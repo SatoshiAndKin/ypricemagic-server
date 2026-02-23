@@ -6,11 +6,16 @@ services:
     volumes:
       - ./nginx.conf:/etc/nginx/nginx.conf:ro
     depends_on:
-      - ypm-ethereum
-      - ypm-arbitrum
-      - ypm-optimism
-      - ypm-base
-      - ypm-polygon
+      ypm-ethereum:
+        condition: service_healthy
+      ypm-arbitrum:
+        condition: service_healthy
+      ypm-optimism:
+        condition: service_healthy
+      ypm-base:
+        condition: service_healthy
+      ypm-polygon:
+        condition: service_healthy
     restart: unless-stopped
 
   ypm-ethereum:
@@ -22,6 +27,12 @@ services:
       ETHERSCAN_TOKEN: ${ETHERSCAN_TOKEN}
     volumes:
       - cache-ethereum:/data/cache
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:8001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
     restart: unless-stopped
 
   ypm-arbitrum:
@@ -33,6 +44,12 @@ services:
       ETHERSCAN_TOKEN: ${ETHERSCAN_TOKEN}
     volumes:
       - cache-arbitrum:/data/cache
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:8001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
     restart: unless-stopped
 
   ypm-optimism:
@@ -44,6 +61,12 @@ services:
       ETHERSCAN_TOKEN: ${ETHERSCAN_TOKEN}
     volumes:
       - cache-optimism:/data/cache
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:8001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
     restart: unless-stopped
 
   ypm-base:
@@ -55,6 +78,12 @@ services:
       ETHERSCAN_TOKEN: ${ETHERSCAN_TOKEN}
     volumes:
       - cache-base:/data/cache
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:8001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
     restart: unless-stopped
 
   ypm-polygon:
@@ -66,6 +95,12 @@ services:
       ETHERSCAN_TOKEN: ${ETHERSCAN_TOKEN}
     volumes:
       - cache-polygon:/data/cache
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:8001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
     restart: unless-stopped
 
 volumes:

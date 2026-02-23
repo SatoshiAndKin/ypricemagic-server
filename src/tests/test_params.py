@@ -1,6 +1,4 @@
-import pytest
-
-from src.params import ParseError, ParseSuccess, is_valid_address, parse_price_params
+from src.params import MAX_BLOCK, ParseError, ParseSuccess, is_valid_address, parse_price_params
 
 DAI = "0x6B175474E89094C44Da98b954EedeAC495271d0F"
 USDC = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"
@@ -87,3 +85,18 @@ class TestParsePriceParams:
         result = parse_price_params(USDC, None)
         assert isinstance(result, ParseSuccess)
         assert result.data.block is None
+
+    def test_block_at_max(self):
+        result = parse_price_params(DAI, str(MAX_BLOCK))
+        assert isinstance(result, ParseSuccess)
+        assert result.data.block == MAX_BLOCK
+
+    def test_block_exceeds_max(self):
+        result = parse_price_params(DAI, str(MAX_BLOCK + 1))
+        assert isinstance(result, ParseError)
+        assert "Invalid block number" in result.error
+
+    def test_block_overflow(self):
+        result = parse_price_params(DAI, "99999999999999999999999999999")
+        assert isinstance(result, ParseError)
+        assert "Invalid block number" in result.error

@@ -4,6 +4,8 @@ from typing import Optional, Union
 
 ADDRESS_REGEX = re.compile(r"^0x[a-fA-F0-9]{40}$")
 
+MAX_BLOCK = 2**63
+
 
 def is_valid_address(address: str) -> bool:
     return bool(ADDRESS_REGEX.match(address))
@@ -44,7 +46,7 @@ def parse_price_params(
             parsed_block = int(block)
         except (ValueError, TypeError):
             return ParseError(f"Invalid block number: {block}")
-        if parsed_block <= 0:
+        if parsed_block <= 0 or parsed_block > MAX_BLOCK:
             return ParseError(f"Invalid block number: {block}")
 
     return ParseSuccess(data=PriceParams(token=token, block=parsed_block))

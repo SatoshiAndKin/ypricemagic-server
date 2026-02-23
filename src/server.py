@@ -1,15 +1,16 @@
 import logging
+import math
 import os
 import time
 from contextlib import asynccontextmanager
 from typing import Optional
 
-from fastapi import FastAPI, Query, Request
+from fastapi import FastAPI, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse
 
 from src.cache import get_cached_price, set_cached_price
-from src.params import ParseError, is_valid_address, parse_price_params
+from src.params import ParseError, parse_price_params
 
 logger = logging.getLogger("ypricemagic-api")
 logging.basicConfig(
@@ -24,8 +25,6 @@ CHAIN_NAME = os.environ.get("CHAIN_NAME", "ethereum")
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info("ypricemagic API starting for chain=%s", CHAIN_NAME)
-    # ypricemagic connects to brownie on import via BROWNIE_NETWORK_ID env var.
-    # We import it here so the connection happens at startup, not at module load.
     try:
         from y import get_price  # noqa: F401
         from brownie import chain
@@ -49,11 +48,22 @@ app.add_middleware(
 
 @app.get("/health")
 async def health():
-    return {"status": "ok", "chain": CHAIN_NAME}
+    try:
+        from brownie import chain
+        height = chain.height
+        return {"status": "ok", "chain": CHAIN_NAME, "block": height}
+    except Exception as e:
+        logger.error("Health check failed: %s", e)
+        return JSONResponse(
+            status_code=503,
+            content={"status": "unhealthy", "chain": CHAIN_NAME, "error": str(e)},
+        )
 
 
+# Use a plain `def` so FastAPI runs it in a threadpool automatically,
+# avoiding blocking the async event loop during slow get_price() calls.
 @app.get("/price")
-async def price(
+def price(
     token: Optional[str] = Query(None),
     block: Optional[str] = Query(None),
 ):
@@ -97,7 +107,32 @@ async def price(
             "Price lookup failed: chain=%s token=%s block=%s error=%s (%dms)",
             CHAIN_NAME, params.token[:10], actual_block, e, duration_ms,
         )
-        return JSONResponse(status_code=500, content={"error": str(e)})
+        return JSONResponse(
+            status_code=500,
+            content={"error": f"Price lookup failed for {params.token} at block {actual_block}. Check server logs."},
+        )
+
+    if math.isnan(price_float) or math.isinf(price_float):
+        duration_ms = int((time.monotonic() - start) * 1000)
+        logger.error(
+            "Invalid price value: chain=%s token=%s block=%s value=%s (%dms)",
+            CHAIN_NAME, params.token[:10], actual_block, p, duration_ms,
+        )
+        return JSONResponse(
+            status_code=502,
+            content={"error": f"Price source returned invalid value for {params.token} at block {actual_block}"},
+        )
+
+    if price_float < 0:
+        duration_ms = int((time.monotonic() - start) * 1000)
+        logger.error(
+            "Negative price: chain=%s token=%s block=%s value=%s (%dms)",
+            CHAIN_NAME, params.token[:10], actual_block, price_float, duration_ms,
+        )
+        return JSONResponse(
+            status_code=502,
+            content={"error": f"Price source returned negative value for {params.token} at block {actual_block}"},
+        )
 
     duration_ms = int((time.monotonic() - start) * 1000)
     set_cached_price(params.token, actual_block, price_float)
