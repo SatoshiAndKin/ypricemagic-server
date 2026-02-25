@@ -172,11 +172,15 @@ async def price(
         if "Invalid price value" in msg or "Negative price" in msg:
             return JSONResponse(
                 status_code=502,
-                content={"error": f"Price source returned invalid value for {params.token} at block {actual_block}"},
+                content={
+                    "error": f"Price source returned invalid value for {params.token} at block {actual_block}"
+                },
             )
         return JSONResponse(
             status_code=500,
-            content={"error": f"Price lookup failed for {params.token} at block {actual_block}. Check server logs."},
+            content={
+                "error": f"Price lookup failed for {params.token} at block {actual_block}. Check server logs."
+            },
         )
     except Exception as e:
         duration_ms = int((time.monotonic() - start) * 1000)
@@ -190,7 +194,9 @@ async def price(
         )
         return JSONResponse(
             status_code=500,
-            content={"error": f"Price lookup failed for {params.token} at block {actual_block}. Check server logs."},
+            content={
+                "error": f"Price lookup failed for {params.token} at block {actual_block}. Check server logs."
+            },
         )
 
     duration_ms = int((time.monotonic() - start) * 1000)
