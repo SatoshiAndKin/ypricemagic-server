@@ -1,6 +1,7 @@
 import os
 import threading
 from datetime import UTC, datetime
+from typing import cast
 
 import diskcache
 
@@ -34,7 +35,7 @@ def get_cached_price(token: str, block: int) -> dict[str, object] | None:
         key = make_key(token, block)
         entry = cache.get(key)
         if entry is not None and isinstance(entry, dict) and "price" in entry:
-            return entry  # type: ignore[return-value]
+            return cast(dict[str, object], entry)
         return None
     except Exception as e:
         logger.warning("cache_read_failed", error=str(e))

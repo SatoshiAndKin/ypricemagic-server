@@ -41,8 +41,8 @@ async def lifespan(app: FastAPI) -> Any:
         from brownie import network
 
         network_id = os.environ.get("BROWNIE_NETWORK_ID", f"{CHAIN_NAME}-custom")
-        if not network.is_connected():
-            network.connect(network_id)
+        if not network.is_connected():  # type: ignore[attr-defined]
+            network.connect(network_id)  # type: ignore[attr-defined]
         logger.info("brownie_connected", network_id=network_id)
 
         from dank_mids.helpers import setup_dank_w3_from_sync
@@ -103,7 +103,7 @@ async def health() -> dict[str, Any]:
 async def _fetch_price(token: str, block: int) -> float:
     from y import get_price
 
-    p = await get_price(token, block, sync=False)
+    p = await get_price(token, block, sync=False)  # type: ignore[call-overload]
     if p is None:
         raise ValueError(f"No price returned for {token} at block {block}")
     price_float = float(p)
