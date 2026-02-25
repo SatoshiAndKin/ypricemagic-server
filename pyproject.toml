@@ -14,7 +14,7 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = [
-    "setuptools<82",
+    "setuptools<83",
     "pytest",
     "pytest-cov",
     "pytest-randomly",

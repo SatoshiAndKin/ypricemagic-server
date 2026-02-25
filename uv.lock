@@ -2237,7 +2237,7 @@ requires-dist = [
     { name = "pytest-cov", marker = "extra == 'dev'" },
     { name = "pytest-randomly", marker = "extra == 'dev'" },
     { name = "ruff", marker = "extra == 'dev'" },
-    { name = "setuptools", marker = "extra == 'dev'", specifier = "<82" },
+    { name = "setuptools", marker = "extra == 'dev'", specifier = "<83" },
     { name = "structlog" },
     { name = "tenacity" },
     { name = "uvicorn", extras = ["standard"] },
