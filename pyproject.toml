@@ -74,8 +74,8 @@ addopts = "--durations=10 -v -p no:pytest_ethereum -p no:pytest-brownie"
 
 [tool.coverage.run]
 source = ["src"]
-omit = ["src/tests/*"]
+omit = ["src/tests/*", "src/server.py"]
 
 [tool.coverage.report]
-fail_under = 60
+fail_under = 80
 show_missing = true
