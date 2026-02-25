@@ -80,4 +80,4 @@ fail_under = 80
 show_missing = true
 
 [tool.deptry]
-per_rule_ignores = {DEP002 = ["uvicorn", "setuptools", "pre-commit", "pytest-cov", "pytest-randomly", "mypy", "ruff", "deptry", "vulture"], DEP003 = ["brownie", "dank_mids", "y"]}
+per_rule_ignores = {DEP002 = ["uvicorn", "setuptools", "pre-commit", "pytest-cov", "pytest-randomly", "mypy", "ruff", "deptry", "vulture"], DEP003 = ["brownie", "dank_mids", "y", "web3"]}
