@@ -1,54 +1,70 @@
-import logging
 import math
 import os
 import time
+import uuid
 from contextlib import asynccontextmanager
-from typing import Optional
+from typing import Any
 
-from fastapi import FastAPI, Query
+import structlog
+from fastapi import FastAPI, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse
+from prometheus_client import Counter, Histogram, make_asgi_app
+from tenacity import RetryError, retry, stop_after_attempt, wait_exponential
 
 from src.cache import get_cached_price, set_cached_price
+from src.logger import configure_logging, get_logger
 from src.params import ParseError, parse_price_params
 
-logger = logging.getLogger("ypricemagic-api")
-logging.basicConfig(
-    level=logging.INFO,
-    format="[%(asctime)s] %(message)s",
-    datefmt="%Y-%m-%dT%H:%M:%S",
-)
+configure_logging()
+logger = get_logger("server")
 
 CHAIN_NAME = os.environ.get("CHAIN_NAME", "ethereum")
 
+# Prometheus metrics
+price_requests_total = Counter(
+    "price_requests_total",
+    "Total price requests",
+    ["chain", "status"],
+)
+price_request_duration_seconds = Histogram(
+    "price_request_duration_seconds",
+    "Price request duration",
+    ["chain"],
+)
+
 
 @asynccontextmanager
-async def lifespan(app: FastAPI):
-    logger.info("ypricemagic API starting for chain=%s", CHAIN_NAME)
+async def lifespan(app: FastAPI) -> Any:
+    logger.info("startup", chain=CHAIN_NAME)
     try:
-        import os
         from brownie import network
+
         network_id = os.environ.get("BROWNIE_NETWORK_ID", f"{CHAIN_NAME}-custom")
-        logger.info("Brownie connected=%s, active=%s, connecting to %s", network.is_connected(), network.show_active(), network_id)
-        if not network.is_connected():
-            network.connect(network_id)
-        logger.info("Brownie connected=%s, active=%s", network.is_connected(), network.show_active())
+        if not network.is_connected():  # type: ignore[attr-defined]
+            network.connect(network_id)  # type: ignore[attr-defined]
+        logger.info("brownie_connected", network_id=network_id)
 
         from dank_mids.helpers import setup_dank_w3_from_sync
+
         setup_dank_w3_from_sync(network.web3)
-        logger.info("dank_mids patched")
+        logger.info("dank_mids_patched")
 
-        from y import get_price  # noqa: F401
         from brownie import chain
+        from y import get_price  # noqa: F401
 
-        logger.info("Connected to chain=%s, chain_id=%s, block=%s", CHAIN_NAME, chain.id, chain.height)
+        logger.info("chain_connected", chain=CHAIN_NAME, chain_id=chain.id, block=chain.height)
     except Exception as e:
-        logger.error("Failed to initialize ypricemagic: %s", e)
+        logger.error("startup_failed", error=str(e))
         raise
     yield
 
 
 app = FastAPI(title="ypricemagic API", lifespan=lifespan)
+
+# Expose Prometheus metrics at /metrics
+metrics_app = make_asgi_app()
+app.mount("/metrics", metrics_app)
 
 app.add_middleware(
     CORSMiddleware,
@@ -58,42 +74,72 @@ app.add_middleware(
 )
 
 
+@app.middleware("http")
+async def request_id_middleware(request: Request, call_next: Any) -> Any:
+    request_id = request.headers.get("X-Request-ID", str(uuid.uuid4()))
+    structlog.contextvars.clear_contextvars()
+    structlog.contextvars.bind_contextvars(request_id=request_id)
+    response = await call_next(request)
+    response.headers["X-Request-ID"] = request_id
+    return response
+
+
 @app.get("/health")
-async def health():
+async def health() -> dict[str, Any]:
     try:
         from brownie import chain
+
         height = chain.height
         return {"status": "ok", "chain": CHAIN_NAME, "block": height}
     except Exception as e:
-        logger.error("Health check failed: %s", e)
-        return JSONResponse(
+        logger.error("health_check_failed", error=str(e))
+        return JSONResponse(  # type: ignore[return-value]
             status_code=503,
-            content={"status": "unhealthy", "chain": CHAIN_NAME, "error": str(e)},
+            content={"status": "unhealthy", "chain": CHAIN_NAME, "error": "RPC connection failed"},
         )
+
+
+@retry(stop=stop_after_attempt(2), wait=wait_exponential(multiplier=1, min=1, max=4))
+async def _fetch_price(token: str, block: int) -> float:
+    from y import get_price
+
+    p = await get_price(token, block, sync=False)  # type: ignore[call-overload]
+    if p is None:
+        raise ValueError(f"No price returned for {token} at block {block}")
+    price_float = float(p)
+    if math.isnan(price_float) or math.isinf(price_float):
+        raise ValueError(f"Invalid price value {p} for {token} at block {block}")
+    if price_float < 0:
+        raise ValueError(f"Negative price {price_float} for {token} at block {block}")
+    return price_float
 
 
 @app.get("/price")
 async def price(
-    token: Optional[str] = Query(None),
-    block: Optional[str] = Query(None),
-):
+    token: str | None = Query(None),
+    block: str | None = Query(None),
+) -> Any:
     result = parse_price_params(token, block)
     if isinstance(result, ParseError):
+        price_requests_total.labels(chain=CHAIN_NAME, status="bad_request").inc()
         return JSONResponse(status_code=400, content={"error": result.error})
 
     params = result.data
 
-    from brownie import chain
-    from y import get_price
+    from brownie import chain as brownie_chain
 
-    actual_block = params.block if params.block is not None else chain.height
+    actual_block = params.block if params.block is not None else brownie_chain.height
 
     cached = get_cached_price(params.token, actual_block)
     if cached is not None:
         logger.info(
-            "Cache hit: chain=%s token=%s block=%s price=%s",
-            CHAIN_NAME, params.token[:10], actual_block, cached["price"],
+            "cache_hit",
+            chain=CHAIN_NAME,
+            token=params.token[:10],
+            block=actual_block,
+            price=cached["price"],
         )
+        price_requests_total.labels(chain=CHAIN_NAME, status="cache_hit").inc()
         return {
             "chain": CHAIN_NAME,
             "token": params.token,
@@ -104,51 +150,66 @@ async def price(
 
     start = time.monotonic()
     try:
-        p = await get_price(params.token, actual_block, sync=False)
-        if p is None:
+        price_float = await _fetch_price(params.token, actual_block)
+    except (RetryError, ValueError) as e:
+        duration_ms = int((time.monotonic() - start) * 1000)
+        inner = e.__cause__ if isinstance(e, RetryError) else e
+        msg = str(inner)
+        if "No price returned" in msg:
+            price_requests_total.labels(chain=CHAIN_NAME, status="not_found").inc()
+            logger.warning("price_not_found", token=params.token[:10], block=actual_block)
             return JSONResponse(
                 status_code=404,
                 content={"error": f"No price found for {params.token} at block {actual_block}"},
             )
-        price_float = float(p)
+        price_requests_total.labels(chain=CHAIN_NAME, status="error").inc()
+        logger.error(
+            "price_lookup_failed",
+            token=params.token[:10],
+            block=actual_block,
+            duration_ms=duration_ms,
+        )
+        if "Invalid price value" in msg or "Negative price" in msg:
+            return JSONResponse(
+                status_code=502,
+                content={
+                    "error": f"Price source returned invalid value for {params.token} at block {actual_block}"
+                },
+            )
+        return JSONResponse(
+            status_code=500,
+            content={
+                "error": f"Price lookup failed for {params.token} at block {actual_block}. Check server logs."
+            },
+        )
     except Exception as e:
         duration_ms = int((time.monotonic() - start) * 1000)
+        price_requests_total.labels(chain=CHAIN_NAME, status="error").inc()
         logger.error(
-            "Price lookup failed: chain=%s token=%s block=%s error=%s (%dms)",
-            CHAIN_NAME, params.token[:10], actual_block, e, duration_ms,
+            "price_lookup_error",
+            token=params.token[:10],
+            block=actual_block,
+            duration_ms=duration_ms,
+            error=type(e).__name__,
         )
         return JSONResponse(
             status_code=500,
-            content={"error": f"Price lookup failed for {params.token} at block {actual_block}. Check server logs."},
-        )
-
-    if math.isnan(price_float) or math.isinf(price_float):
-        duration_ms = int((time.monotonic() - start) * 1000)
-        logger.error(
-            "Invalid price value: chain=%s token=%s block=%s value=%s (%dms)",
-            CHAIN_NAME, params.token[:10], actual_block, p, duration_ms,
-        )
-        return JSONResponse(
-            status_code=502,
-            content={"error": f"Price source returned invalid value for {params.token} at block {actual_block}"},
-        )
-
-    if price_float < 0:
-        duration_ms = int((time.monotonic() - start) * 1000)
-        logger.error(
-            "Negative price: chain=%s token=%s block=%s value=%s (%dms)",
-            CHAIN_NAME, params.token[:10], actual_block, price_float, duration_ms,
-        )
-        return JSONResponse(
-            status_code=502,
-            content={"error": f"Price source returned negative value for {params.token} at block {actual_block}"},
+            content={
+                "error": f"Price lookup failed for {params.token} at block {actual_block}. Check server logs."
+            },
         )
 
     duration_ms = int((time.monotonic() - start) * 1000)
     set_cached_price(params.token, actual_block, price_float)
+    price_requests_total.labels(chain=CHAIN_NAME, status="ok").inc()
+    price_request_duration_seconds.labels(chain=CHAIN_NAME).observe(duration_ms / 1000)
     logger.info(
-        "Price: chain=%s token=%s block=%s price=%s (%dms)",
-        CHAIN_NAME, params.token[:10], actual_block, price_float, duration_ms,
+        "price_fetched",
+        chain=CHAIN_NAME,
+        token=params.token[:10],
+        block=actual_block,
+        price=price_float,
+        duration_ms=duration_ms,
     )
 
     return {
@@ -301,5 +362,5 @@ INDEX_HTML = """<!DOCTYPE html>
 
 
 @app.get("/", response_class=HTMLResponse)
-async def index():
+async def index() -> str:
     return INDEX_HTML

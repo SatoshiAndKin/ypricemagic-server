@@ -1,6 +1,5 @@
 import re
 from dataclasses import dataclass
-from typing import Optional, Union
 
 ADDRESS_REGEX = re.compile(r"^0x[a-fA-F0-9]{40}$")
 
@@ -14,7 +13,7 @@ def is_valid_address(address: str) -> bool:
 @dataclass
 class PriceParams:
     token: str
-    block: Optional[int] = None
+    block: int | None = None
 
 
 @dataclass
@@ -27,12 +26,12 @@ class ParseError:
     error: str
 
 
-ParseResult = Union[ParseSuccess, ParseError]
+ParseResult = ParseSuccess | ParseError
 
 
 def parse_price_params(
-    token: Optional[str],
-    block: Optional[str] = None,
+    token: str | None,
+    block: str | None = None,
 ) -> ParseResult:
     if not token:
         return ParseError("Missing required parameter: token")
@@ -40,7 +39,7 @@ def parse_price_params(
     if not is_valid_address(token):
         return ParseError(f"Invalid token address: {token}")
 
-    parsed_block: Optional[int] = None
+    parsed_block: int | None = None
     if block is not None:
         try:
             parsed_block = int(block)
