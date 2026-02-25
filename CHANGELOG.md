@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.1](https://github.com/SatoshiAndKin/ypricemagic-server/compare/v0.1.0...v0.1.1) (2026-02-25)
+
+
+### Bug Fixes
+
+* inject geth_poa_middleware for Polygon PoA blocks ([eb6202a](https://github.com/SatoshiAndKin/ypricemagic-server/commit/eb6202a1481a9894d9306b05b9af22a7de10f620))
+
 ## 0.1.0 (2026-02-25)
 
 
