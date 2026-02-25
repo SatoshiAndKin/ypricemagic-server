@@ -5,6 +5,10 @@ updates:
     schedule:
       interval: weekly
     open-pull-requests-limit: 10
+    ignore:
+      # setuptools<82 required: brownie/web3 depend on pkg_resources removed in 82+
+      - dependency-name: setuptools
+        versions: [">=82"]
     groups:
       dependencies:
         patterns:
