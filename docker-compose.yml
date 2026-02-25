@@ -20,6 +20,8 @@ services:
 
   ypm-ethereum:
     build: .
+    ports:
+      - "8001:8001"
     environment:
       CHAIN_NAME: ethereum
       CHAIN_ID: 1

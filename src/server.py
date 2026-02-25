@@ -26,6 +26,18 @@ CHAIN_NAME = os.environ.get("CHAIN_NAME", "ethereum")
 async def lifespan(app: FastAPI):
     logger.info("ypricemagic API starting for chain=%s", CHAIN_NAME)
     try:
+        import os
+        from brownie import network
+        network_id = os.environ.get("BROWNIE_NETWORK_ID", f"{CHAIN_NAME}-custom")
+        logger.info("Brownie connected=%s, active=%s, connecting to %s", network.is_connected(), network.show_active(), network_id)
+        if not network.is_connected():
+            network.connect(network_id)
+        logger.info("Brownie connected=%s, active=%s", network.is_connected(), network.show_active())
+
+        from dank_mids.helpers import setup_dank_w3_from_sync
+        setup_dank_w3_from_sync(network.web3)
+        logger.info("dank_mids patched")
+
         from y import get_price  # noqa: F401
         from brownie import chain
 
@@ -60,10 +72,8 @@ async def health():
         )
 
 
-# Use a plain `def` so FastAPI runs it in a threadpool automatically,
-# avoiding blocking the async event loop during slow get_price() calls.
 @app.get("/price")
-def price(
+async def price(
     token: Optional[str] = Query(None),
     block: Optional[str] = Query(None),
 ):
@@ -94,7 +104,7 @@ def price(
 
     start = time.monotonic()
     try:
-        p = get_price(params.token, actual_block)
+        p = await get_price(params.token, actual_block, sync=False)
         if p is None:
             return JSONResponse(
                 status_code=404,

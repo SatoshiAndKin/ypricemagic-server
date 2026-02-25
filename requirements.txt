@@ -1,4 +1,0 @@
-ypricemagic
-fastapi
-uvicorn[standard]
-diskcache
