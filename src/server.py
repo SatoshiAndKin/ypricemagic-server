@@ -21,6 +21,10 @@ logger = get_logger("server")
 
 CHAIN_NAME = os.environ.get("CHAIN_NAME", "ethereum")
 
+# Chains that use Proof-of-Authority consensus and need ExtraDataToPOAMiddleware
+# to handle the extended extraData field in block headers (e.g. proofOfAuthorityData).
+POA_CHAINS = {"polygon"}
+
 # Prometheus metrics
 price_requests_total = Counter(
     "price_requests_total",
@@ -44,6 +48,12 @@ async def lifespan(app: FastAPI) -> Any:
         if not network.is_connected():  # type: ignore[attr-defined]
             network.connect(network_id)  # type: ignore[attr-defined]
         logger.info("brownie_connected", network_id=network_id)
+
+        if CHAIN_NAME in POA_CHAINS:
+            from web3.middleware import geth_poa_middleware  # type: ignore[attr-defined]
+
+            network.web3.middleware_onion.inject(geth_poa_middleware, layer=0)
+            logger.info("poa_middleware_injected", chain=CHAIN_NAME)
 
         from dank_mids.helpers import setup_dank_w3_from_sync
 
