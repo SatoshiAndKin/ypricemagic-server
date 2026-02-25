@@ -13,3 +13,15 @@ venv/
 .mypy_cache/
 .coverage
 htmlcov/
+.ruff_cache/
+.secrets.baseline
+
+# IDE configs
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db

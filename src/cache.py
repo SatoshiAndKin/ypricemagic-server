@@ -1,16 +1,16 @@
-import logging
 import os
 import threading
-from datetime import datetime, timezone
-from typing import Optional
+from datetime import UTC, datetime
 
 import diskcache
 
-logger = logging.getLogger("ypricemagic-api")
+from src.logger import get_logger
+
+logger = get_logger("cache")
 
 CACHE_DIR = os.environ.get("CACHE_DIR", "/data/cache")
 
-_cache: Optional[diskcache.Cache] = None
+_cache: diskcache.Cache | None = None
 _lock = threading.Lock()
 
 
@@ -28,16 +28,16 @@ def make_key(token: str, block: int) -> str:
     return f"{token.lower()}:{block}"
 
 
-def get_cached_price(token: str, block: int) -> Optional[dict]:
+def get_cached_price(token: str, block: int) -> dict[str, object] | None:
     try:
         cache = get_cache()
         key = make_key(token, block)
         entry = cache.get(key)
         if entry is not None and isinstance(entry, dict) and "price" in entry:
-            return entry
+            return entry  # type: ignore[return-value]
         return None
     except Exception as e:
-        logger.warning("Cache read failed, proceeding without cache: %s", e)
+        logger.warning("cache_read_failed", error=str(e))
         return None
 
 
@@ -45,10 +45,10 @@ def set_cached_price(token: str, block: int, price: float) -> None:
     try:
         cache = get_cache()
         key = make_key(token, block)
-        entry = {
+        entry: dict[str, object] = {
             "price": price,
-            "cached_at": datetime.now(timezone.utc).isoformat(),
+            "cached_at": datetime.now(UTC).isoformat(),
         }
         cache.set(key, entry)
     except Exception as e:
-        logger.warning("Cache write failed (price still returned to caller): %s", e)
+        logger.warning("cache_write_failed", error=str(e))
