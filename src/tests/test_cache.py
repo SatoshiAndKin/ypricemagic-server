@@ -1,4 +1,5 @@
-import tempfile
+from collections.abc import Generator
+from pathlib import Path
 from unittest.mock import patch
 
 import pytest
@@ -7,7 +8,7 @@ from src.cache import get_cached_price, make_key, set_cached_price
 
 
 @pytest.fixture(autouse=True)
-def isolated_cache(tmp_path: pytest.TempdirFactory) -> None:
+def isolated_cache(tmp_path: Path) -> Generator[None, None, None]:
     """Each test gets a fresh cache in a temp directory."""
     with patch("src.cache.CACHE_DIR", str(tmp_path)), patch("src.cache._cache", None):
         yield

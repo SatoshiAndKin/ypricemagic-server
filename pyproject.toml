@@ -8,8 +8,6 @@ dependencies = [
     "uvicorn[standard]",
     "diskcache",
     "structlog",
-    "opentelemetry-sdk",
-    "opentelemetry-instrumentation-fastapi",
     "prometheus-client",
     "tenacity",
 ]
@@ -24,6 +22,7 @@ dev = [
     "ruff",
     "deptry",
     "vulture",
+    "pre-commit",
 ]
 
 [tool.uv]
@@ -79,3 +78,6 @@ omit = ["src/tests/*", "src/server.py"]
 [tool.coverage.report]
 fail_under = 80
 show_missing = true
+
+[tool.deptry]
+per_rule_ignores = {DEP002 = ["uvicorn", "setuptools", "pre-commit", "pytest-cov", "pytest-randomly", "mypy", "ruff", "deptry", "vulture"], DEP003 = ["brownie", "dank_mids", "y"]}
