@@ -75,8 +75,7 @@
                   "type": "null"
                 }
               ],
-              "title": "Amount",
-              "description": "Token amount in human-readable units for price impact calculation"
+              "title": "Amount"
             }
           }
         ],
