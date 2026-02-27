@@ -18,6 +18,7 @@ services:
 
   ypm-ethereum:
     build: .
+    init: true
     environment:
       CHAIN_NAME: ethereum
       CHAIN_ID: 1
@@ -35,6 +36,7 @@ services:
 
   ypm-arbitrum:
     build: .
+    init: true
     environment:
       CHAIN_NAME: arbitrum
       CHAIN_ID: 42161
@@ -52,6 +54,7 @@ services:
 
   ypm-optimism:
     build: .
+    init: true
     environment:
       CHAIN_NAME: optimism
       CHAIN_ID: 10
@@ -69,6 +72,7 @@ services:
 
   ypm-base:
     build: .
+    init: true
     environment:
       CHAIN_NAME: base
       CHAIN_ID: 8453
