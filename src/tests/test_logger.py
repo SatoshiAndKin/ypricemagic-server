@@ -16,9 +16,10 @@ class TestRedactSecrets:
         result = self._call({"event": "test", "rpc_url": "http://secret"})
         assert result["rpc_url"] == "[REDACTED]"
 
-    def test_redacts_token_key(self) -> None:
-        result = self._call({"event": "test", "token": "myapikey"})
-        assert result["token"] == "[REDACTED]"
+    def test_preserves_token_address_key(self) -> None:
+        addr = "0x" + "a1" * 20
+        result = self._call({"event": "test", "token": addr})
+        assert result["token"] == addr
 
     def test_preserves_non_sensitive_keys(self) -> None:
         result = self._call({"event": "test", "chain": "ethereum", "block": 100})
