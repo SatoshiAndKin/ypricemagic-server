@@ -61,7 +61,7 @@ src/
 
 ## API Endpoints
 
-- `GET /price?chain=<chain>&token=<address>&block=<block>` — fetch token price
+- `GET /price?chain=<chain>&token=<address>&block=<block>&amount=<amount>` — fetch token price (amount is optional, human-readable token units for price impact)
 - `GET /health` — aggregate health (checks ethereum backend)
 - `GET /health/<chain>` — per-chain health
 - `GET /` — browser UI
@@ -105,6 +105,12 @@ Each chain container: brownie network connect → dank_mids patch → uvicorn Fa
 | `CHAIN_NAME` | container | Set per-container by docker-compose |
 | `CHAIN_ID` | container | Set per-container by docker-compose |
 | `RPC_URL` | container | Set per-container from RPC_URL_<CHAIN> |
+
+## Lessons Learned
+
+- **Pre-release transitive build deps**: `prerelease = "allow"`, `UV_PRERELEASE=allow`, and `--prerelease=allow` do NOT propagate into PEP 517 build isolation environments. If a git/source dependency has pre-release transitive build deps (e.g., ypricemagic's build-system.requires pulls eth-brownie which needs cchecksum==0.3.7.dev0), you must use `build-constraint-dependencies` in `[tool.uv]` to pin them. `extra-build-dependencies` alone is NOT sufficient.
+- **Git deps need git in Docker**: If any dependency uses a git source (e.g., `ypricemagic @ git+https://...`), the Dockerfile must install `git` via apt-get.
+- **PyPI wheels vs git source builds**: PyPI packages install from pre-built wheels (no build env needed). Switching to a git source requires building from source, which triggers `build-system.requires` resolution -- a completely different code path that can surface new dependency issues.
 
 ## CI/CD
 

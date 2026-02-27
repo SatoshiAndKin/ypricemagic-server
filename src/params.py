@@ -14,6 +14,7 @@ def is_valid_address(address: str) -> bool:
 class PriceParams:
     token: str
     block: int | None = None
+    amount: float | None = None
 
 
 @dataclass
@@ -32,6 +33,7 @@ ParseResult = ParseSuccess | ParseError
 def parse_price_params(
     token: str | None,
     block: str | None = None,
+    amount: str | None = None,
 ) -> ParseResult:
     if not token:
         return ParseError("Missing required parameter: token")
@@ -48,4 +50,13 @@ def parse_price_params(
         if parsed_block <= 0 or parsed_block > MAX_BLOCK:
             return ParseError(f"Invalid block number: {block}")
 
-    return ParseSuccess(data=PriceParams(token=token, block=parsed_block))
+    parsed_amount: float | None = None
+    if amount is not None:
+        try:
+            parsed_amount = float(amount)
+        except (ValueError, TypeError):
+            return ParseError(f"Invalid amount: {amount}")
+        if parsed_amount <= 0:
+            return ParseError(f"Invalid amount: {amount}")
+
+    return ParseSuccess(data=PriceParams(token=token, block=parsed_block, amount=parsed_amount))

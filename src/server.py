@@ -100,10 +100,10 @@ async def health() -> dict[str, Any]:
 
 
 @retry(stop=stop_after_attempt(2), wait=wait_exponential(multiplier=1, min=1, max=4))
-async def _fetch_price(token: str, block: int) -> float:
+async def _fetch_price(token: str, block: int, amount: float | None = None) -> float:
     from y import get_price
 
-    p = await get_price(token, block, sync=False)  # type: ignore[call-overload]
+    p = await get_price(token, block, amount=amount, sync=False)  # type: ignore[call-overload]
     if p is None:
         raise ValueError(f"No price returned for {token} at block {block}")
     price_float = float(p)
@@ -118,8 +118,9 @@ async def _fetch_price(token: str, block: int) -> float:
 async def price(
     token: str | None = Query(None),
     block: str | None = Query(None),
+    amount: str | None = Query(None),
 ) -> Any:
-    result = parse_price_params(token, block)
+    result = parse_price_params(token, block, amount)
     if isinstance(result, ParseError):
         price_requests_total.labels(chain=CHAIN_NAME, status="bad_request").inc()
         return JSONResponse(status_code=400, content={"error": result.error})
@@ -130,27 +131,28 @@ async def price(
 
     actual_block = params.block if params.block is not None else brownie_chain.height
 
-    cached = get_cached_price(params.token, actual_block)
-    if cached is not None:
-        logger.info(
-            "cache_hit",
-            chain=CHAIN_NAME,
-            token=params.token[:10],
-            block=actual_block,
-            price=cached["price"],
-        )
-        price_requests_total.labels(chain=CHAIN_NAME, status="cache_hit").inc()
-        return {
-            "chain": CHAIN_NAME,
-            "token": params.token,
-            "block": actual_block,
-            "price": cached["price"],
-            "cached": True,
-        }
+    if params.amount is None:
+        cached = get_cached_price(params.token, actual_block)
+        if cached is not None:
+            logger.info(
+                "cache_hit",
+                chain=CHAIN_NAME,
+                token=params.token[:10],
+                block=actual_block,
+                price=cached["price"],
+            )
+            price_requests_total.labels(chain=CHAIN_NAME, status="cache_hit").inc()
+            return {
+                "chain": CHAIN_NAME,
+                "token": params.token,
+                "block": actual_block,
+                "price": cached["price"],
+                "cached": True,
+            }
 
     start = time.monotonic()
     try:
-        price_float = await _fetch_price(params.token, actual_block)
+        price_float = await _fetch_price(params.token, actual_block, params.amount)
     except (RetryError, ValueError) as e:
         duration_ms = int((time.monotonic() - start) * 1000)
         inner = e.__cause__ if isinstance(e, RetryError) else e
@@ -200,7 +202,8 @@ async def price(
         )
 
     duration_ms = int((time.monotonic() - start) * 1000)
-    set_cached_price(params.token, actual_block, price_float)
+    if params.amount is None:
+        set_cached_price(params.token, actual_block, price_float)
     price_requests_total.labels(chain=CHAIN_NAME, status="ok").inc()
     price_request_duration_seconds.labels(chain=CHAIN_NAME).observe(duration_ms / 1000)
     logger.info(
@@ -209,16 +212,20 @@ async def price(
         token=params.token[:10],
         block=actual_block,
         price=price_float,
+        amount=params.amount,
         duration_ms=duration_ms,
     )
 
-    return {
+    response: dict[str, Any] = {
         "chain": CHAIN_NAME,
         "token": params.token,
         "block": actual_block,
         "price": price_float,
         "cached": False,
     }
+    if params.amount is not None:
+        response["amount"] = params.amount
+    return response
 
 
 INDEX_HTML = """<!DOCTYPE html>
@@ -272,6 +279,10 @@ INDEX_HTML = """<!DOCTYPE html>
       <label for="block">Block Number (optional, blank for latest)</label>
       <input type="text" id="block" placeholder="e.g. 18000000">
     </div>
+    <div class="form-group">
+      <label for="amount">Amount (optional, token units for price impact)</label>
+      <input type="text" id="amount" placeholder="e.g. 1000">
+    </div>
     <button type="submit" id="submit">Get Price</button>
   </form>
 
@@ -284,6 +295,11 @@ INDEX_HTML = """<!DOCTYPE html>
 
     function showResult(data) {
       result.className = 'show';
+      const amountField = data.amount != null ? `
+        <div class="field">
+          <div class="field-label">Amount</div>
+          <div class="field-value">${data.amount}</div>
+        </div>` : '';
       result.innerHTML = `
         <div class="result-header">Price Result</div>
         <div class="field">
@@ -297,9 +313,9 @@ INDEX_HTML = """<!DOCTYPE html>
         <div class="field">
           <div class="field-label">Block</div>
           <div class="field-value">${data.block}</div>
-        </div>
+        </div>${amountField}
         <div class="field">
-          <div class="field-label">Price (USD)</div>
+          <div class="field-label">Price (USD per token)</div>
           <div class="field-value number">${data.price}</div>
         </div>
         <div class="field">
@@ -319,6 +335,7 @@ INDEX_HTML = """<!DOCTYPE html>
       const chain = document.getElementById('chain').value;
       const token = document.getElementById('token').value.trim();
       const block = document.getElementById('block').value.trim();
+      const amount = document.getElementById('amount').value.trim();
 
       submit.disabled = true;
       submit.textContent = 'Fetching...';
@@ -328,6 +345,7 @@ INDEX_HTML = """<!DOCTYPE html>
       try {
         const params = new URLSearchParams({ chain, token });
         if (block) params.set('block', block);
+        if (amount) params.set('amount', amount);
 
         const res = await fetch('/price?' + params.toString());
         const data = await res.json();
@@ -341,6 +359,8 @@ INDEX_HTML = """<!DOCTYPE html>
           url.searchParams.set('token', token);
           if (block) url.searchParams.set('block', block);
           else url.searchParams.delete('block');
+          if (amount) url.searchParams.set('amount', amount);
+          else url.searchParams.delete('amount');
           window.history.replaceState({}, '', url.toString());
         }
       } catch (err) {
@@ -355,6 +375,7 @@ INDEX_HTML = """<!DOCTYPE html>
     if (params.get('chain')) document.getElementById('chain').value = params.get('chain');
     if (params.get('token')) document.getElementById('token').value = params.get('token');
     if (params.get('block')) document.getElementById('block').value = params.get('block');
+    if (params.get('amount')) document.getElementById('amount').value = params.get('amount');
   </script>
 </body>
 </html>"""

@@ -100,3 +100,40 @@ class TestParsePriceParams:
         result = parse_price_params(DAI, "99999999999999999999999999999")
         assert isinstance(result, ParseError)
         assert "Invalid block number" in result.error
+
+
+class TestParsePriceParamsAmount:
+    def test_valid_amount(self) -> None:
+        result = parse_price_params(DAI, "18000000", "1000")
+        assert isinstance(result, ParseSuccess)
+        assert result.data.amount == 1000.0
+
+    def test_valid_amount_decimal(self) -> None:
+        result = parse_price_params(DAI, "18000000", "0.5")
+        assert isinstance(result, ParseSuccess)
+        assert result.data.amount == 0.5
+
+    def test_no_amount(self) -> None:
+        result = parse_price_params(DAI, "18000000")
+        assert isinstance(result, ParseSuccess)
+        assert result.data.amount is None
+
+    def test_none_amount(self) -> None:
+        result = parse_price_params(DAI, "18000000", None)
+        assert isinstance(result, ParseSuccess)
+        assert result.data.amount is None
+
+    def test_invalid_amount_non_numeric(self) -> None:
+        result = parse_price_params(DAI, "18000000", "abc")
+        assert isinstance(result, ParseError)
+        assert "Invalid amount" in result.error
+
+    def test_invalid_amount_zero(self) -> None:
+        result = parse_price_params(DAI, "18000000", "0")
+        assert isinstance(result, ParseError)
+        assert "Invalid amount" in result.error
+
+    def test_invalid_amount_negative(self) -> None:
+        result = parse_price_params(DAI, "18000000", "-100")
+        assert isinstance(result, ParseError)
+        assert "Invalid amount" in result.error
