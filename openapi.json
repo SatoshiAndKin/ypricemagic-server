@@ -61,6 +61,23 @@
               ],
               "title": "Block"
             }
+          },
+          {
+            "name": "amount",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Amount",
+              "description": "Token amount in human-readable units for price impact calculation"
+            }
           }
         ],
         "responses": {

@@ -3,7 +3,7 @@ FROM --platform=linux/amd64 ghcr.io/astral-sh/uv:python3.12-trixie-slim
 WORKDIR /app
 
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends gcc libc6-dev curl \
+    && apt-get install -y --no-install-recommends gcc git libc6-dev curl \
     && rm -rf /var/lib/apt/lists/*
 
 ENV UV_COMPILE_BYTECODE=1

@@ -5,6 +5,9 @@ requires-python = "==3.12.*"
 [options]
 prerelease-mode = "allow"
 
+[manifest]
+build-constraints = [{ name = "cchecksum", specifier = "==0.3.7.dev0" }]
+
 [[package]]
 name = "aiofiles"
 version = "25.1.0"
@@ -418,7 +421,7 @@ wheels = [
 
 [[package]]
 name = "dank-mids"
-version = "4.20.200"
+version = "4.20.202"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aiofiles" },
@@ -435,9 +438,9 @@ dependencies = [
     { name = "typed-envs" },
     { name = "web3" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/da/c8/742942dab6c8764468f5877154d947ae10626553d941888c8bb6775e80e2/dank_mids-4.20.200.tar.gz", hash = "sha256:f5bbd2e3297116924cf2b71496cdbbf2ff0c581e2d16547ca87ba810eb6e261e", size = 12760830, upload-time = "2026-02-21T21:01:53.722Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/38/9c/0d0fd55b6db1046d41325e61d25f73306930ea87488bb504ed35c112d586/dank_mids-4.20.202.tar.gz", hash = "sha256:ea5564d93b9b18d9a13136c588eea788769f362f518b4f4c63082de46a97170c", size = 12760733, upload-time = "2026-02-26T09:34:17.861Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/46/6c/cbff4dc4df651bf93a57ccb90b1ef433d40dd03733a57821c06fb9893e16/dank_mids-4.20.200-py3-none-any.whl", hash = "sha256:89863267fca95c1a4f6e16a59eca37c014057dc86902b5cd880a90e804bd5b63", size = 13615184, upload-time = "2026-02-21T21:01:56.936Z" },
+    { url = "https://files.pythonhosted.org/packages/81/2f/13a2f96331ba12fee3545890e6a9482b248ea82411e494be64b83a4c150f/dank_mids-4.20.202-py3-none-any.whl", hash = "sha256:17ac23c6fe8b1ff3e9311ff06ef852e91254105ae8daec3078cc79f724f69d3c", size = 13615218, upload-time = "2026-02-26T09:34:20.671Z" },
 ]
 
 [[package]]
@@ -2165,8 +2168,8 @@ wheels = [
 
 [[package]]
 name = "ypricemagic"
-version = "5.2.5"
-source = { registry = "https://pypi.org/simple" }
+version = "0.0.1.dev1428"
+source = { git = "https://github.com/SatoshiAndKin/ypricemagic.git?rev=master#587a434929a802c3b333a579c61deeca91f19e5e" }
 dependencies = [
     { name = "aiosqlite" },
     { name = "asyncpg" },
@@ -2187,15 +2190,6 @@ dependencies = [
     { name = "pony-stubs" },
     { name = "python-dateutil" },
     { name = "typed-envs" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/84/d0/657252448ba2b9648e7b13c6174e635b6517551b4cfc39a7697441447414/ypricemagic-5.2.5.tar.gz", hash = "sha256:eb60ef2eab23be0d25df752253dcb2367e852343733bda66c40f6a1d515d8fc5", size = 277737, upload-time = "2026-02-21T22:03:32.792Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/f9/72/e546ad159921fd89670741856730dc477fde5ea185074f161755b9aa616d/ypricemagic-5.2.5-cp312-cp312-macosx_11_0_arm64.whl", hash = "sha256:324c78b9dae8072136d4c0dcb40d62fe91b6c2565341ee290d2a18c6a08585eb", size = 525530, upload-time = "2026-02-21T22:03:19.107Z" },
-    { url = "https://files.pythonhosted.org/packages/8a/8b/a45bf98221f756b14f2a9b6ca8fde47761c921e7652db4d0f9c771fb3089/ypricemagic-5.2.5-cp312-cp312-manylinux1_i686.manylinux_2_28_i686.manylinux_2_5_i686.whl", hash = "sha256:7572dffa19001d6246099ec9115d43fcb0dd8646f9647193e357ee91343ebb0f", size = 741276, upload-time = "2026-02-21T22:03:08.368Z" },
-    { url = "https://files.pythonhosted.org/packages/67/7a/03f20ac941b66a5eb85cf527ff2bc08e16bbf8a15b18742bfcc26d080cbc/ypricemagic-5.2.5-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:cc8afbf35ca39d1634b5660a81ef77191cc3bb153dca5c9a4b9af428b04a1d1d", size = 721143, upload-time = "2026-02-21T22:03:02.848Z" },
-    { url = "https://files.pythonhosted.org/packages/5e/74/e40a568bf1052004ce3cfc09813ea37c3a29fbf1fcafdb9ed48d4af5bfe1/ypricemagic-5.2.5-cp312-cp312-musllinux_1_2_x86_64.whl", hash = "sha256:cad46e1847fc2039cad55b6711cfa4982045bcd7449aaa32291f9cafed598cf5", size = 716989, upload-time = "2026-02-21T22:03:13.972Z" },
-    { url = "https://files.pythonhosted.org/packages/ee/71/e95f67d65e659342e43979f4f6d2419c32be6ec632cbd76e00b68d22e554/ypricemagic-5.2.5-cp312-cp312-win32.whl", hash = "sha256:5e77f1c5dfe967f503bba2c665e3b1fb2b1a855371ca07fdac2252d730c93ae3", size = 441990, upload-time = "2026-02-21T22:03:29.628Z" },
-    { url = "https://files.pythonhosted.org/packages/1e/69/d5b5853168a76edfcb2f8076446dcf819b9db6d9238d47bd22743bbd10c5/ypricemagic-5.2.5-cp312-cp312-win_amd64.whl", hash = "sha256:6040a1932da48fbff0666c040326ae9ccc775334b0184d9e95d19648c4213d74", size = 469321, upload-time = "2026-02-21T22:03:24.354Z" },
 ]
 
 [[package]]
@@ -2242,6 +2236,6 @@ requires-dist = [
     { name = "tenacity" },
     { name = "uvicorn", extras = ["standard"] },
     { name = "vulture", marker = "extra == 'dev'" },
-    { name = "ypricemagic", specifier = "==5.2.5" },
+    { name = "ypricemagic", git = "https://github.com/SatoshiAndKin/ypricemagic.git?rev=master" },
 ]
 provides-extras = ["dev"]

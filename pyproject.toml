@@ -3,7 +3,7 @@ name = "ypricemagic-server"
 version = "0.2.0"
 requires-python = ">=3.12,<3.13"
 dependencies = [
-    "ypricemagic==5.2.5",
+    "ypricemagic @ git+https://github.com/SatoshiAndKin/ypricemagic.git@master",
     "fastapi",
     "uvicorn[standard]",
     "diskcache",
@@ -27,6 +27,8 @@ dev = [
 
 [tool.uv]
 prerelease = "allow"
+extra-build-dependencies = { ypricemagic = ["cchecksum==0.3.7.dev0"] }
+build-constraint-dependencies = ["cchecksum==0.3.7.dev0"]
 
 [tool.ruff]
 line-length = 100
