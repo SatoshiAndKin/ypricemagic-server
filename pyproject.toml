@@ -10,11 +10,11 @@ dependencies = [
     "structlog",
     "prometheus-client",
     "tenacity",
+    "setuptools<82",
 ]
 
 [project.optional-dependencies]
 dev = [
-    "setuptools<82",
     "pytest",
     "pytest-cov",
     "pytest-randomly",

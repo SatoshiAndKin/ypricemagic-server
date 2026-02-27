@@ -16,9 +16,6 @@ COPY pyproject.toml uv.lock ./
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --locked --no-install-project
 
-# brownie/web3 need pkg_resources at runtime; removed from setuptools 82+
-RUN uv pip install 'setuptools<82'
-
 # Copy the project and sync
 COPY . /app
 RUN --mount=type=cache,target=/root/.cache/uv \
