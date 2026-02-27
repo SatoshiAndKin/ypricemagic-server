@@ -10,7 +10,7 @@ def _redact_secrets(
     event_dict: structlog.types.EventDict,
 ) -> structlog.types.EventDict:
     """Scrub RPC URLs and API keys from log events."""
-    sensitive_keys = {"rpc_url", "url", "host", "api_key", "token", "etherscan_token"}
+    sensitive_keys = {"rpc_url", "url", "host", "api_key", "etherscan_token"}
     for key in list(event_dict.keys()):
         if key.lower() in sensitive_keys:
             event_dict[key] = "[REDACTED]"
