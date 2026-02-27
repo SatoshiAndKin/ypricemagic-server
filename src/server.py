@@ -343,11 +343,11 @@ INDEX_HTML = """<!DOCTYPE html>
       result.innerHTML = '<div class="result-header">Fetching price...</div>';
 
       try {
-        const params = new URLSearchParams({ chain, token });
+        const params = new URLSearchParams({ token });
         if (block) params.set('block', block);
         if (amount) params.set('amount', amount);
 
-        const res = await fetch('/price?' + params.toString());
+        const res = await fetch('/' + chain + '/price?' + params.toString());
         const data = await res.json();
 
         if (data.error) {
