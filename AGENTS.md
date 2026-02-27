@@ -68,7 +68,7 @@ src/
 
 ## Supported Chains
 
-`ethereum` (1), `arbitrum` (42161), `optimism` (10), `base` (8453), `polygon` (137)
+`ethereum` (1), `arbitrum` (42161), `optimism` (10), `base` (8453)
 
 ## Architecture
 
@@ -77,7 +77,6 @@ client → nginx:8000 → ypm-ethereum:8001
                     → ypm-arbitrum:8001
                     → ypm-optimism:8001
                     → ypm-base:8001
-                    → ypm-polygon:8001
 ```
 
 Each chain container: brownie network connect → dank_mids patch → uvicorn FastAPI server.
@@ -100,7 +99,6 @@ Each chain container: brownie network connect → dank_mids patch → uvicorn Fa
 | `RPC_URL_ARBITRUM` | yes | Arbitrum RPC endpoint |
 | `RPC_URL_OPTIMISM` | yes | Optimism RPC endpoint |
 | `RPC_URL_BASE` | yes | Base RPC endpoint |
-| `RPC_URL_POLYGON` | yes | Polygon RPC endpoint |
 | `ETHERSCAN_TOKEN` | yes | Etherscan API key (used for all explorer APIs) |
 | `PORT` | no | External port for nginx (default: 8000) |
 | `CACHE_DIR` | no | Path for diskcache storage (default: /data/cache) |

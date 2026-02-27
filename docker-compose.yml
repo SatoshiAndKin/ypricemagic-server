@@ -14,8 +14,6 @@ services:
         condition: service_healthy
       ypm-base:
         condition: service_healthy
-      ypm-polygon:
-        condition: service_healthy
     restart: unless-stopped
 
   ypm-ethereum:
@@ -86,26 +84,8 @@ services:
       start_period: 60s
     restart: unless-stopped
 
-  ypm-polygon:
-    build: .
-    environment:
-      CHAIN_NAME: polygon
-      CHAIN_ID: 137
-      RPC_URL: ${RPC_URL_POLYGON}
-      ETHERSCAN_TOKEN: ${ETHERSCAN_TOKEN}
-    volumes:
-      - cache-polygon:/data/cache
-    healthcheck:
-      test: ["CMD", "curl", "-sf", "http://localhost:8001/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 60s
-    restart: unless-stopped
-
 volumes:
   cache-ethereum:
   cache-arbitrum:
   cache-optimism:
   cache-base:
-  cache-polygon:

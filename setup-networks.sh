@@ -12,7 +12,6 @@ EXPLORER_MAP_ethereum="https://api.etherscan.io/api"
 EXPLORER_MAP_arbitrum="https://api.arbiscan.io/api"
 EXPLORER_MAP_optimism="https://api-optimistic.etherscan.io/api"
 EXPLORER_MAP_base="https://api.basescan.org/api"
-EXPLORER_MAP_polygon="https://api.polygonscan.com/api"
 
 EXPLORER_VAR="EXPLORER_MAP_${CHAIN_NAME}"
 EXPLORER="${!EXPLORER_VAR:-}"
@@ -21,14 +20,13 @@ CATEGORY_MAP_ethereum="Ethereum"
 CATEGORY_MAP_arbitrum="Arbitrum"
 CATEGORY_MAP_optimism="Optimistic Ethereum"
 CATEGORY_MAP_base="Base"
-CATEGORY_MAP_polygon="Polygon"
 
 CATEGORY_VAR="CATEGORY_MAP_${CHAIN_NAME}"
 CATEGORY="${!CATEGORY_VAR:-}"
 
 if [ -z "$CATEGORY" ]; then
   echo "ERROR: Unsupported CHAIN_NAME: ${CHAIN_NAME}"
-  echo "Supported chains: ethereum, arbitrum, optimism, base, polygon"
+  echo "Supported chains: ethereum, arbitrum, optimism, base"
   exit 1
 fi
 

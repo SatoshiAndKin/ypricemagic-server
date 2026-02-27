@@ -9,7 +9,6 @@ client → nginx:8000 → ypm-ethereum:8001
                     → ypm-arbitrum:8001
                     → ypm-optimism:8001
                     → ypm-base:8001
-                    → ypm-polygon:8001
 ```
 
 Each chain container runs FastAPI + brownie + dank_mids + ypricemagic. Prices are cached to disk (diskcache) at `/data/cache`, keyed by `token:block`.
@@ -23,7 +22,6 @@ RPC_URL_ETHEREUM=https://...
 RPC_URL_ARBITRUM=https://...
 RPC_URL_OPTIMISM=https://...
 RPC_URL_BASE=https://...
-RPC_URL_POLYGON=https://...
 ETHERSCAN_TOKEN=your_etherscan_api_key
 PORT=8000
 ```
@@ -44,7 +42,7 @@ All requests go through nginx on port 8000.
 
 | Parameter | Required | Description |
 |-----------|----------|-------------|
-| `chain`   | yes      | `ethereum`, `arbitrum`, `optimism`, `base`, or `polygon` |
+| `chain`   | yes      | `ethereum`, `arbitrum`, `optimism`, or `base` |
 | `token`   | yes      | ERC-20 token address (`0x...`) |
 | `block`   | no       | Block number; defaults to latest |
 
@@ -88,7 +86,6 @@ curl "http://localhost:8000/health/arbitrum"
 | arbitrum  | 42161    |
 | optimism  | 10       |
 | base      | 8453     |
-| polygon   | 137      |
 
 ## Tech Stack
 
