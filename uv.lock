@@ -2194,12 +2194,13 @@ dependencies = [
 
 [[package]]
 name = "ypricemagic-server"
-version = "0.2.0"
+version = "0.3.0"
 source = { virtual = "." }
 dependencies = [
     { name = "diskcache" },
     { name = "fastapi" },
     { name = "prometheus-client" },
+    { name = "setuptools" },
     { name = "structlog" },
     { name = "tenacity" },
     { name = "uvicorn", extra = ["standard"] },
@@ -2215,7 +2216,6 @@ dev = [
     { name = "pytest-cov" },
     { name = "pytest-randomly" },
     { name = "ruff" },
-    { name = "setuptools" },
     { name = "vulture" },
 ]
 
@@ -2231,7 +2231,7 @@ requires-dist = [
     { name = "pytest-cov", marker = "extra == 'dev'" },
     { name = "pytest-randomly", marker = "extra == 'dev'" },
     { name = "ruff", marker = "extra == 'dev'" },
-    { name = "setuptools", marker = "extra == 'dev'", specifier = "<82" },
+    { name = "setuptools", specifier = "<82" },
     { name = "structlog" },
     { name = "tenacity" },
     { name = "uvicorn", extras = ["standard"] },
