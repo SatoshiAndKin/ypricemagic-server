@@ -5,6 +5,8 @@ from unittest.mock import AsyncMock, patch
 import pytest
 
 DAI = "0x6B175474E89094C44Da98b954EedeAC495271d0F"
+USDC = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"
+WETH = "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"
 
 
 class TestFetchPriceNoneReturn:
@@ -20,9 +22,7 @@ class TestFetchPriceNoneReturn:
             result = await _fetch_price(DAI, 18000000)
             assert result is None
             # Should only be called once (no retry)
-            mock_get_price.assert_called_once_with(
-                DAI, 18000000, amount=None, fail_to_None=True, sync=False
-            )
+            mock_get_price.assert_called_once_with(DAI, 18000000, fail_to_None=True, sync=False)
 
     @pytest.mark.asyncio
     async def test_none_return_with_amount(self, mock_y_module: None) -> None:
@@ -205,3 +205,75 @@ class TestFetchPriceSuccess:
         with patch("y.get_price", mock_get_price):
             result = await _fetch_price(DAI, 18000000)
             assert result == 0.0
+
+
+class TestFetchPriceNewParams:
+    """Test that new params (skip_cache, ignore_pools, silent) are forwarded to get_price."""
+
+    @pytest.mark.asyncio
+    async def test_skip_cache_forwarded(self, mock_y_module: None) -> None:
+        """skip_cache=True is forwarded to get_price."""
+        from src.server import _fetch_price
+
+        mock_get_price = AsyncMock(return_value=1.0)
+        with patch("y.get_price", mock_get_price):
+            result = await _fetch_price(DAI, 18000000, skip_cache=True)
+            assert result == 1.0
+            mock_get_price.assert_called_once_with(
+                DAI, 18000000, fail_to_None=True, sync=False, skip_cache=True
+            )
+
+    @pytest.mark.asyncio
+    async def test_ignore_pools_forwarded(self, mock_y_module: None) -> None:
+        """ignore_pools tuple is forwarded to get_price."""
+        from src.server import _fetch_price
+
+        mock_get_price = AsyncMock(return_value=1.0)
+        ignore_pools = (USDC, WETH)
+        with patch("y.get_price", mock_get_price):
+            result = await _fetch_price(DAI, 18000000, ignore_pools=ignore_pools)
+            assert result == 1.0
+            mock_get_price.assert_called_once_with(
+                DAI, 18000000, fail_to_None=True, sync=False, ignore_pools=ignore_pools
+            )
+
+    @pytest.mark.asyncio
+    async def test_silent_forwarded(self, mock_y_module: None) -> None:
+        """silent=True is forwarded to get_price."""
+        from src.server import _fetch_price
+
+        mock_get_price = AsyncMock(return_value=1.0)
+        with patch("y.get_price", mock_get_price):
+            result = await _fetch_price(DAI, 18000000, silent=True)
+            assert result == 1.0
+            mock_get_price.assert_called_once_with(
+                DAI, 18000000, fail_to_None=True, sync=False, silent=True
+            )
+
+    @pytest.mark.asyncio
+    async def test_all_new_params_combined(self, mock_y_module: None) -> None:
+        """All new params are forwarded together."""
+        from src.server import _fetch_price
+
+        mock_get_price = AsyncMock(return_value=1.0)
+        ignore_pools = (USDC,)
+        with patch("y.get_price", mock_get_price):
+            result = await _fetch_price(
+                DAI,
+                18000000,
+                amount=1000.0,
+                skip_cache=True,
+                ignore_pools=ignore_pools,
+                silent=True,
+            )
+            assert result == 1.0
+            mock_get_price.assert_called_once_with(
+                DAI,
+                18000000,
+                amount=1000.0,
+                fail_to_None=True,
+                sync=False,
+                skip_cache=True,
+                ignore_pools=ignore_pools,
+                silent=True,
+            )

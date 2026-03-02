@@ -110,10 +110,30 @@ async def health() -> dict[str, Any]:
     wait=wait_exponential(multiplier=1, min=1, max=4),
     retry=retry_if_exception_type((ConnectionError, TimeoutError, OSError)),
 )
-async def _fetch_price(token: str, block: int, amount: float | None = None) -> float | None:
+async def _fetch_price(
+    token: str,
+    block: int,
+    amount: float | None = None,
+    skip_cache: bool = False,
+    ignore_pools: tuple[str, ...] = (),
+    silent: bool = False,
+) -> float | None:
     from y import get_price
 
-    p = await get_price(token, block, amount=amount, fail_to_None=True, sync=False)  # type: ignore[call-overload]
+    kwargs: dict[str, Any] = {
+        "fail_to_None": True,
+        "sync": False,
+    }
+    if amount is not None:
+        kwargs["amount"] = amount
+    if skip_cache:
+        kwargs["skip_cache"] = True
+    if ignore_pools:
+        kwargs["ignore_pools"] = ignore_pools
+    if silent:
+        kwargs["silent"] = True
+
+    p = await get_price(token, block, **kwargs)
     if p is None:
         return None
     price_float = float(p)
@@ -129,8 +149,11 @@ async def price(
     token: str | None = Query(None),
     block: str | None = Query(None),
     amount: str | None = Query(None),
+    skip_cache: str | None = Query(None),
+    ignore_pools: str | None = Query(None),
+    silent: str | None = Query(None),
 ) -> Any:
-    result = parse_price_params(token, block, amount)
+    result = parse_price_params(token, block, amount, skip_cache, ignore_pools, silent)
     if isinstance(result, ParseError):
         price_requests_total.labels(chain=CHAIN_NAME, status="bad_request").inc()
         return JSONResponse(status_code=400, content={"error": result.error})
@@ -141,7 +164,8 @@ async def price(
 
     actual_block = params.block if params.block is not None else brownie_chain.height
 
-    if params.amount is None:
+    # Check cache only if: no amount AND not skip_cache
+    if params.amount is None and not params.skip_cache:
         cached = get_cached_price(params.token, actual_block)
         if cached is not None:
             logger.info(
@@ -162,7 +186,14 @@ async def price(
 
     start = time.monotonic()
     try:
-        price_float = await _fetch_price(params.token, actual_block, params.amount)
+        price_float = await _fetch_price(
+            params.token,
+            actual_block,
+            amount=params.amount,
+            skip_cache=params.skip_cache,
+            ignore_pools=params.ignore_pools,
+            silent=params.silent,
+        )
     except (RetryError, ValueError) as e:
         duration_ms = int((time.monotonic() - start) * 1000)
         inner = e.__cause__ if isinstance(e, RetryError) else e
