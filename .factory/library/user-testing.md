@@ -1,0 +1,34 @@
+# User Testing
+
+Testing surface: tools, URLs, setup steps, isolation notes, known quirks.
+
+---
+
+## Testing Surface
+
+### API (curl)
+- Base URL: http://localhost:8000
+- Chain-specific: http://localhost:8000/{chain}/price, /prices, /check_bucket, /health
+- Aggregate health: http://localhost:8000/health
+- Prometheus: http://localhost:8000/metrics
+- Browser UI: http://localhost:8000/
+
+### Known good test tokens (Ethereum)
+- USDC: 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48
+- DAI: 0x6B175474E89094C44Da98b954EedeAC495271d0F
+- Known block: 18000000
+
+### Docker Stack
+- Must be running for integration tests: `docker compose up -d`
+- Containers take ~60s to become healthy after start
+- Build takes several minutes due to ypricemagic compilation
+
+### Tools Available
+- curl for API testing
+- agent-browser for HTML UI testing
+- Docker logs: `docker compose logs ypm-ethereum --tail=20`
+
+## Known Quirks
+- Token addresses may appear redacted in responses (42-char asterisks) — this is existing behavior from logger.py
+- First price request after container start may be slow (cold cache, brownie warming up)
+- Chain containers are independent — a test on ethereum doesn't affect arbitrum
