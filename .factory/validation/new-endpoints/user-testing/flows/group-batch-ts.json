@@ -1,0 +1,94 @@
+{
+  "groupId": "group-batch-ts",
+  "testedAt": "2026-03-02T00:00:00Z",
+  "credentials": {
+    "account": "N/A",
+    "namespace": "ns-batch-ts-1633676e"
+  },
+  "toolsUsed": ["curl"],
+  "assertions": [
+    {
+      "id": "VAL-BATCH-010",
+      "title": "Batch with timestamp param works",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "GET /ethereum/prices?tokens=0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48,0x6B175474E89094C44Da98b954EedeAC495271d0F&timestamp=1700000000",
+          "expected": "HTTP 200, all results have same resolved block",
+          "observed": "HTTP 200, both results have block:18573050, block_timestamp:1699999991, price:1.0"
+        }
+      ],
+      "evidence": {
+        "screenshots": [],
+        "consoleErrors": "N/A (API test)",
+        "network": "GET /ethereum/prices?tokens=USDC,DAI&timestamp=1700000000 -> 200, body: [{\"token\":\"***\",\"block\":18573050,\"price\":1.0,\"block_timestamp\":1699999991,\"cached\":true},{\"token\":\"***\",\"block\":18573050,\"price\":1.0,\"block_timestamp\":1699999991,\"cached\":true}]"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-BATCH-011",
+      "title": "Batch with timestamp and amounts combined",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "GET /ethereum/prices?tokens=0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48,0x6B175474E89094C44Da98b954EedeAC495271d0F&timestamp=1700000000&amounts=1000,500",
+          "expected": "HTTP 200, timestamp resolved to block, amounts applied, results returned",
+          "observed": "HTTP 200, both results have block:18573050, price:1.0, cached:false (amount requests bypass cache as expected)"
+        }
+      ],
+      "evidence": {
+        "screenshots": [],
+        "consoleErrors": "N/A (API test)",
+        "network": "GET /ethereum/prices?tokens=USDC,DAI&timestamp=1700000000&amounts=1000,500 -> 200, body: [{\"token\":\"***\",\"block\":18573050,\"price\":1.0,\"block_timestamp\":1699999991,\"cached\":false},{\"token\":\"***\",\"block\":18573050,\"price\":1.0,\"block_timestamp\":1699999991,\"cached\":false}]"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-BATCH-015",
+      "title": "Batch supports skip_cache and silent params",
+      "status": "blocked",
+      "steps": [
+        {
+          "action": "GET /ethereum/prices?tokens=USDC,DAI&block=18000000 (prime cache)",
+          "expected": "HTTP 200, cache primed",
+          "observed": "HTTP 200, second token cached:false (first request), first token cached:true (already in cache from prior tests)"
+        },
+        {
+          "action": "GET /ethereum/prices?tokens=USDC,DAI&block=18000000&skip_cache=true&silent=true",
+          "expected": "HTTP 200, all results have cached:false (skip_cache bypasses cache read)",
+          "observed": "HTTP 200, both results have cached:false — skip_cache is observably working"
+        },
+        {
+          "action": "GET /ethereum/prices?tokens=USDC,DAI&block=18000000 (verify cache re-primed)",
+          "expected": "HTTP 200, cached:true (skip_cache write-back re-primed cache)",
+          "observed": "HTTP 200, both results have cached:true — confirms skip_cache wrote fresh values to cache"
+        },
+        {
+          "action": "GET /ethereum/prices?tokens=USDC&block=18000000&skip_cache=maybe",
+          "expected": "HTTP 400 (invalid boolean)",
+          "observed": "HTTP 400, {\"error\":\"Invalid skip_cache value: 'maybe'. Must be true, false, 1, or 0.\"}"
+        },
+        {
+          "action": "GET /ethereum/prices?tokens=USDC&block=18000000&silent=2",
+          "expected": "HTTP 400 (invalid boolean)",
+          "observed": "HTTP 400, {\"error\":\"Invalid silent value: '2'. Must be true, false, 1, or 0.\"}"
+        }
+      ],
+      "evidence": {
+        "screenshots": [],
+        "consoleErrors": "N/A (API test)",
+        "network": "GET /ethereum/prices?...&skip_cache=true&silent=true -> 200 with cached:false for all; GET without skip_cache -> 200 with cached:true; GET with skip_cache=maybe -> 400; GET with silent=2 -> 400"
+      },
+      "issues": "Assertion requires 'unit test verifying kwargs' as evidence to conclusively prove skip_cache and silent are forwarded as kwargs to get_prices(). From user surface: (1) skip_cache=true observably bypasses cache reads and re-primes cache — strongly implies correct forwarding. (2) silent=true is accepted without error and does not change observable response shape — acceptance is consistent with forwarding but not conclusive proof. Internal kwargs forwarding cannot be verified from HTTP alone."
+    }
+  ],
+  "frictions": [],
+  "blockers": [
+    {
+      "description": "VAL-BATCH-015 requires 'unit test verifying kwargs' as evidence. Internal kwargs forwarding to get_prices() cannot be conclusively demonstrated from the HTTP user surface alone — only observable behavioral side effects (cache bypass, param acceptance) can be verified.",
+      "affectedAssertions": ["VAL-BATCH-015"],
+      "quickFixAttempted": "Tested observable behavior: skip_cache=true causes cached:false, silent=true is accepted, invalid values return 400. All consistent with correct forwarding but not conclusive proof of kwargs being passed to get_prices()."
+    }
+  ],
+  "summary": "Tested 3 assertions: 2 passed (VAL-BATCH-010, VAL-BATCH-011 — timestamp resolution bug is fixed, batch+timestamp and batch+timestamp+amounts both work), 1 blocked (VAL-BATCH-015 — observable behavior consistent with correct skip_cache/silent forwarding, but conclusive kwargs proof requires unit test)."
+}

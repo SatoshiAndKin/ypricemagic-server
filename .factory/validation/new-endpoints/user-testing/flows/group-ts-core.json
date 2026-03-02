@@ -1,0 +1,91 @@
+{
+  "groupId": "group-ts-core",
+  "testedAt": "2026-03-02T00:00:00Z",
+  "credentials": {
+    "account": "N/A",
+    "namespace": "ns-ts-core-1633676e"
+  },
+  "toolsUsed": ["curl"],
+  "assertions": [
+    {
+      "id": "VAL-TS-001",
+      "title": "Unix epoch timestamp resolves to correct block",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "GET /ethereum/price?token=0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48&timestamp=1700000000",
+          "expected": "HTTP 200 with resolved block number and price",
+          "observed": "HTTP 200: {\"chain\":\"ethereum\",\"token\":\"...\",\"block\":18573050,\"price\":1.0,\"cached\":true,\"block_timestamp\":1699999991}"
+        }
+      ],
+      "evidence": {
+        "screenshots": [],
+        "consoleErrors": "N/A (API test)",
+        "network": "GET /ethereum/price?token=0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48&timestamp=1700000000 -> 200, block=18573050, price=1.0, block_timestamp=1699999991"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-TS-002",
+      "title": "ISO 8601 timestamp resolves correctly",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "GET /ethereum/price?token=0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48&timestamp=2023-11-14T22:13:20Z",
+          "expected": "HTTP 200 with same block as VAL-TS-001 (Unix epoch 1700000000)",
+          "observed": "HTTP 200: {\"chain\":\"ethereum\",\"token\":\"...\",\"block\":18573050,\"price\":1.0,\"cached\":true,\"block_timestamp\":1699999991} — block 18573050 matches VAL-TS-001"
+        }
+      ],
+      "evidence": {
+        "screenshots": [],
+        "consoleErrors": "N/A (API test)",
+        "network": "GET /ethereum/price?token=0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48&timestamp=2023-11-14T22:13:20Z -> 200, block=18573050 (matches VAL-TS-001)"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-TS-007",
+      "title": "Timestamp response includes resolved block",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "Inspect response from VAL-TS-001 timestamp-based query",
+          "expected": "Response includes numeric 'block' field showing the resolved block number",
+          "observed": "Response contains \"block\":18573050 — a numeric block field is present, allowing callers to know which block was used"
+        }
+      ],
+      "evidence": {
+        "screenshots": [],
+        "consoleErrors": "N/A (API test)",
+        "network": "GET /ethereum/price?token=0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48&timestamp=1700000000 -> 200, response has block=18573050 (numeric)"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-CROSS-003",
+      "title": "Timestamp-resolved prices cached by block",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "Step 1: GET /ethereum/price?token=0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48&timestamp=1700000000",
+          "expected": "Returns 200 with resolved block (18573050)",
+          "observed": "HTTP 200: block=18573050, price=1.0"
+        },
+        {
+          "action": "Step 2: GET /ethereum/price?token=0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48&block=18573050",
+          "expected": "Returns 200 with cached=true (price was cached by resolved block from timestamp query)",
+          "observed": "HTTP 200: {\"block\":18573050,\"price\":1.0,\"cached\":true,\"block_timestamp\":1699999991} — cached=true confirms timestamp-resolved price was stored by block number"
+        }
+      ],
+      "evidence": {
+        "screenshots": [],
+        "consoleErrors": "N/A (API test)",
+        "network": "GET /ethereum/price?...&timestamp=1700000000 -> 200 (block=18573050); GET /ethereum/price?...&block=18573050 -> 200 (cached=true)"
+      },
+      "issues": null
+    }
+  ],
+  "frictions": [],
+  "blockers": [],
+  "summary": "Tested 4 assertions: 4 passed, 0 failed. The timestamp-to-block resolution bug (epoch int passed where datetime expected) has been fixed (commit 5892443). Both Unix epoch and ISO 8601 formats resolve to the same block (18573050), responses include the resolved block number, and timestamp-resolved prices are correctly cached by block number."
+}
