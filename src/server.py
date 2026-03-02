@@ -275,9 +275,13 @@ async def _resolve_block_from_timestamp(timestamp: int) -> int:
 
     Raises Exception on RPC failure.
     """
+    from datetime import UTC, datetime
+
     from y import get_block_at_timestamp
 
-    return await get_block_at_timestamp(timestamp, sync=False)
+    # Convert Unix epoch to timezone-aware datetime (ypricemagic expects datetime, not int)
+    dt = datetime.fromtimestamp(timestamp, tz=UTC)
+    return await get_block_at_timestamp(dt, sync=False)
 
 
 def _make_error_response(status: int, message: str) -> JSONResponse:

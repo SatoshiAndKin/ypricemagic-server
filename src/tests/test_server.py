@@ -72,6 +72,43 @@ class TestTimestampResolution:
             assert data["block"] == 18000000
 
     @pytest.mark.asyncio
+    async def test_timestamp_converted_to_datetime(self, mock_y_module: None) -> None:
+        """Unix epoch timestamp is converted to timezone-aware datetime before calling get_block_at_timestamp."""
+        from datetime import UTC, datetime
+
+        from fastapi.testclient import TestClient
+
+        from src.server import app
+
+        mock_get_block_at_timestamp = AsyncMock(return_value=18000000)
+        mock_get_price = AsyncMock(return_value=1.0)
+        mock_get_block_timestamp = AsyncMock(return_value=1700000000)
+        mock_chain = type("MockChain", (), {"height": 19000000})()
+
+        with (
+            patch("y.get_block_at_timestamp", mock_get_block_at_timestamp),
+            patch("y.get_price", mock_get_price),
+            patch("y.get_block_timestamp_async", mock_get_block_timestamp),
+            patch("brownie.chain", mock_chain),
+        ):
+            client = TestClient(app)
+            response = client.get(
+                "/price",
+                params={"token": DAI, "timestamp": "1700000000"},
+            )
+
+            assert response.status_code == 200
+            # Verify get_block_at_timestamp was called with a datetime object
+            mock_get_block_at_timestamp.assert_called_once()
+            call_args = mock_get_block_at_timestamp.call_args
+            # First positional argument should be a datetime
+            dt_arg = call_args[0][0]
+            assert isinstance(dt_arg, datetime)
+            # Verify it's the correct datetime (UTC timezone, correct epoch)
+            assert dt_arg == datetime.fromtimestamp(1700000000, tz=UTC)
+            assert dt_arg.tzinfo is not None
+
+    @pytest.mark.asyncio
     async def test_timestamp_and_block_returns_400(self, mock_y_module: None) -> None:
         """Both timestamp and block parameters returns 400."""
         from fastapi.testclient import TestClient
@@ -848,6 +885,40 @@ class TestBatchPricesEndpoint:
             data = response.json()
             assert all(r["block"] == 18000000 for r in data)
             mock_get_block_at_timestamp.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_batch_timestamp_converted_to_datetime(self, mock_y_module: None) -> None:
+        """Batch endpoint converts Unix epoch to datetime before calling get_block_at_timestamp."""
+        from datetime import UTC, datetime
+
+        from fastapi.testclient import TestClient
+
+        from src.server import app
+
+        mock_get_block_at_timestamp = AsyncMock(return_value=18000000)
+        mock_get_prices = AsyncMock(return_value=[1.0, 1.0])
+        mock_get_block_timestamp = AsyncMock(return_value=1700000000)
+        mock_chain = type("MockChain", (), {"height": 19000000})()
+
+        with (
+            patch("y.get_block_at_timestamp", mock_get_block_at_timestamp),
+            patch("y.get_prices", mock_get_prices),
+            patch("y.get_block_timestamp_async", mock_get_block_timestamp),
+            patch("brownie.chain", mock_chain),
+        ):
+            client = TestClient(app)
+            response = client.get(
+                "/prices", params={"tokens": f"{DAI},{USDC}", "timestamp": "1700000000"}
+            )
+
+            assert response.status_code == 200
+            # Verify get_block_at_timestamp was called with a datetime object
+            mock_get_block_at_timestamp.assert_called_once()
+            call_args = mock_get_block_at_timestamp.call_args
+            dt_arg = call_args[0][0]
+            assert isinstance(dt_arg, datetime)
+            assert dt_arg == datetime.fromtimestamp(1700000000, tz=UTC)
+            assert dt_arg.tzinfo is not None
 
     @pytest.mark.asyncio
     async def test_batch_with_timestamp_and_amounts(self, mock_y_module: None) -> None:
