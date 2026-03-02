@@ -605,12 +605,78 @@ class TestParseBatchParamsAmounts:
         assert isinstance(result, BatchParseSuccess)
         assert result.data.amounts == (1000.0, 500.0)
 
-    def test_amounts_empty_segments_dropped(self) -> None:
-        """Empty segments in amounts are dropped."""
-        result = parse_batch_params(f"{DAI},{USDC}", amounts="1000,,500")
-        # After dropping empty, we have 2 amounts for 2 tokens - should fail
+    def test_amounts_empty_segments_now_none(self) -> None:
+        """Empty segments in amounts are now treated as None (not dropped)."""
+        result = parse_batch_params(f"{DAI},{USDC},{WETH}", amounts="1000,,500")
+        # Now: 3 amounts for 3 tokens, middle one is None
         assert isinstance(result, BatchParseSuccess)
-        assert result.data.amounts == (1000.0, 500.0)
+        assert result.data.amounts == (1000.0, None, 500.0)
+
+    def test_amounts_count_mismatch_with_none(self) -> None:
+        """Empty segments count as None, so 2 tokens with 3 amounts fails."""
+        result = parse_batch_params(f"{DAI},{USDC}", amounts="1000,,500")
+        # 3 amounts for 2 tokens - should fail
+        assert isinstance(result, ParseError)
+        assert "does not match" in result.error.lower()
+
+
+class TestParseBatchParamsMixedAmounts:
+    """Tests for mixed amounts lists (some None) - documenting intended semantics.
+
+    This documents the behavior where some tokens in a batch have amounts
+    specified and others don't (represented as None in the amounts tuple).
+
+    Use cases:
+    - Price impact calculation for specific tokens only
+    - Different amounts for different tokens in a single batch
+    - Skipping price impact for tokens where it's not relevant
+    """
+
+    def test_mixed_amounts_some_none(self) -> None:
+        """Amounts list can contain None values for tokens without amount."""
+        result = parse_batch_params(f"{DAI},{USDC},{WETH}", amounts="1000,,500")
+        assert isinstance(result, BatchParseSuccess)
+        assert result.data.amounts == (1000.0, None, 500.0)
+        assert len(result.data.amounts) == 3
+
+    def test_all_none_amounts(self) -> None:
+        """All None amounts is valid (equivalent to no amounts)."""
+        result = parse_batch_params(f"{DAI},{USDC}", amounts=",")
+        assert isinstance(result, BatchParseSuccess)
+        assert result.data.amounts == (None, None)
+
+    def test_single_none_amount(self) -> None:
+        """Single token with empty amount results in (None,)."""
+        result = parse_batch_params(DAI, amounts="")
+        # Empty string returns None from _parse_amounts, but single comma is (None,)
+        assert isinstance(result, BatchParseSuccess)
+        # amounts="" returns None, not (None,)
+        assert result.data.amounts is None
+
+    def test_leading_none_amount(self) -> None:
+        """Leading empty segment becomes None."""
+        result = parse_batch_params(f"{DAI},{USDC}", amounts=",500")
+        assert isinstance(result, BatchParseSuccess)
+        assert result.data.amounts == (None, 500.0)
+
+    def test_trailing_none_amount(self) -> None:
+        """Trailing empty segment becomes None."""
+        result = parse_batch_params(f"{DAI},{USDC}", amounts="1000,")
+        assert isinstance(result, BatchParseSuccess)
+        assert result.data.amounts == (1000.0, None)
+
+    def test_mixed_amounts_preserves_position(self) -> None:
+        """None values preserve positional correspondence with tokens."""
+        result = parse_batch_params(
+            f"{DAI},{USDC},{WETH}",
+            amounts="1000,,500",
+        )
+        assert isinstance(result, BatchParseSuccess)
+        # DAI has amount 1000, USDC has None, WETH has amount 500
+        assert result.data.amounts is not None
+        assert result.data.amounts[0] == 1000.0  # DAI
+        assert result.data.amounts[1] is None  # USDC
+        assert result.data.amounts[2] == 500.0  # WETH
 
 
 class TestParseBatchParamsTimestamp:

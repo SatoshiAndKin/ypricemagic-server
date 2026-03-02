@@ -1158,6 +1158,197 @@ class TestBatchPricesCaching:
 class TestBatchPricesParams:
     """Tests for skip_cache and silent parameters in batch pricing."""
 
+
+class TestBatchPricesMixedAmounts:
+    """Tests for mixed amounts lists (some None) - documenting intended semantics.
+
+    This documents the behavior where some tokens in a batch have amounts
+    specified and others don't. Tokens with None amounts are cached normally,
+    while tokens with amounts skip caching (since price depends on amount).
+    """
+
+    @pytest.mark.asyncio
+    async def test_mixed_amounts_passed_to_get_prices(self, mock_y_module: None) -> None:
+        """Mixed amounts list with None values is passed to get_prices correctly."""
+        from fastapi.testclient import TestClient
+
+        from src.server import app
+
+        mock_get_prices = AsyncMock(return_value=[1.0, 2.0, 3.0])
+        mock_get_block_timestamp = AsyncMock(return_value=1700000000)
+        mock_chain = type("MockChain", (), {"height": 19000000})()
+
+        with (
+            patch("y.get_prices", mock_get_prices),
+            patch("y.get_block_timestamp_async", mock_get_block_timestamp),
+            patch("brownie.chain", mock_chain),
+            patch("src.server.get_cached_price", return_value=None),
+        ):
+            client = TestClient(app)
+            # DAI has amount 1000, USDC has None, WETH has amount 500
+            response = client.get(
+                "/prices",
+                params={
+                    "tokens": f"{DAI},{USDC},{WETH}",
+                    "amounts": "1000,,500",
+                    "block": "18000000",
+                },
+            )
+
+            assert response.status_code == 200
+            data = response.json()
+            assert len(data) == 3
+
+            # Verify amounts were passed correctly to get_prices
+            call_kwargs = mock_get_prices.call_args[1]
+            assert call_kwargs.get("amounts") == (1000.0, None, 500.0)
+
+    @pytest.mark.asyncio
+    async def test_mixed_amounts_caching_semantics(self, mock_y_module: None) -> None:
+        """Tokens with None amounts are cached, tokens with amounts are not."""
+        from fastapi.testclient import TestClient
+
+        from src.server import app
+
+        mock_get_prices = AsyncMock(return_value=[1.0, 2.0, 3.0])
+        mock_get_block_timestamp = AsyncMock(return_value=1700000000)
+        mock_chain = type("MockChain", (), {"height": 19000000})()
+
+        cached_data: dict[str, dict[str, object]] = {}
+
+        def mock_get_cached_price(token: str, block: int) -> dict[str, object] | None:
+            key = f"{token}:{block}"
+            return cached_data.get(key)
+
+        def mock_set_cached_price(
+            token: str, block: int, price: float, block_timestamp: int | None = None
+        ) -> None:
+            key = f"{token}:{block}"
+            cached_data[key] = {"price": price, "block_timestamp": block_timestamp}
+
+        with (
+            patch("y.get_prices", mock_get_prices),
+            patch("y.get_block_timestamp_async", mock_get_block_timestamp),
+            patch("brownie.chain", mock_chain),
+            patch("src.server.get_cached_price", mock_get_cached_price),
+            patch("src.server.set_cached_price", mock_set_cached_price),
+        ):
+            client = TestClient(app)
+            # DAI has amount, USDC has None, WETH has amount
+            response = client.get(
+                "/prices",
+                params={
+                    "tokens": f"{DAI},{USDC},{WETH}",
+                    "amounts": "1000,,500",
+                    "block": "18000000",
+                },
+            )
+
+            assert response.status_code == 200
+
+            # USDC (with None amount) should be cached
+            assert f"{USDC}:18000000" in cached_data
+
+            # DAI and WETH (with amounts) should NOT be cached
+            assert f"{DAI}:18000000" not in cached_data
+            assert f"{WETH}:18000000" not in cached_data
+
+    @pytest.mark.asyncio
+    async def test_all_none_amounts_all_cached(self, mock_y_module: None) -> None:
+        """When all amounts are None, all results are cached."""
+        from fastapi.testclient import TestClient
+
+        from src.server import app
+
+        mock_get_prices = AsyncMock(return_value=[1.0, 2.0])
+        mock_get_block_timestamp = AsyncMock(return_value=1700000000)
+        mock_chain = type("MockChain", (), {"height": 19000000})()
+
+        cached_data: dict[str, dict[str, object]] = {}
+
+        def mock_set_cached_price(
+            token: str, block: int, price: float, block_timestamp: int | None = None
+        ) -> None:
+            key = f"{token}:{block}"
+            cached_data[key] = {"price": price, "block_timestamp": block_timestamp}
+
+        with (
+            patch("y.get_prices", mock_get_prices),
+            patch("y.get_block_timestamp_async", mock_get_block_timestamp),
+            patch("brownie.chain", mock_chain),
+            patch("src.server.get_cached_price", return_value=None),
+            patch("src.server.set_cached_price", mock_set_cached_price),
+        ):
+            client = TestClient(app)
+            # Both tokens have None amounts
+            response = client.get(
+                "/prices",
+                params={
+                    "tokens": f"{DAI},{USDC}",
+                    "amounts": ",",
+                    "block": "18000000",
+                },
+            )
+
+            assert response.status_code == 200
+
+            # Both should be cached
+            assert f"{DAI}:18000000" in cached_data
+            assert f"{USDC}:18000000" in cached_data
+
+    @pytest.mark.asyncio
+    async def test_none_amount_token_uses_cache_on_hit(self, mock_y_module: None) -> None:
+        """Tokens with None amounts can get cache hits."""
+        from fastapi.testclient import TestClient
+
+        from src.server import app
+
+        mock_get_prices = AsyncMock(return_value=[1.0])  # Only for WETH
+        mock_get_block_timestamp = AsyncMock(return_value=1700000000)
+        mock_chain = type("MockChain", (), {"height": 19000000})()
+
+        # DAI already cached
+        def mock_get_cached_price(token: str, block: int) -> dict[str, object] | None:
+            if token == DAI:
+                return {"price": 1.0, "block_timestamp": 1700000000}
+            return None
+
+        with (
+            patch("y.get_prices", mock_get_prices),
+            patch("y.get_block_timestamp_async", mock_get_block_timestamp),
+            patch("brownie.chain", mock_chain),
+            patch("src.server.get_cached_price", mock_get_cached_price),
+            patch("src.server.set_cached_price", lambda *args, **kwargs: None),
+        ):
+            client = TestClient(app)
+            # DAI has None amount (can use cache), WETH has amount (must fetch)
+            response = client.get(
+                "/prices",
+                params={
+                    "tokens": f"{DAI},{WETH}",
+                    "amounts": ",500",
+                    "block": "18000000",
+                },
+            )
+
+            assert response.status_code == 200
+            data = response.json()
+            assert len(data) == 2
+
+            # DAI should be from cache
+            assert data[0]["token"] == DAI
+            assert data[0]["cached"] is True
+
+            # WETH should be fresh
+            assert data[1]["token"] == WETH
+            assert data[1]["cached"] is False
+
+            # get_prices should only be called for WETH
+            mock_get_prices.assert_called_once()
+            call_args = mock_get_prices.call_args
+            # The tokens passed should just be WETH
+            assert call_args[0][0] == (WETH,)
+
     @pytest.mark.asyncio
     async def test_skip_cache_forwarded(self, mock_y_module: None) -> None:
         """skip_cache is forwarded to get_prices."""

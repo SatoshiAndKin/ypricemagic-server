@@ -1099,6 +1099,12 @@ INDEX_HTML = """<!DOCTYPE html>
     if (params.get('tokens')) document.getElementById('batch-tokens').value = params.get('tokens');
     if (params.get('amounts')) document.getElementById('batch-amounts').value = params.get('amounts');
     if (params.get('bucket_token')) document.getElementById('bucket-token').value = params.get('bucket_token');
+
+    // Dispatch input events to enforce block/timestamp mutual exclusivity after URL restoration
+    document.getElementById('price-block').dispatchEvent(new Event('input'));
+    document.getElementById('price-timestamp').dispatchEvent(new Event('input'));
+    document.getElementById('batch-block').dispatchEvent(new Event('input'));
+    document.getElementById('batch-timestamp').dispatchEvent(new Event('input'));
   </script>
 </body>
 </html>"""

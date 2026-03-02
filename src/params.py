@@ -29,7 +29,7 @@ class PriceParams:
 class BatchParams:
     tokens: tuple[str, ...]
     block: int | None = None
-    amounts: tuple[float, ...] | None = None
+    amounts: tuple[float | None, ...] | None = None
     skip_cache: bool = False
     silent: bool = False
     timestamp: int | None = None
@@ -286,33 +286,39 @@ class BatchParseSuccess:
 BatchParseResult = BatchParseSuccess | ParseError
 
 
-def _parse_amounts(value: str | None) -> tuple[float, ...] | None | ParseError:
+def _parse_amounts(value: str | None) -> tuple[float | None, ...] | None | ParseError:
     """Parse comma-separated amounts.
 
-    Splits on comma, strips whitespace, drops empty segments.
-    Validates each segment as a positive number.
-    Returns tuple of amounts.
+    Splits on comma, strips whitespace.
+    Empty segments (from consecutive commas or explicit empty) are treated as None.
+    This allows specifying amounts for some tokens but not others in a batch.
+
+    Non-empty segments must be positive numbers.
+
+    Returns tuple of amounts (float or None for empty segments).
     Returns None for missing/empty values.
-    Returns ParseError if any amount is invalid.
+    Returns ParseError if any non-empty amount is invalid.
     """
     if value is None or value == "":
         return None
 
     segments = value.split(",")
-    amounts: list[float] = []
+    amounts: list[float | None] = []
     for i, segment in enumerate(segments):
         stripped = segment.strip()
         if stripped == "":
-            continue  # Drop empty segments
-        try:
-            parsed = float(stripped)
-        except (ValueError, TypeError):
-            return ParseError(f"Invalid amount at position {i + 1}: '{stripped}'")
-        if parsed <= 0:
-            return ParseError(
-                f"Invalid amount at position {i + 1}: '{stripped}' (must be positive)"
-            )
-        amounts.append(parsed)
+            # Empty segment means "no amount for this token"
+            amounts.append(None)
+        else:
+            try:
+                parsed = float(stripped)
+            except (ValueError, TypeError):
+                return ParseError(f"Invalid amount at position {i + 1}: '{stripped}'")
+            if parsed <= 0:
+                return ParseError(
+                    f"Invalid amount at position {i + 1}: '{stripped}' (must be positive)"
+                )
+            amounts.append(parsed)
 
     return tuple(amounts) if amounts else None
 
