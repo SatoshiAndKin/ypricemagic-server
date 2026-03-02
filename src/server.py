@@ -58,6 +58,11 @@ check_bucket_requests_total = Counter(
     "Total check_bucket requests",
     ["chain", "status"],
 )
+check_bucket_request_duration_seconds = Histogram(
+    "check_bucket_request_duration_seconds",
+    "Check bucket request duration",
+    ["chain"],
+)
 
 
 @asynccontextmanager
@@ -204,7 +209,7 @@ async def _fetch_price(
 async def _fetch_batch_prices(
     tokens: tuple[str, ...],
     block: int,
-    amounts: tuple[float, ...] | None = None,
+    amounts: tuple[float | None, ...] | None = None,
     skip_cache: bool = False,
     silent: bool = False,
 ) -> list[float | None]:
@@ -476,7 +481,7 @@ async def price(
             ignore_pools=params.ignore_pools,
             silent=params.silent,
         )
-    except (RetryError, ValueError, Exception) as e:
+    except Exception as e:
         duration_ms = int((time.monotonic() - start) * 1000)
         return _handle_price_error(e, params.token, actual_block, duration_ms)
 
@@ -562,14 +567,10 @@ async def prices(
 
     # Fetch prices for tokens not in cache
     if tokens_to_fetch:
-        # Prepare amounts for the tokens we need to fetch
-        fetch_amounts: tuple[float, ...] | None = None
+        # Prepare amounts for the tokens we need to fetch (preserve positional correspondence)
+        fetch_amounts: tuple[float | None, ...] | None = None
         if params.amounts is not None:
-            fetch_amounts = tuple(
-                params.amounts[i] for i in indices_to_fetch if params.amounts[i] is not None
-            )
-            if len(fetch_amounts) != len(indices_to_fetch):
-                fetch_amounts = None
+            fetch_amounts = tuple(params.amounts[i] for i in indices_to_fetch)
 
         prices = await _fetch_batch_prices(
             tuple(tokens_to_fetch),
@@ -632,16 +633,20 @@ async def check_bucket(
         check_bucket_requests_total.labels(chain=CHAIN_NAME, status="bad_request").inc()
         return _make_error_response(400, f"Invalid token address: {token}")
 
+    start = time.monotonic()
     try:
         from y import check_bucket as y_check_bucket
 
         bucket = await y_check_bucket(token, sync=False)
+        duration_ms = int((time.monotonic() - start) * 1000)
         check_bucket_requests_total.labels(chain=CHAIN_NAME, status="ok").inc()
+        check_bucket_request_duration_seconds.labels(chain=CHAIN_NAME).observe(duration_ms / 1000)
         logger.info(
             "check_bucket_success",
             chain=CHAIN_NAME,
             token=token[:10],
             bucket=bucket,
+            duration_ms=duration_ms,
         )
         return {
             "token": token,
@@ -649,12 +654,14 @@ async def check_bucket(
             "bucket": bucket,
         }
     except Exception as e:
+        duration_ms = int((time.monotonic() - start) * 1000)
         check_bucket_requests_total.labels(chain=CHAIN_NAME, status="error").inc()
         logger.error(
             "check_bucket_failed",
             chain=CHAIN_NAME,
             token=token[:10] if token else None,
             error=str(e),
+            duration_ms=duration_ms,
         )
         return _make_error_response(
             500,
@@ -813,14 +820,21 @@ INDEX_HTML = """<!DOCTYPE html>
       return document.getElementById('chain').value;
     }
 
+    function escapeHtml(str) {
+      if (str == null) return '';
+      return String(str).replace(/[&<>"']/g, function(c) {
+        return {'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;'}[c];
+      });
+    }
+
     function showError(resultEl, msg) {
       resultEl.className = 'result show';
-      resultEl.innerHTML = '<div class="error">' + msg + '</div>';
+      resultEl.innerHTML = '<div class="error">' + escapeHtml(msg) + '</div>';
     }
 
     function showLoading(resultEl, msg) {
       resultEl.className = 'result show';
-      resultEl.innerHTML = '<div class="result-header">' + msg + '</div>';
+      resultEl.innerHTML = '<div class="result-header">' + escapeHtml(msg) + '</div>';
     }
 
     // Timestamp/Block mutual exclusivity
@@ -858,30 +872,30 @@ INDEX_HTML = """<!DOCTYPE html>
       const timestampField = data.block_timestamp != null ? `
         <div class="field">
           <div class="field-label">Block Timestamp</div>
-          <div class="field-value">${data.block_timestamp}</div>
+          <div class="field-value">${escapeHtml(data.block_timestamp)}</div>
         </div>` : '';
       const amountField = data.amount != null ? `
         <div class="field">
           <div class="field-label">Amount</div>
-          <div class="field-value">${data.amount}</div>
+          <div class="field-value">${escapeHtml(data.amount)}</div>
         </div>` : '';
       priceResult.innerHTML = `
         <div class="result-header">Price Result</div>
         <div class="field">
           <div class="field-label">Chain</div>
-          <div class="field-value">${data.chain}</div>
+          <div class="field-value">${escapeHtml(data.chain)}</div>
         </div>
         <div class="field">
           <div class="field-label">Token</div>
-          <div class="field-value"><span class="dim">${data.token}</span></div>
+          <div class="field-value"><span class="dim">${escapeHtml(data.token)}</span></div>
         </div>
         <div class="field">
           <div class="field-label">Block</div>
-          <div class="field-value">${data.block}</div>
+          <div class="field-value">${escapeHtml(data.block)}</div>
         </div>${timestampField}${amountField}
         <div class="field">
           <div class="field-label">Price (USD per token)</div>
-          <div class="field-value number">${data.price}</div>
+          <div class="field-value number">${escapeHtml(data.price)}</div>
         </div>
         <div class="field">
           <div class="field-label">Cached</div>
@@ -944,12 +958,12 @@ INDEX_HTML = """<!DOCTYPE html>
 
       let rows = '';
       for (const item of data) {
-        const priceDisplay = item.price !== null ? item.price : '<span class="null">null</span>';
+        const priceDisplay = item.price !== null ? escapeHtml(item.price) : '<span class="null">null</span>';
         const cachedDisplay = item.cached ? 'yes' : 'no';
-        const tsDisplay = item.block_timestamp !== null ? item.block_timestamp : '-';
+        const tsDisplay = item.block_timestamp !== null ? escapeHtml(item.block_timestamp) : '-';
         rows += `<tr>
-          <td>${item.token}</td>
-          <td>${item.block}</td>
+          <td>${escapeHtml(item.token)}</td>
+          <td>${escapeHtml(item.block)}</td>
           <td>${priceDisplay}</td>
           <td>${tsDisplay}</td>
           <td>${cachedDisplay}</td>
@@ -957,7 +971,7 @@ INDEX_HTML = """<!DOCTYPE html>
       }
 
       batchResult.innerHTML = `
-        <div class="result-header">Batch Results (${data.length} tokens)</div>
+        <div class="result-header">Batch Results (${escapeHtml(data.length)} tokens)</div>
         <table>
           <thead>
             <tr>
@@ -1023,16 +1037,16 @@ INDEX_HTML = """<!DOCTYPE html>
 
     function showBucketResult(data) {
       bucketResult.className = 'result show';
-      const bucketDisplay = data.bucket !== null ? data.bucket : '<span class="null">null</span>';
+      const bucketDisplay = data.bucket !== null ? escapeHtml(data.bucket) : '<span class="null">null</span>';
       bucketResult.innerHTML = `
         <div class="result-header">Classification Result</div>
         <div class="field">
           <div class="field-label">Token</div>
-          <div class="field-value"><span class="dim">${data.token}</span></div>
+          <div class="field-value"><span class="dim">${escapeHtml(data.token)}</span></div>
         </div>
         <div class="field">
           <div class="field-label">Chain</div>
-          <div class="field-value">${data.chain}</div>
+          <div class="field-value">${escapeHtml(data.chain)}</div>
         </div>
         <div class="field">
           <div class="field-label">Bucket</div>
@@ -1072,9 +1086,19 @@ INDEX_HTML = """<!DOCTYPE html>
       }
     });
 
-    // Load URL params
+    // Load URL params to restore form state
     const params = new URLSearchParams(window.location.search);
     if (params.get('chain')) document.getElementById('chain').value = params.get('chain');
+    if (params.get('token')) document.getElementById('price-token').value = params.get('token');
+    if (params.get('block')) document.getElementById('price-block').value = params.get('block');
+    if (params.get('timestamp')) document.getElementById('price-timestamp').value = params.get('timestamp');
+    if (params.get('amount')) document.getElementById('price-amount').value = params.get('amount');
+    if (params.get('skip_cache') === 'true') document.getElementById('price-skip-cache').checked = true;
+    if (params.get('silent') === 'true') document.getElementById('price-silent').checked = true;
+    if (params.get('ignore_pools')) document.getElementById('price-ignore-pools').value = params.get('ignore_pools');
+    if (params.get('tokens')) document.getElementById('batch-tokens').value = params.get('tokens');
+    if (params.get('amounts')) document.getElementById('batch-amounts').value = params.get('amounts');
+    if (params.get('bucket_token')) document.getElementById('bucket-token').value = params.get('bucket_token');
   </script>
 </body>
 </html>"""
