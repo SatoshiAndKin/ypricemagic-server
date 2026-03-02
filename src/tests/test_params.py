@@ -1,8 +1,11 @@
 from src.params import (
+    MAX_BATCH_TOKENS,
     MAX_BLOCK,
+    BatchParseSuccess,
     ParseError,
     ParseSuccess,
     is_valid_address,
+    parse_batch_params,
     parse_bool_param,
     parse_ignore_pools,
     parse_price_params,
@@ -453,4 +456,260 @@ class TestParsePriceParamsTimestamp:
         result = parse_price_params(DAI)
         assert isinstance(result, ParseSuccess)
         assert result.data.timestamp is None
+        assert result.data.block is None
+
+
+class TestParseBatchParams:
+    """Tests for parse_batch_params function."""
+
+    def test_single_token(self) -> None:
+        """Single token returns tuple of one."""
+        result = parse_batch_params(DAI)
+        assert isinstance(result, BatchParseSuccess)
+        assert result.data.tokens == (DAI,)
+        assert result.data.block is None
+
+    def test_multiple_tokens(self) -> None:
+        """Multiple tokens return tuple preserving order."""
+        result = parse_batch_params(f"{DAI},{USDC},{WETH}")
+        assert isinstance(result, BatchParseSuccess)
+        assert result.data.tokens == (DAI, USDC, WETH)
+
+    def test_strips_whitespace(self) -> None:
+        """Whitespace around tokens is stripped."""
+        result = parse_batch_params(f"  {DAI} , {USDC}  ")
+        assert isinstance(result, BatchParseSuccess)
+        assert result.data.tokens == (DAI, USDC)
+
+    def test_missing_tokens(self) -> None:
+        """Missing tokens param returns error."""
+        result = parse_batch_params(None)
+        assert isinstance(result, ParseError)
+        assert "Missing required parameter" in result.error
+
+    def test_empty_tokens(self) -> None:
+        """Empty tokens string returns error."""
+        result = parse_batch_params("")
+        assert isinstance(result, ParseError)
+        assert "Missing required parameter" in result.error
+
+    def test_whitespace_only_tokens(self) -> None:
+        """Whitespace-only tokens returns error."""
+        result = parse_batch_params("   ,  ,  ")
+        assert isinstance(result, ParseError)
+        assert "No valid token" in result.error
+
+    def test_invalid_address_in_list(self) -> None:
+        """Invalid address in list returns error with position."""
+        result = parse_batch_params(f"{DAI},INVALID,{USDC}")
+        assert isinstance(result, ParseError)
+        assert "position 2" in result.error
+        assert "INVALID" in result.error
+
+    def test_consecutive_commas_dropped(self) -> None:
+        """Empty segments from consecutive commas are dropped."""
+        result = parse_batch_params(f"{DAI},,{USDC}")
+        assert isinstance(result, BatchParseSuccess)
+        assert result.data.tokens == (DAI, USDC)
+
+    def test_trailing_comma_dropped(self) -> None:
+        """Trailing comma is dropped."""
+        result = parse_batch_params(f"{DAI},")
+        assert isinstance(result, BatchParseSuccess)
+        assert result.data.tokens == (DAI,)
+
+    def test_block_param(self) -> None:
+        """Block param is parsed and applies to all tokens."""
+        result = parse_batch_params(f"{DAI},{USDC}", block="18000000")
+        assert isinstance(result, BatchParseSuccess)
+        assert result.data.block == 18000000
+
+    def test_invalid_block(self) -> None:
+        """Invalid block returns error."""
+        result = parse_batch_params(DAI, block="abc")
+        assert isinstance(result, ParseError)
+        assert "Invalid block" in result.error
+
+    def test_too_many_tokens(self) -> None:
+        """More than MAX_BATCH_TOKENS returns error."""
+        tokens = ",".join([DAI] * (MAX_BATCH_TOKENS + 1))
+        result = parse_batch_params(tokens)
+        assert isinstance(result, ParseError)
+        assert "Too many tokens" in result.error
+        assert str(MAX_BATCH_TOKENS + 1) in result.error
+        assert str(MAX_BATCH_TOKENS) in result.error
+
+    def test_exactly_max_tokens(self) -> None:
+        """Exactly MAX_BATCH_TOKENS is accepted."""
+        tokens = ",".join([DAI] * MAX_BATCH_TOKENS)
+        result = parse_batch_params(tokens)
+        assert isinstance(result, BatchParseSuccess)
+        assert len(result.data.tokens) == MAX_BATCH_TOKENS
+
+
+class TestParseBatchParamsAmounts:
+    """Tests for amounts parameter in batch pricing."""
+
+    def test_amounts_matching_count(self) -> None:
+        """Amounts with matching count are parsed correctly."""
+        result = parse_batch_params(f"{DAI},{USDC}", amounts="1000,500")
+        assert isinstance(result, BatchParseSuccess)
+        assert result.data.amounts == (1000.0, 500.0)
+
+    def test_amounts_with_decimals(self) -> None:
+        """Amounts with decimal values are parsed."""
+        result = parse_batch_params(DAI, amounts="0.5")
+        assert isinstance(result, BatchParseSuccess)
+        assert result.data.amounts == (0.5,)
+
+    def test_amounts_count_mismatch(self) -> None:
+        """Amounts count mismatch returns error."""
+        result = parse_batch_params(f"{DAI},{USDC}", amounts="1000")
+        assert isinstance(result, ParseError)
+        assert "Amounts" in result.error or "amounts" in result.error.lower()
+        assert "does not match" in result.error.lower()
+
+    def test_amounts_more_than_tokens(self) -> None:
+        """More amounts than tokens returns error."""
+        result = parse_batch_params(DAI, amounts="1000,500")
+        assert isinstance(result, ParseError)
+        assert "does not match" in result.error.lower()
+
+    def test_invalid_amount_non_numeric(self) -> None:
+        """Non-numeric amount returns error."""
+        result = parse_batch_params(DAI, amounts="abc")
+        assert isinstance(result, ParseError)
+        assert "Invalid amount" in result.error
+
+    def test_invalid_amount_negative(self) -> None:
+        """Negative amount returns error."""
+        result = parse_batch_params(f"{DAI},{USDC}", amounts="1000,-500")
+        assert isinstance(result, ParseError)
+        assert "Invalid amount" in result.error
+
+    def test_invalid_amount_zero(self) -> None:
+        """Zero amount returns error."""
+        result = parse_batch_params(DAI, amounts="0")
+        assert isinstance(result, ParseError)
+        assert "Invalid amount" in result.error
+
+    def test_no_amounts(self) -> None:
+        """No amounts param returns None."""
+        result = parse_batch_params(DAI)
+        assert isinstance(result, BatchParseSuccess)
+        assert result.data.amounts is None
+
+    def test_amounts_strip_whitespace(self) -> None:
+        """Whitespace around amounts is stripped."""
+        result = parse_batch_params(f"{DAI},{USDC}", amounts=" 1000 , 500 ")
+        assert isinstance(result, BatchParseSuccess)
+        assert result.data.amounts == (1000.0, 500.0)
+
+    def test_amounts_empty_segments_dropped(self) -> None:
+        """Empty segments in amounts are dropped."""
+        result = parse_batch_params(f"{DAI},{USDC}", amounts="1000,,500")
+        # After dropping empty, we have 2 amounts for 2 tokens - should fail
+        assert isinstance(result, BatchParseSuccess)
+        assert result.data.amounts == (1000.0, 500.0)
+
+
+class TestParseBatchParamsTimestamp:
+    """Tests for timestamp parameter in batch pricing."""
+
+    def test_timestamp_without_block(self) -> None:
+        """Timestamp without block is accepted."""
+        result = parse_batch_params(DAI, timestamp="1700000000")
+        assert isinstance(result, BatchParseSuccess)
+        assert result.data.timestamp == 1700000000
+        assert result.data.block is None
+
+    def test_timestamp_and_block_mutually_exclusive(self) -> None:
+        """Both timestamp and block returns error."""
+        result = parse_batch_params(DAI, block="18000000", timestamp="1700000000")
+        assert isinstance(result, ParseError)
+        assert "mutually exclusive" in result.error.lower()
+
+    def test_timestamp_invalid_format(self) -> None:
+        """Invalid timestamp format returns error."""
+        result = parse_batch_params(DAI, timestamp="invalid")
+        assert isinstance(result, ParseError)
+        assert "timestamp" in result.error.lower()
+
+    def test_timestamp_with_amounts(self) -> None:
+        """Timestamp works with amounts."""
+        result = parse_batch_params(DAI, timestamp="1700000000", amounts="1000")
+        assert isinstance(result, BatchParseSuccess)
+        assert result.data.timestamp == 1700000000
+        assert result.data.amounts == (1000.0,)
+
+
+class TestParseBatchParamsBooleans:
+    """Tests for skip_cache and silent parameters in batch pricing."""
+
+    def test_skip_cache_true(self) -> None:
+        result = parse_batch_params(DAI, skip_cache="true")
+        assert isinstance(result, BatchParseSuccess)
+        assert result.data.skip_cache is True
+
+    def test_skip_cache_default_false(self) -> None:
+        result = parse_batch_params(DAI)
+        assert isinstance(result, BatchParseSuccess)
+        assert result.data.skip_cache is False
+
+    def test_skip_cache_invalid(self) -> None:
+        result = parse_batch_params(DAI, skip_cache="maybe")
+        assert isinstance(result, ParseError)
+        assert "skip_cache" in result.error
+
+    def test_silent_true(self) -> None:
+        result = parse_batch_params(DAI, silent="true")
+        assert isinstance(result, BatchParseSuccess)
+        assert result.data.silent is True
+
+    def test_silent_default_false(self) -> None:
+        result = parse_batch_params(DAI)
+        assert isinstance(result, BatchParseSuccess)
+        assert result.data.silent is False
+
+    def test_silent_invalid(self) -> None:
+        result = parse_batch_params(DAI, silent="2")
+        assert isinstance(result, ParseError)
+        assert "silent" in result.error
+
+    def test_both_booleans_true(self) -> None:
+        result = parse_batch_params(DAI, skip_cache="1", silent="1")
+        assert isinstance(result, BatchParseSuccess)
+        assert result.data.skip_cache is True
+        assert result.data.silent is True
+
+
+class TestParseBatchParamsCombined:
+    """Tests for combined parameters in batch pricing."""
+
+    def test_all_params_combined(self) -> None:
+        """All params work together."""
+        result = parse_batch_params(
+            f"{DAI},{USDC}",
+            block="18000000",
+            amounts="1000,500",
+            skip_cache="true",
+            silent="true",
+        )
+        assert isinstance(result, BatchParseSuccess)
+        assert result.data.tokens == (DAI, USDC)
+        assert result.data.block == 18000000
+        assert result.data.amounts == (1000.0, 500.0)
+        assert result.data.skip_cache is True
+        assert result.data.silent is True
+
+    def test_timestamp_amounts_combined(self) -> None:
+        """Timestamp and amounts can be combined."""
+        result = parse_batch_params(
+            f"{DAI},{USDC}",
+            timestamp="1700000000",
+            amounts="1000,500",
+        )
+        assert isinstance(result, BatchParseSuccess)
+        assert result.data.timestamp == 1700000000
+        assert result.data.amounts == (1000.0, 500.0)
         assert result.data.block is None

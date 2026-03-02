@@ -4,7 +4,7 @@ import os
 import time
 import uuid
 from contextlib import asynccontextmanager
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import structlog
 from fastapi import FastAPI, Query, Request
@@ -21,7 +21,10 @@ from tenacity import (
 
 from src.cache import get_cached_price, set_cached_price
 from src.logger import configure_logging, get_logger
-from src.params import ParseError, parse_price_params
+from src.params import ParseError, parse_batch_params, parse_price_params
+
+if TYPE_CHECKING:
+    from src.params import BatchParams
 
 configure_logging()
 logger = get_logger("server")
@@ -37,6 +40,16 @@ price_requests_total = Counter(
 price_request_duration_seconds = Histogram(
     "price_request_duration_seconds",
     "Price request duration",
+    ["chain"],
+)
+batch_requests_total = Counter(
+    "batch_requests_total",
+    "Total batch pricing requests",
+    ["chain", "status"],
+)
+batch_request_duration_seconds = Histogram(
+    "batch_request_duration_seconds",
+    "Batch request duration",
     ["chain"],
 )
 
@@ -164,6 +177,57 @@ async def _fetch_price(
     return price_float
 
 
+async def _fetch_batch_prices(
+    tokens: tuple[str, ...],
+    block: int,
+    amounts: tuple[float, ...] | None = None,
+    skip_cache: bool = False,
+    silent: bool = False,
+) -> list[float | None]:
+    """Fetch prices for multiple tokens in parallel.
+
+    Returns a list of prices (float) or None for tokens that couldn't be priced.
+    Does not raise exceptions - errors are logged and None is returned for that token.
+    """
+    from y import get_prices
+
+    kwargs: dict[str, Any] = {
+        "fail_to_None": True,
+        "sync": False,
+    }
+    if amounts is not None:
+        kwargs["amounts"] = amounts
+    if skip_cache:
+        kwargs["skip_cache"] = True
+    if silent:
+        kwargs["silent"] = True
+
+    try:
+        results = await get_prices(tokens, block, **kwargs)
+        # results should be a list parallel to tokens
+        prices: list[float | None] = []
+        for i, p in enumerate(results):
+            if p is None:
+                prices.append(None)
+            else:
+                price_float = float(p)
+                if math.isnan(price_float) or math.isinf(price_float) or price_float < 0:
+                    logger.warning(
+                        "batch_invalid_price",
+                        token=tokens[i][:10],
+                        block=block,
+                        price=p,
+                    )
+                    prices.append(None)
+                else:
+                    prices.append(price_float)
+        return prices
+    except Exception as e:
+        logger.error("batch_fetch_failed", block=block, error=str(e))
+        # Return None for all tokens on complete failure
+        return [None] * len(tokens)
+
+
 async def _fetch_block_timestamp(block: int) -> int | None:
     """Fetch the Unix epoch timestamp for a block.
 
@@ -217,6 +281,104 @@ def _handle_price_error(e: Exception, token: str, block: int, duration_ms: int) 
         500,
         f"Price lookup failed for {token} at block {block}. Check server logs.",
     )
+
+
+async def _resolve_batch_block(
+    params: "BatchParams",
+) -> int | tuple[int, JSONResponse]:
+    """Resolve the block for batch pricing.
+
+    Returns the block number on success.
+    Returns a tuple of (0, error_response) on failure.
+    """
+    from brownie import chain as brownie_chain
+
+    if params.timestamp is not None:
+        try:
+            return await _resolve_block_from_timestamp(params.timestamp)
+        except Exception as e:
+            logger.error(
+                "batch_timestamp_resolution_failed",
+                timestamp=params.timestamp,
+                error=str(e),
+            )
+            return (
+                0,
+                _make_error_response(
+                    502,
+                    f"Failed to resolve timestamp {params.timestamp} to block: {e}",
+                ),
+            )
+    return params.block if params.block is not None else brownie_chain.height
+
+
+def _prepare_batch_cache_check(
+    params: "BatchParams",
+    block: int,
+) -> tuple[list[dict[str, Any]], list[str], list[int]]:
+    """Prepare batch results by checking cache for each token.
+
+    Returns:
+    - results: list of result dicts (with placeholders for tokens to fetch)
+    - tokens_to_fetch: list of tokens that need fetching
+    - indices_to_fetch: original indices of tokens to fetch
+    """
+    results: list[dict[str, Any]] = []
+    tokens_to_fetch: list[str] = []
+    indices_to_fetch: list[int] = []
+
+    for i, token in enumerate(params.tokens):
+        token_amount = params.amounts[i] if params.amounts is not None else None
+
+        # Check cache only if: no amount AND not skip_cache
+        if token_amount is None and not params.skip_cache:
+            cached = get_cached_price(token, block)
+            if cached is not None:
+                results.append(
+                    {
+                        "token": token,
+                        "block": block,
+                        "price": cached["price"],
+                        "block_timestamp": cached.get("block_timestamp"),
+                        "cached": True,
+                    }
+                )
+                continue
+
+        # Need to fetch this token
+        tokens_to_fetch.append(token)
+        indices_to_fetch.append(i)
+        results.append({})  # Placeholder
+
+    return results, tokens_to_fetch, indices_to_fetch
+
+
+def _fill_batch_results(
+    results: list[dict[str, Any]],
+    tokens_to_fetch: list[str],
+    indices_to_fetch: list[int],
+    prices: list[float | None],
+    block: int,
+    block_timestamp: int | None,
+    params: "BatchParams",
+) -> None:
+    """Fill in batch results with fetched prices and cache them."""
+    for idx, token in enumerate(tokens_to_fetch):
+        i = indices_to_fetch[idx]
+        price_val = prices[idx]
+        token_amount = params.amounts[i] if params.amounts is not None else None
+
+        results[i] = {
+            "token": token,
+            "block": block,
+            "price": price_val,
+            "block_timestamp": block_timestamp,
+            "cached": False,
+        }
+
+        # Cache only if: price found AND no amount
+        if price_val is not None and token_amount is None:
+            set_cached_price(token, block, price_val, block_timestamp=block_timestamp)
 
 
 @app.get("/price")
@@ -329,6 +491,96 @@ async def price(
     if params.amount is not None:
         response["amount"] = params.amount
     return response
+
+
+@app.get("/prices")
+async def prices(
+    tokens: str | None = Query(None),
+    block: str | None = Query(None),
+    amounts: str | None = Query(None),
+    timestamp: str | None = Query(None),
+    skip_cache: str | None = Query(None),
+    silent: str | None = Query(None),
+) -> Any:
+    """Batch pricing endpoint.
+
+    Returns a JSON array of results. Each element has:
+    - token: the token address
+    - block: the block number used
+    - price: float or null (if price unavailable)
+    - block_timestamp: Unix epoch or null
+    - cached: boolean (true if from cache)
+
+    Partial failures return 200 with null prices for failed tokens.
+    All-failures also return 200.
+    """
+    result = parse_batch_params(tokens, block, amounts, timestamp, skip_cache, silent)
+    if isinstance(result, ParseError):
+        batch_requests_total.labels(chain=CHAIN_NAME, status="bad_request").inc()
+        return _make_error_response(400, result.error)
+
+    params = result.data
+
+    # Determine the block to use
+    block_result = await _resolve_batch_block(params)
+    if isinstance(block_result, tuple):
+        return block_result[1]
+    actual_block = block_result
+
+    start = time.monotonic()
+
+    # Prepare results - check cache for each token
+    results, tokens_to_fetch, indices_to_fetch = _prepare_batch_cache_check(params, actual_block)
+
+    # Fetch prices for tokens not in cache
+    if tokens_to_fetch:
+        # Prepare amounts for the tokens we need to fetch
+        fetch_amounts: tuple[float, ...] | None = None
+        if params.amounts is not None:
+            fetch_amounts = tuple(
+                params.amounts[i] for i in indices_to_fetch if params.amounts[i] is not None
+            )
+            if len(fetch_amounts) != len(indices_to_fetch):
+                fetch_amounts = None
+
+        prices = await _fetch_batch_prices(
+            tuple(tokens_to_fetch),
+            actual_block,
+            amounts=fetch_amounts,
+            skip_cache=params.skip_cache,
+            silent=params.silent,
+        )
+
+        # Fetch block timestamp once for all
+        block_timestamp = await _fetch_block_timestamp(actual_block)
+
+        # Fill in results
+        _fill_batch_results(
+            results,
+            tokens_to_fetch,
+            indices_to_fetch,
+            prices,
+            actual_block,
+            block_timestamp,
+            params,
+        )
+
+    duration_ms = int((time.monotonic() - start) * 1000)
+    batch_requests_total.labels(chain=CHAIN_NAME, status="ok").inc()
+    batch_request_duration_seconds.labels(chain=CHAIN_NAME).observe(duration_ms / 1000)
+
+    # Count success/failure
+    success_count = sum(1 for r in results if r.get("price") is not None)
+    logger.info(
+        "batch_fetched",
+        chain=CHAIN_NAME,
+        total_tokens=len(params.tokens),
+        success_count=success_count,
+        block=actual_block,
+        duration_ms=duration_ms,
+    )
+
+    return results
 
 
 INDEX_HTML = """<!DOCTYPE html>

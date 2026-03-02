@@ -656,3 +656,513 @@ class TestHealthEndpoint:
             assert result.status_code == 503
             # check_node_async should not have been called
             mock_check_node_async.assert_not_called()
+
+
+class TestBatchPricesEndpoint:
+    """Tests for GET /prices batch pricing endpoint."""
+
+    @pytest.mark.asyncio
+    async def test_single_token_returns_array_of_one(self, mock_y_module: None) -> None:
+        """Single token returns 200 with JSON array containing one result."""
+        from fastapi.testclient import TestClient
+
+        from src.server import app
+
+        mock_get_prices = AsyncMock(return_value=[1.0])
+        mock_get_block_timestamp = AsyncMock(return_value=1700000000)
+        mock_chain = type("MockChain", (), {"height": 19000000})()
+
+        with (
+            patch("y.get_prices", mock_get_prices),
+            patch("y.get_block_timestamp_async", mock_get_block_timestamp),
+            patch("brownie.chain", mock_chain),
+        ):
+            client = TestClient(app)
+            response = client.get("/prices", params={"tokens": DAI})
+
+            assert response.status_code == 200
+            data = response.json()
+            assert isinstance(data, list)
+            assert len(data) == 1
+            assert data[0]["token"] == DAI
+            assert data[0]["price"] == 1.0
+            assert data[0]["cached"] is False
+
+    @pytest.mark.asyncio
+    async def test_multiple_tokens_preserve_order(self, mock_y_module: None) -> None:
+        """Multiple tokens return ordered results preserving input order."""
+        from fastapi.testclient import TestClient
+
+        from src.server import app
+
+        mock_get_prices = AsyncMock(return_value=[1.0, 1.0])
+        mock_get_block_timestamp = AsyncMock(return_value=1700000000)
+        mock_chain = type("MockChain", (), {"height": 19000000})()
+
+        with (
+            patch("y.get_prices", mock_get_prices),
+            patch("y.get_block_timestamp_async", mock_get_block_timestamp),
+            patch("brownie.chain", mock_chain),
+        ):
+            client = TestClient(app)
+            response = client.get("/prices", params={"tokens": f"{DAI},{USDC}"})
+
+            assert response.status_code == 200
+            data = response.json()
+            assert len(data) == 2
+            assert data[0]["token"] == DAI
+            assert data[1]["token"] == USDC
+
+    @pytest.mark.asyncio
+    async def test_missing_tokens_returns_400(self, mock_y_module: None) -> None:
+        """Missing tokens param returns 400."""
+        from fastapi.testclient import TestClient
+
+        from src.server import app
+
+        mock_chain = type("MockChain", (), {"height": 19000000})()
+
+        with patch("brownie.chain", mock_chain):
+            client = TestClient(app)
+            response = client.get("/prices")
+
+            assert response.status_code == 400
+            data = response.json()
+            assert "tokens" in data["error"].lower()
+
+    @pytest.mark.asyncio
+    async def test_invalid_address_returns_400(self, mock_y_module: None) -> None:
+        """Invalid address in list returns 400."""
+        from fastapi.testclient import TestClient
+
+        from src.server import app
+
+        mock_chain = type("MockChain", (), {"height": 19000000})()
+
+        with patch("brownie.chain", mock_chain):
+            client = TestClient(app)
+            response = client.get("/prices", params={"tokens": f"{DAI},INVALID"})
+
+            assert response.status_code == 400
+            data = response.json()
+            assert "INVALID" in data["error"]
+
+    @pytest.mark.asyncio
+    async def test_block_applies_to_all_tokens(self, mock_y_module: None) -> None:
+        """Block param applies to all tokens."""
+        from fastapi.testclient import TestClient
+
+        from src.server import app
+
+        mock_get_prices = AsyncMock(return_value=[1.0, 1.0])
+        mock_get_block_timestamp = AsyncMock(return_value=1700000000)
+        mock_chain = type("MockChain", (), {"height": 19000000})()
+
+        with (
+            patch("y.get_prices", mock_get_prices),
+            patch("y.get_block_timestamp_async", mock_get_block_timestamp),
+            patch("brownie.chain", mock_chain),
+        ):
+            client = TestClient(app)
+            response = client.get(
+                "/prices", params={"tokens": f"{DAI},{USDC}", "block": "18000000"}
+            )
+
+            assert response.status_code == 200
+            data = response.json()
+            assert all(r["block"] == 18000000 for r in data)
+
+    @pytest.mark.asyncio
+    async def test_partial_failure_returns_null_prices(self, mock_y_module: None) -> None:
+        """Partial failure returns 200 with null prices for failed tokens."""
+        from fastapi.testclient import TestClient
+
+        from src.server import app
+
+        # First token succeeds, second fails
+        mock_get_prices = AsyncMock(return_value=[1.0, None])
+        mock_get_block_timestamp = AsyncMock(return_value=1700000000)
+        mock_chain = type("MockChain", (), {"height": 19000000})()
+
+        with (
+            patch("y.get_prices", mock_get_prices),
+            patch("y.get_block_timestamp_async", mock_get_block_timestamp),
+            patch("brownie.chain", mock_chain),
+        ):
+            client = TestClient(app)
+            response = client.get("/prices", params={"tokens": f"{DAI},{USDC}"})
+
+            assert response.status_code == 200
+            data = response.json()
+            assert len(data) == 2
+            assert data[0]["price"] == 1.0
+            assert data[1]["price"] is None
+
+    @pytest.mark.asyncio
+    async def test_all_failures_returns_200(self, mock_y_module: None) -> None:
+        """All-failures also returns 200 with null prices."""
+        from fastapi.testclient import TestClient
+
+        from src.server import app
+
+        mock_get_prices = AsyncMock(return_value=[None, None])
+        mock_get_block_timestamp = AsyncMock(return_value=1700000000)
+        mock_chain = type("MockChain", (), {"height": 19000000})()
+
+        with (
+            patch("y.get_prices", mock_get_prices),
+            patch("y.get_block_timestamp_async", mock_get_block_timestamp),
+            patch("brownie.chain", mock_chain),
+        ):
+            client = TestClient(app)
+            response = client.get("/prices", params={"tokens": f"{DAI},{USDC}"})
+
+            assert response.status_code == 200
+            data = response.json()
+            assert all(r["price"] is None for r in data)
+
+    @pytest.mark.asyncio
+    async def test_batch_with_timestamp_resolves_correctly(self, mock_y_module: None) -> None:
+        """Batch with timestamp resolves to block and prices all tokens."""
+        from fastapi.testclient import TestClient
+
+        from src.server import app
+
+        mock_get_block_at_timestamp = AsyncMock(return_value=18000000)
+        mock_get_prices = AsyncMock(return_value=[1.0, 1.0])
+        mock_get_block_timestamp = AsyncMock(return_value=1700000000)
+        mock_chain = type("MockChain", (), {"height": 19000000})()
+
+        with (
+            patch("y.get_block_at_timestamp", mock_get_block_at_timestamp),
+            patch("y.get_prices", mock_get_prices),
+            patch("y.get_block_timestamp_async", mock_get_block_timestamp),
+            patch("brownie.chain", mock_chain),
+        ):
+            client = TestClient(app)
+            response = client.get(
+                "/prices", params={"tokens": f"{DAI},{USDC}", "timestamp": "1700000000"}
+            )
+
+            assert response.status_code == 200
+            data = response.json()
+            assert all(r["block"] == 18000000 for r in data)
+            mock_get_block_at_timestamp.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_batch_with_timestamp_and_amounts(self, mock_y_module: None) -> None:
+        """Batch with timestamp and amounts combined works."""
+        from fastapi.testclient import TestClient
+
+        from src.server import app
+
+        mock_get_block_at_timestamp = AsyncMock(return_value=18000000)
+        mock_get_prices = AsyncMock(return_value=[1.0, 2.0])
+        mock_get_block_timestamp = AsyncMock(return_value=1700000000)
+        mock_chain = type("MockChain", (), {"height": 19000000})()
+
+        with (
+            patch("y.get_block_at_timestamp", mock_get_block_at_timestamp),
+            patch("y.get_prices", mock_get_prices),
+            patch("y.get_block_timestamp_async", mock_get_block_timestamp),
+            patch("brownie.chain", mock_chain),
+        ):
+            client = TestClient(app)
+            response = client.get(
+                "/prices",
+                params={
+                    "tokens": f"{DAI},{USDC}",
+                    "timestamp": "1700000000",
+                    "amounts": "1000,500",
+                },
+            )
+
+            assert response.status_code == 200
+            data = response.json()
+            assert len(data) == 2
+            # Verify amounts were passed to get_prices
+            mock_get_prices.assert_called_once()
+            call_kwargs = mock_get_prices.call_args[1]
+            assert call_kwargs.get("amounts") == (1000.0, 500.0)
+
+    @pytest.mark.asyncio
+    async def test_too_many_tokens_returns_400(self, mock_y_module: None) -> None:
+        """More than 100 tokens returns 400."""
+        from fastapi.testclient import TestClient
+
+        from src.params import MAX_BATCH_TOKENS
+        from src.server import app
+
+        mock_chain = type("MockChain", (), {"height": 19000000})()
+        tokens = ",".join([DAI] * (MAX_BATCH_TOKENS + 1))
+
+        with patch("brownie.chain", mock_chain):
+            client = TestClient(app)
+            response = client.get("/prices", params={"tokens": tokens})
+
+            assert response.status_code == 400
+            data = response.json()
+            assert "Too many" in data["error"]
+
+    @pytest.mark.asyncio
+    async def test_batch_results_include_block_timestamp(self, mock_y_module: None) -> None:
+        """Each element in batch response includes block_timestamp field."""
+        from fastapi.testclient import TestClient
+
+        from src.server import app
+
+        mock_get_prices = AsyncMock(return_value=[1.0, 1.0])
+        mock_get_block_timestamp = AsyncMock(return_value=1700000000)
+        mock_chain = type("MockChain", (), {"height": 19000000})()
+
+        with (
+            patch("y.get_prices", mock_get_prices),
+            patch("y.get_block_timestamp_async", mock_get_block_timestamp),
+            patch("brownie.chain", mock_chain),
+        ):
+            client = TestClient(app)
+            response = client.get("/prices", params={"tokens": f"{DAI},{USDC}"})
+
+            assert response.status_code == 200
+            data = response.json()
+            assert all("block_timestamp" in r for r in data)
+            assert all(r["block_timestamp"] == 1700000000 for r in data)
+
+
+class TestBatchPricesAmounts:
+    """Tests for amounts parameter in batch pricing."""
+
+    @pytest.mark.asyncio
+    async def test_amounts_matching_count(self, mock_y_module: None) -> None:
+        """Amounts with matching count work for price impact."""
+        from fastapi.testclient import TestClient
+
+        from src.server import app
+
+        mock_get_prices = AsyncMock(return_value=[0.99, 1.01])
+        mock_get_block_timestamp = AsyncMock(return_value=1700000000)
+        mock_chain = type("MockChain", (), {"height": 19000000})()
+
+        with (
+            patch("y.get_prices", mock_get_prices),
+            patch("y.get_block_timestamp_async", mock_get_block_timestamp),
+            patch("brownie.chain", mock_chain),
+        ):
+            client = TestClient(app)
+            response = client.get(
+                "/prices", params={"tokens": f"{DAI},{USDC}", "amounts": "1000,500"}
+            )
+
+            assert response.status_code == 200
+            data = response.json()
+            assert len(data) == 2
+            # Verify amounts were passed
+            call_kwargs = mock_get_prices.call_args[1]
+            assert call_kwargs.get("amounts") == (1000.0, 500.0)
+
+    @pytest.mark.asyncio
+    async def test_amounts_count_mismatch_returns_400(self, mock_y_module: None) -> None:
+        """Amounts count mismatch returns 400."""
+        from fastapi.testclient import TestClient
+
+        from src.server import app
+
+        mock_chain = type("MockChain", (), {"height": 19000000})()
+
+        with patch("brownie.chain", mock_chain):
+            client = TestClient(app)
+            response = client.get("/prices", params={"tokens": f"{DAI},{USDC}", "amounts": "1000"})
+
+            assert response.status_code == 400
+            data = response.json()
+            assert "does not match" in data["error"].lower()
+
+    @pytest.mark.asyncio
+    async def test_invalid_amount_returns_400(self, mock_y_module: None) -> None:
+        """Invalid amount values return 400."""
+        from fastapi.testclient import TestClient
+
+        from src.server import app
+
+        mock_chain = type("MockChain", (), {"height": 19000000})()
+
+        with patch("brownie.chain", mock_chain):
+            client = TestClient(app)
+            response = client.get(
+                "/prices", params={"tokens": f"{DAI},{USDC}", "amounts": "1000,abc"}
+            )
+
+            assert response.status_code == 400
+            data = response.json()
+            assert "amount" in data["error"].lower()
+
+
+class TestBatchPricesCaching:
+    """Tests for caching behavior in batch pricing."""
+
+    @pytest.mark.asyncio
+    async def test_cache_hit_for_single_token(self, mock_y_module: None) -> None:
+        """Individual results are cached and retrievable via single /price."""
+        from unittest.mock import patch
+
+        from fastapi.testclient import TestClient
+
+        from src.server import app
+
+        mock_get_prices = AsyncMock(return_value=[1.0])
+        mock_get_block_timestamp = AsyncMock(return_value=1700000000)
+        mock_chain = type("MockChain", (), {"height": 19000000})()
+
+        # Mock cache functions
+        cached_data: dict[str, dict[str, object]] = {}
+
+        def mock_get_cached_price(token: str, block: int) -> dict[str, object] | None:
+            key = f"{token}:{block}"
+            return cached_data.get(key)
+
+        def mock_set_cached_price(
+            token: str, block: int, price: float, block_timestamp: int | None = None
+        ) -> None:
+            key = f"{token}:{block}"
+            cached_data[key] = {"price": price, "block_timestamp": block_timestamp}
+
+        with (
+            patch("y.get_prices", mock_get_prices),
+            patch("y.get_block_timestamp_async", mock_get_block_timestamp),
+            patch("brownie.chain", mock_chain),
+            patch("src.server.get_cached_price", mock_get_cached_price),
+            patch("src.server.set_cached_price", mock_set_cached_price),
+        ):
+            client = TestClient(app)
+
+            # First request - should fetch
+            response = client.get("/prices", params={"tokens": DAI, "block": "18000000"})
+            assert response.status_code == 200
+            data = response.json()
+            assert data[0]["cached"] is False
+
+            # Verify it was cached
+            assert f"{DAI}:18000000" in cached_data
+
+    @pytest.mark.asyncio
+    async def test_amounts_skip_cache_write(self, mock_y_module: None) -> None:
+        """Results with amounts are NOT cached."""
+        from unittest.mock import patch
+
+        from fastapi.testclient import TestClient
+
+        from src.server import app
+
+        mock_get_prices = AsyncMock(return_value=[1.0])
+        mock_get_block_timestamp = AsyncMock(return_value=1700000000)
+        mock_chain = type("MockChain", (), {"height": 19000000})()
+
+        cached_data: dict[str, dict[str, object]] = {}
+
+        def mock_set_cached_price(
+            token: str, block: int, price: float, block_timestamp: int | None = None
+        ) -> None:
+            key = f"{token}:{block}"
+            cached_data[key] = {"price": price, "block_timestamp": block_timestamp}
+
+        with (
+            patch("y.get_prices", mock_get_prices),
+            patch("y.get_block_timestamp_async", mock_get_block_timestamp),
+            patch("brownie.chain", mock_chain),
+            patch("src.server.get_cached_price", return_value=None),
+            patch("src.server.set_cached_price", mock_set_cached_price),
+        ):
+            client = TestClient(app)
+
+            # Request with amount - should NOT cache
+            response = client.get(
+                "/prices", params={"tokens": DAI, "block": "18000000", "amounts": "1000"}
+            )
+            assert response.status_code == 200
+
+            # Verify it was NOT cached
+            assert f"{DAI}:18000000" not in cached_data
+
+
+class TestBatchPricesParams:
+    """Tests for skip_cache and silent parameters in batch pricing."""
+
+    @pytest.mark.asyncio
+    async def test_skip_cache_forwarded(self, mock_y_module: None) -> None:
+        """skip_cache is forwarded to get_prices."""
+        from fastapi.testclient import TestClient
+
+        from src.server import app
+
+        mock_get_prices = AsyncMock(return_value=[1.0])
+        mock_get_block_timestamp = AsyncMock(return_value=1700000000)
+        mock_chain = type("MockChain", (), {"height": 19000000})()
+
+        with (
+            patch("y.get_prices", mock_get_prices),
+            patch("y.get_block_timestamp_async", mock_get_block_timestamp),
+            patch("brownie.chain", mock_chain),
+            patch("src.server.get_cached_price", return_value=None),
+        ):
+            client = TestClient(app)
+            response = client.get(
+                "/prices", params={"tokens": DAI, "block": "18000000", "skip_cache": "true"}
+            )
+
+            assert response.status_code == 200
+            call_kwargs = mock_get_prices.call_args[1]
+            assert call_kwargs.get("skip_cache") is True
+
+    @pytest.mark.asyncio
+    async def test_silent_forwarded(self, mock_y_module: None) -> None:
+        """silent is forwarded to get_prices."""
+        from fastapi.testclient import TestClient
+
+        from src.server import app
+
+        mock_get_prices = AsyncMock(return_value=[1.0])
+        mock_get_block_timestamp = AsyncMock(return_value=1700000000)
+        mock_chain = type("MockChain", (), {"height": 19000000})()
+
+        with (
+            patch("y.get_prices", mock_get_prices),
+            patch("y.get_block_timestamp_async", mock_get_block_timestamp),
+            patch("brownie.chain", mock_chain),
+            patch("src.server.get_cached_price", return_value=None),
+        ):
+            client = TestClient(app)
+            response = client.get(
+                "/prices", params={"tokens": DAI, "block": "18000000", "silent": "true"}
+            )
+
+            assert response.status_code == 200
+            call_kwargs = mock_get_prices.call_args[1]
+            assert call_kwargs.get("silent") is True
+
+    @pytest.mark.asyncio
+    async def test_both_params_forwarded(self, mock_y_module: None) -> None:
+        """Both skip_cache and silent are forwarded together."""
+        from fastapi.testclient import TestClient
+
+        from src.server import app
+
+        mock_get_prices = AsyncMock(return_value=[1.0])
+        mock_get_block_timestamp = AsyncMock(return_value=1700000000)
+        mock_chain = type("MockChain", (), {"height": 19000000})()
+
+        with (
+            patch("y.get_prices", mock_get_prices),
+            patch("y.get_block_timestamp_async", mock_get_block_timestamp),
+            patch("brownie.chain", mock_chain),
+            patch("src.server.get_cached_price", return_value=None),
+        ):
+            client = TestClient(app)
+            response = client.get(
+                "/prices",
+                params={"tokens": DAI, "block": "18000000", "skip_cache": "1", "silent": "1"},
+            )
+
+            assert response.status_code == 200
+            call_kwargs = mock_get_prices.call_args[1]
+            assert call_kwargs.get("skip_cache") is True
+            assert call_kwargs.get("silent") is True

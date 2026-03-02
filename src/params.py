@@ -26,6 +26,20 @@ class PriceParams:
 
 
 @dataclass
+class BatchParams:
+    tokens: tuple[str, ...]
+    block: int | None = None
+    amounts: tuple[float, ...] | None = None
+    skip_cache: bool = False
+    silent: bool = False
+    timestamp: int | None = None
+
+
+# Maximum number of tokens allowed in a batch request
+MAX_BATCH_TOKENS = 100
+
+
+@dataclass
 class ParseSuccess:
     data: PriceParams
 
@@ -258,6 +272,151 @@ def parse_price_params(
             amount=parsed_amount,
             skip_cache=parsed_skip_cache,
             ignore_pools=parsed_ignore_pools,
+            silent=parsed_silent,
+            timestamp=parsed_timestamp,
+        )
+    )
+
+
+@dataclass
+class BatchParseSuccess:
+    data: "BatchParams"
+
+
+BatchParseResult = BatchParseSuccess | ParseError
+
+
+def _parse_amounts(value: str | None) -> tuple[float, ...] | None | ParseError:
+    """Parse comma-separated amounts.
+
+    Splits on comma, strips whitespace, drops empty segments.
+    Validates each segment as a positive number.
+    Returns tuple of amounts.
+    Returns None for missing/empty values.
+    Returns ParseError if any amount is invalid.
+    """
+    if value is None or value == "":
+        return None
+
+    segments = value.split(",")
+    amounts: list[float] = []
+    for i, segment in enumerate(segments):
+        stripped = segment.strip()
+        if stripped == "":
+            continue  # Drop empty segments
+        try:
+            parsed = float(stripped)
+        except (ValueError, TypeError):
+            return ParseError(f"Invalid amount at position {i + 1}: '{stripped}'")
+        if parsed <= 0:
+            return ParseError(
+                f"Invalid amount at position {i + 1}: '{stripped}' (must be positive)"
+            )
+        amounts.append(parsed)
+
+    return tuple(amounts) if amounts else None
+
+
+def _parse_tokens(value: str | None) -> tuple[str, ...] | ParseError:
+    """Parse comma-separated token addresses.
+
+    Validates:
+    - At least one valid address
+    - Each address is valid
+    - Max MAX_BATCH_TOKENS addresses
+
+    Returns tuple of addresses on success.
+    Returns ParseError on validation failure.
+    """
+    if value is None or value.strip() == "":
+        return ParseError("Missing required parameter: tokens")
+
+    segments = value.split(",")
+    tokens: list[str] = []
+    for i, segment in enumerate(segments):
+        stripped = segment.strip()
+        if stripped == "":
+            continue  # Drop empty segments
+        if not is_valid_address(stripped):
+            return ParseError(f"Invalid token address at position {i + 1}: '{stripped}'")
+        tokens.append(stripped)
+
+    if len(tokens) == 0:
+        return ParseError("No valid token addresses provided.")
+
+    if len(tokens) > MAX_BATCH_TOKENS:
+        return ParseError(f"Too many tokens: {len(tokens)}. Maximum allowed is {MAX_BATCH_TOKENS}.")
+
+    return tuple(tokens)
+
+
+def parse_batch_params(
+    tokens: str | None,
+    block: str | None = None,
+    amounts: str | None = None,
+    timestamp: str | None = None,
+    skip_cache: str | None = None,
+    silent: str | None = None,
+) -> BatchParseResult:
+    """Parse batch pricing parameters.
+
+    Validates:
+    - tokens: comma-separated addresses (required, max 100)
+    - block: optional block number
+    - amounts: optional comma-separated amounts (must match token count if provided)
+    - timestamp: optional Unix/ISO timestamp (mutually exclusive with block)
+    - skip_cache, silent: optional booleans
+
+    Returns BatchParseSuccess with BatchParams on success.
+    Returns ParseError on validation failure.
+    """
+    # Parse tokens
+    parsed_tokens = _parse_tokens(tokens)
+    if isinstance(parsed_tokens, ParseError):
+        return parsed_tokens
+
+    # Parse block
+    parsed_block = _parse_block(block)
+    if isinstance(parsed_block, ParseError):
+        return parsed_block
+
+    # Parse amounts
+    parsed_amounts = _parse_amounts(amounts)
+    if isinstance(parsed_amounts, ParseError):
+        return parsed_amounts
+
+    # Validate amounts count matches tokens count
+    if parsed_amounts is not None and len(parsed_amounts) != len(parsed_tokens):
+        return ParseError(
+            f"Amounts count ({len(parsed_amounts)}) does not match tokens count ({len(parsed_tokens)})."
+        )
+
+    # Parse timestamp
+    parsed_timestamp = parse_timestamp(timestamp)
+    if isinstance(parsed_timestamp, ParseError):
+        return parsed_timestamp
+
+    # Parse booleans
+    parsed_skip_cache = _parse_bool_with_default(skip_cache, "skip_cache")
+    if isinstance(parsed_skip_cache, ParseError):
+        return parsed_skip_cache
+
+    parsed_silent = _parse_bool_with_default(silent, "silent")
+    if isinstance(parsed_silent, ParseError):
+        return parsed_silent
+
+    # Mutual exclusivity check: timestamp and block cannot both be provided
+    if parsed_timestamp is not None and parsed_block is not None:
+        return ParseError(
+            "Parameters 'timestamp' and 'block' are mutually exclusive. Provide only one."
+        )
+
+    return BatchParseSuccess(
+        data=BatchParams(
+            tokens=tuple(parsed_tokens),
+            block=parsed_block,
+            amounts=parsed_amounts,
+            skip_cache=parsed_skip_cache,
             silent=parsed_silent,
             timestamp=parsed_timestamp,
         )
