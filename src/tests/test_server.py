@@ -1320,3 +1320,442 @@ class TestCheckBucketEndpoint:
             assert response.status_code == 200
             # The metric should have been incremented (we can't easily check the value here,
             # but we verify the endpoint works without error)
+
+
+class TestCrossAreaErrorEnvelope:
+    """Tests for error envelope format across all endpoints (VAL-CROSS-002)."""
+
+    @pytest.mark.asyncio
+    async def test_price_parse_error_uses_error_envelope(self, mock_y_module: None) -> None:
+        """Parse errors from /price endpoint use {"error": "..."} format."""
+        from fastapi.testclient import TestClient
+
+        from src.server import app
+
+        mock_chain = type("MockChain", (), {"height": 19000000})()
+
+        with patch("brownie.chain", mock_chain):
+            client = TestClient(app)
+            response = client.get("/price", params={"token": "INVALID"})
+
+            assert response.status_code == 400
+            data = response.json()
+            assert "error" in data
+            assert "INVALID" in data["error"]
+
+    @pytest.mark.asyncio
+    async def test_prices_parse_error_uses_error_envelope(self, mock_y_module: None) -> None:
+        """Parse errors from /prices endpoint use {"error": "..."} format."""
+        from fastapi.testclient import TestClient
+
+        from src.server import app
+
+        mock_chain = type("MockChain", (), {"height": 19000000})()
+
+        with patch("brownie.chain", mock_chain):
+            client = TestClient(app)
+            response = client.get("/prices", params={"tokens": "INVALID"})
+
+            assert response.status_code == 400
+            data = response.json()
+            assert "error" in data
+            assert "INVALID" in data["error"]
+
+    @pytest.mark.asyncio
+    async def test_check_bucket_parse_error_uses_error_envelope(self, mock_y_module: None) -> None:
+        """Parse errors from /check_bucket endpoint use {"error": "..."} format."""
+        from fastapi.testclient import TestClient
+
+        from src.server import app
+
+        client = TestClient(app)
+        response = client.get("/check_bucket", params={"token": "INVALID"})
+
+        assert response.status_code == 400
+        data = response.json()
+        assert "error" in data
+        assert "INVALID" in data["error"]
+
+    @pytest.mark.asyncio
+    async def test_fastapi_422_uses_error_envelope(self, mock_y_module: None) -> None:
+        """FastAPI's default 422 validation errors are converted to {"error": "..."} format."""
+        import json
+
+        from fastapi.exceptions import RequestValidationError
+
+        from src.server import validation_exception_handler
+
+        # Create a mock request and validation error to test the handler directly
+        mock_request = type("MockRequest", (), {})()
+        mock_error = RequestValidationError(
+            [{"loc": ("query", "token"), "msg": "field required", "type": "value_error.missing"}]
+        )
+
+        # Test the exception handler directly
+        response = await validation_exception_handler(mock_request, mock_error)
+
+        assert response.status_code == 422
+        # Parse the response body - body is bytes
+        data = json.loads(bytes(response.body))
+        assert "error" in data
+        assert "Validation error" in data["error"]
+
+
+class TestCrossAreaRequestId:
+    """Tests for X-Request-ID header propagation (VAL-CROSS-006)."""
+
+    @pytest.mark.asyncio
+    async def test_request_id_echoed_on_price(self, mock_y_module: None) -> None:
+        """X-Request-ID header is echoed back on /price endpoint."""
+        from fastapi.testclient import TestClient
+
+        from src.server import app
+
+        mock_get_price = AsyncMock(return_value=1.0)
+        mock_get_block_timestamp = AsyncMock(return_value=1700000000)
+        mock_chain = type("MockChain", (), {"height": 19000000})()
+
+        with (
+            patch("y.get_price", mock_get_price),
+            patch("y.get_block_timestamp_async", mock_get_block_timestamp),
+            patch("brownie.chain", mock_chain),
+        ):
+            client = TestClient(app)
+            response = client.get(
+                "/price",
+                params={"token": DAI},
+                headers={"X-Request-ID": "test-request-123"},
+            )
+
+            assert response.status_code == 200
+            assert response.headers["X-Request-ID"] == "test-request-123"
+
+    @pytest.mark.asyncio
+    async def test_request_id_generated_if_missing(self, mock_y_module: None) -> None:
+        """X-Request-ID is generated if not provided."""
+        from fastapi.testclient import TestClient
+
+        from src.server import app
+
+        mock_chain = type("MockChain", (), {"height": 19000000})()
+
+        with patch("brownie.chain", mock_chain):
+            client = TestClient(app)
+            response = client.get("/price", params={"token": "INVALID"})
+
+            # Even on error, X-Request-ID should be present
+            assert "X-Request-ID" in response.headers
+            assert len(response.headers["X-Request-ID"]) > 0
+
+    @pytest.mark.asyncio
+    async def test_request_id_on_prices_endpoint(self, mock_y_module: None) -> None:
+        """X-Request-ID header is echoed back on /prices endpoint."""
+        from fastapi.testclient import TestClient
+
+        from src.server import app
+
+        mock_get_prices = AsyncMock(return_value=[1.0])
+        mock_get_block_timestamp = AsyncMock(return_value=1700000000)
+        mock_chain = type("MockChain", (), {"height": 19000000})()
+
+        with (
+            patch("y.get_prices", mock_get_prices),
+            patch("y.get_block_timestamp_async", mock_get_block_timestamp),
+            patch("brownie.chain", mock_chain),
+        ):
+            client = TestClient(app)
+            response = client.get(
+                "/prices",
+                params={"tokens": DAI},
+                headers={"X-Request-ID": "batch-request-456"},
+            )
+
+            assert response.status_code == 200
+            assert response.headers["X-Request-ID"] == "batch-request-456"
+
+    @pytest.mark.asyncio
+    async def test_request_id_on_check_bucket_endpoint(self, mock_y_module: None) -> None:
+        """X-Request-ID header is echoed back on /check_bucket endpoint."""
+        from fastapi.testclient import TestClient
+
+        from src.server import app
+
+        mock_check_bucket = AsyncMock(return_value="atoken")
+
+        with patch("y.check_bucket", mock_check_bucket):
+            client = TestClient(app)
+            response = client.get(
+                "/check_bucket",
+                params={"token": DAI},
+                headers={"X-Request-ID": "bucket-request-789"},
+            )
+
+            assert response.status_code == 200
+            assert response.headers["X-Request-ID"] == "bucket-request-789"
+
+
+class TestCrossAreaCORS:
+    """Tests for CORS headers on all endpoints (VAL-CROSS-007)."""
+
+    @pytest.mark.asyncio
+    async def test_cors_headers_on_price(self, mock_y_module: None) -> None:
+        """CORS headers are present on /price endpoint."""
+        from fastapi.testclient import TestClient
+
+        from src.server import app
+
+        mock_chain = type("MockChain", (), {"height": 19000000})()
+
+        with patch("brownie.chain", mock_chain):
+            client = TestClient(app)
+            response = client.options(
+                "/price",
+                headers={
+                    "Origin": "http://example.com",
+                    "Access-Control-Request-Method": "GET",
+                },
+            )
+
+            # CORS middleware should add these headers
+            assert "access-control-allow-origin" in response.headers
+
+    @pytest.mark.asyncio
+    async def test_cors_headers_on_prices(self, mock_y_module: None) -> None:
+        """CORS headers are present on /prices endpoint."""
+        from fastapi.testclient import TestClient
+
+        from src.server import app
+
+        client = TestClient(app)
+        response = client.options(
+            "/prices",
+            headers={
+                "Origin": "http://example.com",
+                "Access-Control-Request-Method": "GET",
+            },
+        )
+
+        assert "access-control-allow-origin" in response.headers
+
+    @pytest.mark.asyncio
+    async def test_cors_headers_on_check_bucket(self, mock_y_module: None) -> None:
+        """CORS headers are present on /check_bucket endpoint."""
+        from fastapi.testclient import TestClient
+
+        from src.server import app
+
+        client = TestClient(app)
+        response = client.options(
+            "/check_bucket",
+            headers={
+                "Origin": "http://example.com",
+                "Access-Control-Request-Method": "GET",
+            },
+        )
+
+        assert "access-control-allow-origin" in response.headers
+
+
+class TestCrossAreaSkipCacheAmount:
+    """Tests for skip_cache + amount interaction (VAL-CROSS-004)."""
+
+    @pytest.mark.asyncio
+    async def test_amount_skips_cache_write_regardless_of_skip_cache(
+        self, mock_y_module: None
+    ) -> None:
+        """Amount requests skip cache writes regardless of skip_cache setting."""
+        from unittest.mock import patch
+
+        from fastapi.testclient import TestClient
+
+        from src.server import app
+
+        mock_get_price = AsyncMock(return_value=1.0)
+        mock_get_block_timestamp = AsyncMock(return_value=1700000000)
+        mock_chain = type("MockChain", (), {"height": 19000000})()
+
+        cache_writes: list[tuple[str, int, float]] = []
+
+        def mock_set_cached_price(
+            token: str, block: int, price: float, block_timestamp: int | None = None
+        ) -> None:
+            cache_writes.append((token, block, price))
+
+        with (
+            patch("y.get_price", mock_get_price),
+            patch("y.get_block_timestamp_async", mock_get_block_timestamp),
+            patch("brownie.chain", mock_chain),
+            patch("src.server.get_cached_price", return_value=None),
+            patch("src.server.set_cached_price", mock_set_cached_price),
+        ):
+            client = TestClient(app)
+
+            # Request with amount (cache write should be skipped)
+            response = client.get(
+                "/price",
+                params={"token": DAI, "block": "18000000", "amount": "1000", "skip_cache": "true"},
+            )
+
+            assert response.status_code == 200
+            # Cache should NOT have been written because amount is present
+            assert len(cache_writes) == 0
+
+    @pytest.mark.asyncio
+    async def test_amount_request_not_cached(self, mock_y_module: None) -> None:
+        """After an amount request, subsequent non-amount request is not cached:true."""
+        from unittest.mock import patch
+
+        from fastapi.testclient import TestClient
+
+        from src.server import app
+
+        mock_get_price = AsyncMock(return_value=1.0)
+        mock_get_block_timestamp = AsyncMock(return_value=1700000000)
+        mock_chain = type("MockChain", (), {"height": 19000000})()
+
+        cached_data: dict[str, dict[str, object]] = {}
+
+        def mock_get_cached_price(token: str, block: int) -> dict[str, object] | None:
+            key = f"{token}:{block}"
+            return cached_data.get(key)
+
+        def mock_set_cached_price(
+            token: str, block: int, price: float, block_timestamp: int | None = None
+        ) -> None:
+            key = f"{token}:{block}"
+            cached_data[key] = {"price": price, "block_timestamp": block_timestamp}
+
+        with (
+            patch("y.get_price", mock_get_price),
+            patch("y.get_block_timestamp_async", mock_get_block_timestamp),
+            patch("brownie.chain", mock_chain),
+            patch("src.server.get_cached_price", mock_get_cached_price),
+            patch("src.server.set_cached_price", mock_set_cached_price),
+        ):
+            client = TestClient(app)
+
+            # First request with amount (should NOT be cached)
+            response1 = client.get(
+                "/price",
+                params={"token": DAI, "block": "18000000", "amount": "1000"},
+            )
+            assert response1.status_code == 200
+            assert response1.json()["cached"] is False
+
+            # Cache should be empty
+            assert len(cached_data) == 0
+
+            # Second request without amount (should be fresh, not cached)
+            response2 = client.get(
+                "/price",
+                params={"token": DAI, "block": "18000000"},
+            )
+            assert response2.status_code == 200
+            assert response2.json()["cached"] is False
+
+            # Now cache should have the entry
+            assert len(cached_data) == 1
+
+
+class TestCrossAreaBackwardsCompat:
+    """Tests for backwards compatible response shape (VAL-CROSS-001)."""
+
+    @pytest.mark.asyncio
+    async def test_price_response_has_all_original_fields(self, mock_y_module: None) -> None:
+        """GET /price with only original params returns existing fields + additive block_timestamp."""
+        from fastapi.testclient import TestClient
+
+        from src.server import app
+
+        mock_get_price = AsyncMock(return_value=1.0)
+        mock_get_block_timestamp = AsyncMock(return_value=1700000000)
+        mock_chain = type("MockChain", (), {"height": 19000000})()
+
+        with (
+            patch("y.get_price", mock_get_price),
+            patch("y.get_block_timestamp_async", mock_get_block_timestamp),
+            patch("brownie.chain", mock_chain),
+        ):
+            client = TestClient(app)
+            response = client.get(
+                "/price",
+                params={"token": DAI, "block": "18000000"},
+            )
+
+            assert response.status_code == 200
+            data = response.json()
+
+            # All original fields must be present
+            assert "chain" in data
+            assert "token" in data
+            assert "block" in data
+            assert "price" in data
+            assert "cached" in data
+
+            # Additive field should be present
+            assert "block_timestamp" in data
+
+            # Verify values
+            assert data["chain"] == "ethereum"
+            assert data["token"] == DAI
+            assert data["block"] == 18000000
+            assert data["price"] == 1.0
+            assert data["cached"] is False
+            assert data["block_timestamp"] == 1700000000
+
+    @pytest.mark.asyncio
+    async def test_price_response_no_new_fields_removed(self, mock_y_module: None) -> None:
+        """Response shape is a superset - no fields removed."""
+        from fastapi.testclient import TestClient
+
+        from src.server import app
+
+        mock_get_price = AsyncMock(return_value=1.0)
+        mock_get_block_timestamp = AsyncMock(return_value=1700000000)
+        mock_chain = type("MockChain", (), {"height": 19000000})()
+
+        with (
+            patch("y.get_price", mock_get_price),
+            patch("y.get_block_timestamp_async", mock_get_block_timestamp),
+            patch("brownie.chain", mock_chain),
+        ):
+            client = TestClient(app)
+            response = client.get("/price", params={"token": DAI})
+
+            assert response.status_code == 200
+            data = response.json()
+
+            # Response should have these required keys
+            required_keys = {"chain", "token", "block", "price", "cached", "block_timestamp"}
+            assert required_keys.issubset(data.keys())
+
+    @pytest.mark.asyncio
+    async def test_amount_field_conditional(self, mock_y_module: None) -> None:
+        """Amount field is only present when amount parameter is provided."""
+        from fastapi.testclient import TestClient
+
+        from src.server import app
+
+        mock_get_price = AsyncMock(return_value=1.0)
+        mock_get_block_timestamp = AsyncMock(return_value=1700000000)
+        mock_chain = type("MockChain", (), {"height": 19000000})()
+
+        with (
+            patch("y.get_price", mock_get_price),
+            patch("y.get_block_timestamp_async", mock_get_block_timestamp),
+            patch("brownie.chain", mock_chain),
+        ):
+            client = TestClient(app)
+
+            # Without amount - should NOT have amount field
+            response1 = client.get("/price", params={"token": DAI, "block": "18000000"})
+            assert response1.status_code == 200
+            assert "amount" not in response1.json()
+
+            # With amount - should have amount field
+            response2 = client.get(
+                "/price", params={"token": DAI, "block": "18000000", "amount": "1000"}
+            )
+            assert response2.status_code == 200
+            assert "amount" in response2.json()
+            assert response2.json()["amount"] == 1000.0

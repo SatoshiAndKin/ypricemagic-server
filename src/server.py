@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, Any
 
 import structlog
 from fastapi import FastAPI, Query, Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse
 from prometheus_client import Counter, Histogram, make_asgi_app
@@ -86,6 +87,24 @@ async def lifespan(app: FastAPI) -> Any:
 
 
 app = FastAPI(title="ypricemagic API", lifespan=lifespan)
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(
+    request: Request, exc: RequestValidationError
+) -> JSONResponse:
+    """Convert FastAPI's default 422 validation errors to our error envelope format."""
+    # Extract the first error message for a cleaner response
+    errors = exc.errors()
+    if errors:
+        first_error = errors[0]
+        loc = " -> ".join(str(x) for x in first_error.get("loc", []))
+        msg = first_error.get("msg", "Validation error")
+        error_message = f"Validation error in {loc}: {msg}"
+    else:
+        error_message = "Validation error"
+    return JSONResponse(status_code=422, content={"error": error_message})
+
 
 # Expose Prometheus metrics at /metrics
 metrics_app = make_asgi_app()
