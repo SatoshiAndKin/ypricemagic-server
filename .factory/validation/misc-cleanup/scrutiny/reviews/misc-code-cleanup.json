@@ -1,0 +1,39 @@
+{
+  "featureId": "misc-code-cleanup",
+  "reviewedAt": "2026-03-02T21:55:00Z",
+  "commitId": "bd19d74",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "pass",
+  "codeReview": {
+    "summary": "All 5 items from the feature description were implemented correctly. The exception tuple simplification, dead code removal, histogram addition, XSS escaping, and URL restoration are all sound. Two minor non-blocking issues noted: (1) URL state restoration doesn't trigger mutual exclusivity input events, so if both block and timestamp are in the URL, both fields appear enabled; (2) the batch amounts behavior changed subtly (previously dropped all amounts if any were None, now preserves individual Nones) without new test coverage for the changed behavior.",
+    "issues": [
+      {
+        "file": "src/server.py",
+        "line": 1092,
+        "severity": "non_blocking",
+        "description": "URL state restoration sets .value programmatically for both price-block and price-timestamp, but this doesn't fire the 'input' events that drive mutual exclusivity. If a URL has both ?block=123&timestamp=456, both fields will be populated and remain enabled. Fix: dispatch an input event after setting values, e.g. `el.dispatchEvent(new Event('input'))` on whichever field has a value, or add a post-restoration check."
+      },
+      {
+        "file": "src/server.py",
+        "line": 571,
+        "severity": "non_blocking",
+        "description": "The batch fetch_amounts behavior changed: previously if any amount was None, ALL amounts were dropped (fetch_amounts = None). Now individual Nones are preserved and passed through to get_prices. This is arguably more correct behavior but is a subtle semantic change with no new test covering it. The downstream ypricemagic get_prices must handle None entries in the amounts tuple."
+      }
+    ]
+  },
+  "sharedStateObservations": [
+    {
+      "area": "conventions",
+      "observation": "The HTML UI uses 'input' event listeners for mutual exclusivity between block/timestamp fields, but programmatic .value setting (used in URL restoration) doesn't trigger these events. This is a known DOM behavior pattern that could be documented in AGENTS.md under 'Key Implementation Patterns' to prevent future regressions when adding URL-driven state restoration.",
+      "evidence": "src/server.py lines 841-863 (setupMutualExclusivity) and lines 1089-1101 (URL restoration). Setting .value doesn't fire 'input' events per DOM spec."
+    },
+    {
+      "area": "skills",
+      "observation": "Worker followed the skill procedure correctly: read existing code, made changes, ran all validators (pytest, mypy, ruff check, ruff format). The skill says 'Write Tests First (TDD)' but the worker correctly skipped this for a refactoring/cleanup feature where existing tests provide coverage. The skill could note that TDD is optional for refactoring-only features.",
+      "evidence": "Transcript shows worker read server.py first, made edits, then ran all 4 validators. handoff.skillFeedback.followedProcedure is true. No new tests were added, which is reasonable for refactoring."
+    }
+  ],
+  "addressesFailureFrom": null,
+  "summary": "Feature passes review. All 5 code quality items were implemented: exception handling simplified, dead code removed from batch path, check_bucket histogram added with proper duration tracking in both success/error paths, innerHTML XSS vulnerability fixed with a correct escapeHtml function applied to all API-provided values, and URL state restoration extended to all form fields. Two non-blocking issues: URL restoration doesn't trigger mutual exclusivity logic (cosmetic UX issue, server-side validation catches conflicts), and the batch amounts behavior change lacks dedicated test coverage. All 223 existing tests pass, mypy and ruff are clean."
+}
