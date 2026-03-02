@@ -1,3 +1,4 @@
+import asyncio
 import math
 import os
 import time
@@ -96,13 +97,32 @@ async def health() -> dict[str, Any]:
         from brownie import chain
 
         height = chain.height
-        return {"status": "ok", "chain": CHAIN_NAME, "block": height}
     except Exception as e:
         logger.error("health_check_failed", error=str(e))
         return JSONResponse(  # type: ignore[return-value]
             status_code=503,
             content={"status": "unhealthy", "chain": CHAIN_NAME, "error": "RPC connection failed"},
         )
+
+    # Check node sync status
+    synced: bool | None = None
+    try:
+        from y.time import check_node_async
+
+        await asyncio.wait_for(check_node_async(), timeout=5.0)
+        synced = True
+    except TimeoutError:
+        logger.warning("health_check_node_timeout")
+        synced = None
+    except Exception as e:
+        # Check if it's NodeNotSynced by class name (avoids import issues in except block)
+        if type(e).__name__ == "NodeNotSynced":
+            synced = False
+        else:
+            logger.warning("health_check_node_error", error=str(e))
+            synced = None
+
+    return {"status": "ok", "chain": CHAIN_NAME, "block": height, "synced": synced}
 
 
 @retry(

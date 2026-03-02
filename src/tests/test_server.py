@@ -312,3 +312,150 @@ class TestFetchBlockTimestamp:
         with patch("y.get_block_timestamp_async", mock_get_block_timestamp):
             result = await _fetch_block_timestamp(18000000)
             assert result is None
+
+
+class TestHealthEndpoint:
+    """Tests for the enhanced /health endpoint with node sync status."""
+
+    @pytest.mark.asyncio
+    async def test_synced_true_when_node_synced(self, mock_y_module: None) -> None:
+        """When check_node_async succeeds, health returns synced=True."""
+        from src.server import health
+
+        mock_check_node_async = AsyncMock(return_value=None)
+        mock_chain = type("MockChain", (), {"height": 18000000})()
+
+        with (
+            patch("y.time.check_node_async", mock_check_node_async),
+            patch("brownie.chain", mock_chain),
+        ):
+            result = await health()
+            assert result["status"] == "ok"
+            assert result["chain"] == "ethereum"
+            assert result["block"] == 18000000
+            assert result["synced"] is True
+
+    @pytest.mark.asyncio
+    async def test_synced_false_when_node_not_synced(self, mock_y_module: None) -> None:
+        """When check_node_async raises NodeNotSynced, health returns synced=False."""
+        from src.server import health
+
+        # Create a NodeNotSynced exception matching ypricemagic's name
+        class NodeNotSynced(Exception):  # noqa: N818
+            pass
+
+        mock_check_node_async = AsyncMock(side_effect=NodeNotSynced("Node is behind"))
+        mock_chain = type("MockChain", (), {"height": 18000000})()
+
+        with (
+            patch("y.time.check_node_async", mock_check_node_async),
+            patch("brownie.chain", mock_chain),
+        ):
+            result = await health()
+            assert result["status"] == "ok"
+            assert result["synced"] is False
+
+    @pytest.mark.asyncio
+    async def test_synced_none_on_other_exception(self, mock_y_module: None) -> None:
+        """When check_node_async raises unexpected exception, health returns synced=None."""
+        from src.server import health
+
+        mock_check_node_async = AsyncMock(side_effect=RuntimeError("Unexpected error"))
+        mock_chain = type("MockChain", (), {"height": 18000000})()
+
+        with (
+            patch("y.time.check_node_async", mock_check_node_async),
+            patch("brownie.chain", mock_chain),
+        ):
+            result = await health()
+            assert result["status"] == "ok"
+            assert result["synced"] is None
+
+    @pytest.mark.asyncio
+    async def test_503_on_chain_height_failure(self, mock_y_module: None) -> None:
+        """When chain.height fails, health returns 503 (existing behavior preserved)."""
+        from fastapi.responses import JSONResponse
+
+        from src.server import health
+
+        mock_chain = type(
+            "MockChain",
+            (),
+            {"height": property(lambda self: (_ for _ in ()).throw(ConnectionError("RPC failed")))},
+        )()
+
+        with patch("brownie.chain", mock_chain):
+            result = await health()
+            assert isinstance(result, JSONResponse)
+            assert result.status_code == 503
+
+    @pytest.mark.asyncio
+    async def test_existing_fields_preserved(self, mock_y_module: None) -> None:
+        """Health response retains status, chain, block fields. synced is additive."""
+        from src.server import health
+
+        mock_check_node_async = AsyncMock(return_value=None)
+        mock_chain = type("MockChain", (), {"height": 18000000})()
+
+        with (
+            patch("y.time.check_node_async", mock_check_node_async),
+            patch("brownie.chain", mock_chain),
+        ):
+            result = await health()
+            # All required fields present
+            assert "status" in result
+            assert "chain" in result
+            assert "block" in result
+            assert "synced" in result
+            # Values correct
+            assert result["status"] == "ok"
+            assert result["block"] == 18000000
+            assert result["synced"] is True
+
+    @pytest.mark.asyncio
+    async def test_timeout_protection(self, mock_y_module: None) -> None:
+        """check_node_async timeout doesn't hang health endpoint."""
+        import asyncio
+
+        from src.server import health
+
+        async def slow_check() -> None:
+            await asyncio.sleep(10)  # Would hang without timeout
+
+        mock_check_node_async = AsyncMock(side_effect=slow_check)
+        mock_chain = type("MockChain", (), {"height": 18000000})()
+
+        with (
+            patch("y.time.check_node_async", mock_check_node_async),
+            patch("brownie.chain", mock_chain),
+        ):
+            # Should complete within reasonable time (timeout is 5s)
+            result = await health()
+            # Timeout should result in synced=None
+            assert result["synced"] is None
+
+    @pytest.mark.asyncio
+    async def test_synced_check_only_after_height_success(self, mock_y_module: None) -> None:
+        """synced check only runs if we can get block height (503 path unchanged)."""
+        from fastapi.responses import JSONResponse
+
+        from src.server import health
+
+        # Simulate chain.height failing
+        mock_chain = type(
+            "MockChain",
+            (),
+            {"height": property(lambda self: (_ for _ in ()).throw(ConnectionError("RPC failed")))},
+        )()
+        mock_check_node_async = AsyncMock(return_value=None)
+
+        with (
+            patch("brownie.chain", mock_chain),
+            patch("y.time.check_node_async", mock_check_node_async),
+        ):
+            result = await health()
+            # Should return 503, not call check_node_async
+            assert isinstance(result, JSONResponse)
+            assert result.status_code == 503
+            # check_node_async should not have been called
+            mock_check_node_async.assert_not_called()
