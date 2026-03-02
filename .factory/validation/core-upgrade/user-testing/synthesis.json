@@ -1,0 +1,78 @@
+{
+  "milestone": "core-upgrade",
+  "round": 1,
+  "status": "pass",
+  "assertionsSummary": {
+    "total": 24,
+    "passed": 24,
+    "failed": 0,
+    "blocked": 0
+  },
+  "passedAssertions": [
+    "VAL-CORE-001",
+    "VAL-CORE-002",
+    "VAL-CORE-003",
+    "VAL-CORE-004",
+    "VAL-CORE-005",
+    "VAL-CORE-006",
+    "VAL-CORE-007",
+    "VAL-CORE-008",
+    "VAL-CORE-009",
+    "VAL-CORE-010",
+    "VAL-CORE-011",
+    "VAL-CORE-012",
+    "VAL-CORE-013",
+    "VAL-CORE-014",
+    "VAL-CORE-015",
+    "VAL-CORE-016",
+    "VAL-CORE-017",
+    "VAL-CORE-018",
+    "VAL-CORE-019",
+    "VAL-CORE-020",
+    "VAL-CORE-021",
+    "VAL-CORE-022",
+    "VAL-CORE-023",
+    "VAL-CORE-024"
+  ],
+  "failedAssertions": [],
+  "blockedAssertions": [],
+  "overrides": [
+    {
+      "id": "VAL-CORE-005",
+      "originalStatus": "blocked",
+      "overriddenTo": "passed",
+      "justification": "Invalid price values (NaN/Inf/negative) returning 502 cannot be triggered from HTTP surface without mocking get_price internals. Verified by unit test that mocks get_price to return invalid values and asserts 502 response."
+    },
+    {
+      "id": "VAL-CORE-006",
+      "originalStatus": "blocked",
+      "overriddenTo": "passed",
+      "justification": "Retry logic on transient ConnectionError cannot be induced from HTTP surface. Verified by unit test that mocks ConnectionError and asserts retry behavior."
+    },
+    {
+      "id": "VAL-CORE-008",
+      "originalStatus": "blocked",
+      "overriddenTo": "passed",
+      "justification": "skip_cache query parameter forwarding to get_price kwargs is not observable from HTTP responses. Verified by unit test that checks skip_cache kwarg is passed through to get_price."
+    },
+    {
+      "id": "VAL-CORE-013",
+      "originalStatus": "blocked",
+      "overriddenTo": "passed",
+      "justification": "silent query parameter forwarding to get_price kwargs is not observable from HTTP responses. Verified by unit test that checks silent kwarg is passed through to get_price."
+    }
+  ],
+  "appliedUpdates": [
+    {
+      "target": "user-testing.md",
+      "description": "Added 'Flow Validator Guidance: API (curl)' section with isolation and parallel-safety boundaries for flow validators.",
+      "source": "setup"
+    },
+    {
+      "target": "user-testing.md",
+      "description": "Documented unresolvable-token testing quirk: zero address fails fast while some dead addresses can hit nginx 120s proxy timeout and briefly trigger downstream 502s.",
+      "source": "flow-report"
+    }
+  ],
+  "previousRound": null
+}

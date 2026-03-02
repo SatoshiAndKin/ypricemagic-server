@@ -60,3 +60,46 @@ class TestSetCachedPrice:
     def test_write_error_does_not_raise(self) -> None:
         with patch("src.cache.get_cache", side_effect=RuntimeError("disk full")):
             set_cached_price("0xtoken", 1, 1.0)  # must not raise
+
+
+class TestBlockTimestampInCache:
+    """Tests for block_timestamp field in cache entries."""
+
+    def test_set_cached_price_stores_block_timestamp(self) -> None:
+        """When block_timestamp is provided, it's stored in the cache entry."""
+        set_cached_price("0xtoken", 1, 42.0, block_timestamp=1700000000)
+        result = get_cached_price("0xtoken", 1)
+        assert result is not None
+        assert result["price"] == 42.0
+        assert result.get("block_timestamp") == 1700000000
+
+    def test_set_cached_price_without_block_timestamp(self) -> None:
+        """When block_timestamp is not provided, it defaults to None."""
+        set_cached_price("0xtoken", 1, 42.0)
+        result = get_cached_price("0xtoken", 1)
+        assert result is not None
+        assert result.get("block_timestamp") is None
+
+    def test_get_cached_price_returns_block_timestamp(self) -> None:
+        """Cache hit returns the stored block_timestamp."""
+        set_cached_price("0xtoken", 1, 42.0, block_timestamp=1700000000)
+        result = get_cached_price("0xtoken", 1)
+        assert result is not None
+        assert result["block_timestamp"] == 1700000000
+
+    def test_old_cache_entry_without_block_timestamp_returns_none(self, tmp_path: Path) -> None:
+        """Pre-upgrade cache entries (without block_timestamp) return block_timestamp: None."""
+        # Simulate an old cache entry without block_timestamp
+        from src.cache import get_cache, make_key
+
+        with patch("src.cache.CACHE_DIR", str(tmp_path)), patch("src.cache._cache", None):
+            cache = get_cache()
+            key = make_key("0xoldtoken", 1)
+            old_entry = {"price": 99.0, "cached_at": "2023-01-01T00:00:00+00:00"}
+            cache.set(key, old_entry)
+
+            # Now get_cached_price should return the entry with block_timestamp: None
+            result = get_cached_price("0xoldtoken", 1)
+            assert result is not None
+            assert result["price"] == 99.0
+            assert result.get("block_timestamp") is None

@@ -1,0 +1,156 @@
+{
+  "groupId": "core-build-health",
+  "testedAt": "2026-03-02T20:05:00Z",
+  "credentials": {
+    "account": "not-required-api-flow-1",
+    "namespace": "ns_core_health"
+  },
+  "toolsUsed": ["curl", "docker compose logs", "uv run pytest"],
+  "assertions": [
+    {
+      "id": "VAL-CORE-001",
+      "title": "Docker build succeeds with updated dependency",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "Run docker compose ps to check container status",
+          "expected": "All 4 chain containers built and running",
+          "observed": "All 4 containers (ypm-ethereum, ypm-arbitrum, ypm-optimism, ypm-base) running with status 'Up (healthy)', images built ~21 minutes ago"
+        },
+        {
+          "action": "Run docker compose images to check image build",
+          "expected": "Images exist for all chain services",
+          "observed": "Images exist: ypm-ethereum (1.44GB), ypm-arbitrum (1.44GB), ypm-optimism (1.44GB), ypm-base (1.44GB), all tagged latest"
+        }
+      ],
+      "evidence": {
+        "dockerComposePs": "All 4 chain containers healthy, nginx running",
+        "dockerComposeImages": "All 4 chain images built successfully (1.44GB each)"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-CORE-002",
+      "title": "Server starts with updated dependency",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "Check docker compose logs ypm-ethereum for startup sequence",
+          "expected": "Logs show brownie connect, dank_mids patch, and successful import",
+          "observed": "Logs show: 'brownie_connected network_id=ethereum-custom', 'dank_mids_patched', 'chain_connected block=24571919 chain=ethereum chain_id=1', 'Application startup complete', 'Uvicorn running on http://0.0.0.0:8001'"
+        }
+      ],
+      "evidence": {
+        "startupLogs": "Sequence: network registered -> brownie_connected -> dank_mids_patched -> chain_connected (block=24571919, chain_id=1) -> Application startup complete -> Uvicorn running",
+        "noImportErrors": "No import errors or tracebacks in startup logs"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-CORE-003",
+      "title": "Existing price lookup works after upgrade",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "curl GET /ethereum/price?token=0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48&block=18000000",
+          "expected": "HTTP 200 with correct price response shape",
+          "observed": "HTTP 200. Response: {\"chain\":\"ethereum\",\"token\":\"0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48\",\"block\":18000000,\"price\":1.0,\"cached\":true,\"block_timestamp\":null}"
+        }
+      ],
+      "evidence": {
+        "curlResponse": "{\"chain\":\"ethereum\",\"token\":\"0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48\",\"block\":18000000,\"price\":1.0,\"cached\":true,\"block_timestamp\":null}",
+        "httpStatus": 200
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-CORE-021",
+      "title": "/health reports node sync status",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "curl GET /health",
+          "expected": "HTTP 200 with 'synced' boolean field",
+          "observed": "HTTP 200. Response: {\"status\":\"ok\",\"chain\":\"ethereum\",\"block\":24572021,\"synced\":true}"
+        },
+        {
+          "action": "curl GET /ethereum/health, /arbitrum/health, /optimism/health, /base/health",
+          "expected": "All chain health endpoints include 'synced' field",
+          "observed": "All 4 chains return synced:true - ethereum (block 24572024), arbitrum (block 437660954), optimism (block 148441517), base (block 42846232)"
+        }
+      ],
+      "evidence": {
+        "curlHealthAggregate": "{\"status\":\"ok\",\"chain\":\"ethereum\",\"block\":24572021,\"synced\":true}",
+        "allChainsHaveSynced": true,
+        "httpStatus": 200
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-CORE-022",
+      "title": "/health synced=false when node behind",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "Run unit test test_synced_false_when_node_not_synced",
+          "expected": "Test passes: when check_node_async raises NodeNotSynced, health returns 200 with synced:false",
+          "observed": "Test PASSED. Unit test mocks check_node_async to raise NodeNotSynced('Node is behind'), verifies response is 200 with synced=false"
+        }
+      ],
+      "evidence": {
+        "unitTest": "src/tests/test_server.py::TestHealthEndpoint::test_synced_false_when_node_not_synced PASSED",
+        "testSuite": "7/7 tests passed in TestHealthEndpoint class"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-CORE-023",
+      "title": "/health still 503 on RPC connection failure",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "Run unit test test_503_on_chain_height_failure",
+          "expected": "Test passes: when chain.height fails entirely, health returns 503",
+          "observed": "Test PASSED. Unit test mocks chain height property to raise Exception, verifies response is 503"
+        }
+      ],
+      "evidence": {
+        "unitTest": "src/tests/test_server.py::TestHealthEndpoint::test_503_on_chain_height_failure PASSED",
+        "testSuite": "7/7 tests passed in TestHealthEndpoint class"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-CORE-024",
+      "title": "Existing /health fields preserved",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "curl GET /health and verify response fields",
+          "expected": "Response retains status, chain, block fields; synced is additive",
+          "observed": "Response has all expected fields: status='ok', chain='ethereum', block=24572021, synced=true"
+        },
+        {
+          "action": "Verify all 4 chain health endpoints have same field structure",
+          "expected": "All chains return {status, chain, block, synced}",
+          "observed": "All 4 chains return consistent {status, chain, block, synced} structure"
+        },
+        {
+          "action": "Run unit test test_existing_fields_preserved",
+          "expected": "Test passes confirming field preservation",
+          "observed": "Test PASSED"
+        }
+      ],
+      "evidence": {
+        "curlResponse": "{\"status\":\"ok\",\"chain\":\"ethereum\",\"block\":24572024,\"synced\":true}",
+        "fieldsPresent": ["status", "chain", "block", "synced"],
+        "unitTest": "src/tests/test_server.py::TestHealthEndpoint::test_existing_fields_preserved PASSED",
+        "httpStatus": 200
+      },
+      "issues": null
+    }
+  ],
+  "frictions": [],
+  "blockers": [],
+  "summary": "Tested 7 assertions: 7 passed, 0 failed. Docker build succeeds (all 4 chain containers healthy). Server starts correctly with updated ypricemagic (brownie connects, dank_mids patches, chain connects). Existing price lookups work (USDC at block 18000000 returns price 1.0). Health endpoint includes new 'synced' field across all 4 chains. Unit tests confirm synced=false on NodeNotSynced, 503 on RPC failure, and existing field preservation."
+}

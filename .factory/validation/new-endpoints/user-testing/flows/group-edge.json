@@ -1,0 +1,124 @@
+{
+  "groupId": "group-edge",
+  "testedAt": "2026-03-02T00:00:00Z",
+  "credentials": {
+    "account": "N/A",
+    "namespace": "ns-edge-1633676e"
+  },
+  "toolsUsed": ["curl"],
+  "assertions": [
+    {
+      "id": "VAL-BUCKET-004",
+      "title": "Unclassifiable token returns 200 with null bucket",
+      "status": "blocked",
+      "steps": [
+        {
+          "action": "curl GET /ethereum/check_bucket?token=0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2 (WETH)",
+          "expected": "200 with bucket:null for unclassifiable token",
+          "observed": "200 with bucket:'chainlink feed' — WETH is classified"
+        },
+        {
+          "action": "curl GET /ethereum/check_bucket?token=0x000000000000000000000000000000000000dEaD (burn addr)",
+          "expected": "200 with bucket:null",
+          "observed": "Timeout after 30s — non-contract address hangs"
+        },
+        {
+          "action": "curl GET /ethereum/check_bucket?token=0xC18360217D8F7Ab5e7c516566761Ea12Ce7F9D72 (ENS)",
+          "expected": "200 with bucket:null",
+          "observed": "200 with bucket:'chainlink feed' — ENS is classified"
+        },
+        {
+          "action": "curl GET /ethereum/check_bucket?token=0x9f8F72aA9304c8B593d555F12eF6589cC3A579A2 (MKR)",
+          "expected": "200 with bucket:null",
+          "observed": "200 with bucket:'chainlink feed' — MKR is classified"
+        },
+        {
+          "action": "curl GET /ethereum/check_bucket?token=0x89d24A6b4CcB1B6fAA2625fE562bDD9a23260359 (SAI old DAI)",
+          "expected": "200 with bucket:null",
+          "observed": "Timeout after 30s — old/dead token hangs"
+        },
+        {
+          "action": "curl GET /ethereum/check_bucket?token=0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f (Uniswap V2 Factory)",
+          "expected": "200 with bucket:null for non-token contract",
+          "observed": "Timeout after 30s — non-token contract hangs"
+        },
+        {
+          "action": "curl GET /ethereum/check_bucket?token=0x0000000000000000000000000000000000000000 (zero addr)",
+          "expected": "200 with bucket:null",
+          "observed": "500 with error 'Failed to classify token' — exception raised, not null return"
+        },
+        {
+          "action": "curl GET /ethereum/check_bucket?token=0x0bc529c00C6401aEF6D220BE8C6Ea1667F6Ad93e (YFI)",
+          "expected": "200 with bucket:null",
+          "observed": "200 with bucket:'chainlink feed' — YFI is classified"
+        },
+        {
+          "action": "curl GET /base/check_bucket?token=0x4200000000000000000000000000000000000006 (Base WETH)",
+          "expected": "200 with bucket:null",
+          "observed": "200 with bucket:'chainlink feed' — Base WETH is classified"
+        }
+      ],
+      "evidence": {
+        "screenshots": [],
+        "consoleErrors": "N/A (API test)",
+        "network": "GET /ethereum/check_bucket with 9 different tokens: well-known tokens return 200 with classified bucket, obscure/dead tokens timeout (30s), zero address returns 500. No token found that returns bucket:null."
+      },
+      "issues": "Cannot validate from user surface. No known live token triggers the bucket:null code path. Well-known tokens get classified (e.g., 'chainlink feed', 'stable usd'), non-contract/dead addresses timeout or raise exceptions (500). The user-testing.md documents this: 'No known live token currently triggers /check_bucket with bucket:null; this path is easiest to verify via unit tests/mocking.' The null-bucket path exists in code (returns y_check_bucket result directly, which can be None) and is covered by unit test test_check_bucket_unclassifiable_token, but cannot be triggered from the API surface without knowledge of a specific unclassifiable-yet-resolvable token."
+    },
+    {
+      "id": "VAL-TS-008",
+      "title": "Timestamp resolution failure returns 502",
+      "status": "blocked",
+      "steps": [
+        {
+          "action": "curl GET /ethereum/price?token=0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48&timestamp=1 (epoch 1 = pre-Ethereum)",
+          "expected": "502 from get_block_at_timestamp failure",
+          "observed": "200 with block:0, price:1.0 — timestamp resolved successfully to genesis block"
+        },
+        {
+          "action": "curl GET /ethereum/price?token=0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48&timestamp=1438269970 (pre-genesis)",
+          "expected": "502 from get_block_at_timestamp failure",
+          "observed": "200 with block:0, price:1.0 — timestamp resolved to genesis block (cached from prior call)"
+        },
+        {
+          "action": "Analyzed _resolve_block_from_timestamp in server.py",
+          "expected": "Identify a user-surface scenario that triggers RPC exception in get_block_at_timestamp",
+          "observed": "The function converts timestamp to datetime and calls get_block_at_timestamp. RPC errors would only occur from network/infrastructure failures, not from any particular timestamp value. All valid timestamps resolve or get caught by params.py validation (future timestamps -> 400)."
+        }
+      ],
+      "evidence": {
+        "screenshots": [],
+        "consoleErrors": "N/A (API test)",
+        "network": "GET /ethereum/price with extreme timestamp values: timestamp=1 -> 200 (resolves to block 0), timestamp=1438269970 -> 200 (resolves to block 0). No user-controllable input triggers an RPC failure in get_block_at_timestamp."
+      },
+      "issues": "Cannot validate from user surface. The assertion's evidence requirement is explicitly 'unit test with mocked get_block_at_timestamp raising -> 502', which requires backend fault injection (mocking). From the curl surface: (1) All valid timestamps either resolve successfully or are rejected at params validation (400 for future timestamps, 400 for invalid formats). (2) Triggering an actual RPC error in get_block_at_timestamp requires the RPC node to fail, which cannot be induced from user-surface requests. (3) Even if a natural 502 occurred, nginx proxy_intercept_errors masks the server's error body with a generic message. The 502 error path exists in code (server.py lines 434-441) and is covered by unit tests, but is not triggerable via curl without infrastructure disruption."
+    }
+  ],
+  "frictions": [
+    {
+      "description": "Token addresses in check_bucket responses are redacted (42-char asterisks), making it harder to confirm which token was queried in the response. Documented in user-testing.md as known behavior.",
+      "resolved": true,
+      "resolution": "Verified correct routing by checking HTTP status codes and bucket values — the redaction doesn't affect assertion validation.",
+      "affectedAssertions": ["VAL-BUCKET-004"]
+    },
+    {
+      "description": "Several check_bucket queries with obscure/dead tokens (0xdead, SAI, UniV2 Factory) timed out after 30s without returning any response, consuming significant testing time.",
+      "resolved": true,
+      "resolution": "Used --max-time 30 on curl to cap wait time and moved on to other tokens.",
+      "affectedAssertions": ["VAL-BUCKET-004"]
+    }
+  ],
+  "blockers": [
+    {
+      "description": "VAL-BUCKET-004: No known live token triggers the bucket:null code path from the API surface. All tested tokens either get classified, timeout, or raise exceptions. The user-testing.md explicitly documents: 'No known live token currently triggers /check_bucket with bucket:null; this path is easiest to verify via unit tests/mocking.'",
+      "affectedAssertions": ["VAL-BUCKET-004"],
+      "quickFixAttempted": "Tested 9 different tokens across ethereum and base chains including WETH, USDC, ENS, MKR, YFI, SAI, dead address, zero address, UniV2 Factory, Base WETH. None returned bucket:null."
+    },
+    {
+      "description": "VAL-TS-008: The assertion requires mocking get_block_at_timestamp to raise an exception, which is backend fault injection not available via curl. Natural RPC failures cannot be triggered by any user-controllable input. Nginx also masks 502 response bodies.",
+      "affectedAssertions": ["VAL-TS-008"],
+      "quickFixAttempted": "Tested extreme timestamp values (epoch 1, pre-genesis) hoping to trigger RPC errors, but all resolved successfully to block 0."
+    }
+  ],
+  "summary": "Tested 2 assertions: 0 passed, 0 failed, 2 blocked. VAL-BUCKET-004 is blocked because no known live token returns bucket:null from the API surface (all tokens are either classified or cause timeouts/exceptions). VAL-TS-008 is blocked because it requires backend fault injection (mocking get_block_at_timestamp to raise) which cannot be triggered via curl — all valid timestamps resolve successfully."
+}

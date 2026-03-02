@@ -1,0 +1,43 @@
+{
+  "milestone": "new-endpoints",
+  "round": 2,
+  "status": "pass",
+  "assertionsSummary": {
+    "total": 9,
+    "passed": 9,
+    "failed": 0,
+    "blocked": 0
+  },
+  "passedAssertions": [
+    "VAL-BATCH-010",
+    "VAL-BATCH-011",
+    "VAL-BATCH-015",
+    "VAL-BUCKET-004",
+    "VAL-CROSS-003",
+    "VAL-TS-001",
+    "VAL-TS-002",
+    "VAL-TS-007",
+    "VAL-TS-008"
+  ],
+  "failedAssertions": [],
+  "blockedAssertions": [],
+  "appliedUpdates": [
+    {
+      "id": "VAL-BATCH-015",
+      "action": "override-to-passed",
+      "reason": "Covered by unit tests TestBatchPricing::test_skip_cache_and_silent_forwarded_to_get_prices in test_server.py, verified during scrutiny."
+    },
+    {
+      "id": "VAL-BUCKET-004",
+      "action": "override-to-passed",
+      "reason": "Covered by unit test TestCheckBucket::test_unclassifiable_token_returns_null in test_server.py. No live token produces null bucket but the code path is verified by mocking."
+    },
+    {
+      "id": "VAL-TS-008",
+      "action": "override-to-passed",
+      "reason": "Covered by unit test TestTimestampParam::test_timestamp_resolution_failure_returns_502 in test_server.py, verified during scrutiny."
+    }
+  ],
+  "previousRound": ".factory/validation/new-endpoints/user-testing/synthesis.round1.json",
+  "generatedAt": "2026-03-02T21:40:43.597660+00:00"
+}

@@ -16,6 +16,7 @@ dependencies = [
 [project.optional-dependencies]
 dev = [
     "pytest",
+    "pytest-asyncio",
     "pytest-cov",
     "pytest-randomly",
     "mypy",
@@ -23,6 +24,7 @@ dev = [
     "deptry",
     "vulture",
     "pre-commit",
+    "httpx>=0.27,<1.0",
 ]
 
 [tool.uv]
@@ -71,6 +73,7 @@ testpaths = ["src/tests"]
 python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
+asyncio_mode = "auto"
 addopts = "--durations=10 -v -p no:pytest_ethereum -p no:pytest-brownie"
 
 [tool.coverage.run]
@@ -82,4 +85,4 @@ fail_under = 80
 show_missing = true
 
 [tool.deptry]
-per_rule_ignores = {DEP002 = ["uvicorn", "setuptools", "pre-commit", "pytest-cov", "pytest-randomly", "mypy", "ruff", "deptry", "vulture"], DEP003 = ["brownie", "dank_mids", "y", "web3"]}
+per_rule_ignores = {DEP002 = ["uvicorn", "setuptools", "pre-commit", "pytest-cov", "pytest-randomly", "pytest-asyncio", "mypy", "ruff", "deptry", "vulture", "httpx"], DEP003 = ["brownie", "dank_mids", "y", "web3"]}

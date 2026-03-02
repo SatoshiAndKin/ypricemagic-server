@@ -1,0 +1,44 @@
+commands:
+  install: uv sync --extra dev
+  test: uv run pytest -x -q --tb=short -n 6
+  lint: uv run ruff check src/
+  format_check: uv run ruff format --check .
+  format: uv run ruff format .
+  typecheck: uv run mypy src/
+  deptry: uv run deptry .
+
+services:
+  nginx:
+    start: cd /Users/bryan/code/ypricemagic-server && docker compose up -d nginx
+    stop: cd /Users/bryan/code/ypricemagic-server && docker compose stop nginx
+    healthcheck: curl -sf http://localhost:8000/health
+    port: 8000
+    depends_on: [ypm-ethereum, ypm-arbitrum, ypm-optimism, ypm-base]
+
+  ypm-ethereum:
+    start: cd /Users/bryan/code/ypricemagic-server && docker compose up -d ypm-ethereum
+    stop: cd /Users/bryan/code/ypricemagic-server && docker compose stop ypm-ethereum
+    healthcheck: docker exec ypricemagic-server-ypm-ethereum-1 curl -sf http://localhost:8001/health
+    port: 8001
+    depends_on: []
+
+  ypm-arbitrum:
+    start: cd /Users/bryan/code/ypricemagic-server && docker compose up -d ypm-arbitrum
+    stop: cd /Users/bryan/code/ypricemagic-server && docker compose stop ypm-arbitrum
+    healthcheck: docker exec ypricemagic-server-ypm-arbitrum-1 curl -sf http://localhost:8001/health
+    port: 8001
+    depends_on: []
+
+  ypm-optimism:
+    start: cd /Users/bryan/code/ypricemagic-server && docker compose up -d ypm-optimism
+    stop: cd /Users/bryan/code/ypricemagic-server && docker compose stop ypm-optimism
+    healthcheck: docker exec ypricemagic-server-ypm-optimism-1 curl -sf http://localhost:8001/health
+    port: 8001
+    depends_on: []
+
+  ypm-base:
+    start: cd /Users/bryan/code/ypricemagic-server && docker compose up -d ypm-base
+    stop: cd /Users/bryan/code/ypricemagic-server && docker compose stop ypm-base
+    healthcheck: docker exec ypricemagic-server-ypm-base-1 curl -sf http://localhost:8001/health
+    port: 8001
+    depends_on: []

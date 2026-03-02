@@ -1,0 +1,108 @@
+{
+  "milestone": "core-upgrade",
+  "round": 1,
+  "status": "pass",
+  "validatorsRun": {
+    "test": {
+      "passed": true,
+      "command": "uv run pytest -x -q --tb=short -n 6",
+      "exitCode": 0
+    },
+    "typecheck": {
+      "passed": true,
+      "command": "uv run mypy src/",
+      "exitCode": 0
+    },
+    "lint": {
+      "passed": true,
+      "command": "uv run ruff check src/",
+      "exitCode": 0
+    }
+  },
+  "reviewsSummary": {
+    "total": 6,
+    "passed": 6,
+    "failed": 0,
+    "failedFeatures": []
+  },
+  "blockingIssues": [],
+  "nonBlockingIssues": [
+    {
+      "featureId": "new-price-params",
+      "severity": "non_blocking",
+      "description": "Root openapi.json appears stale relative to current /price query params; static artifact drift risk.",
+      "source": "review"
+    },
+    {
+      "featureId": "new-price-params",
+      "severity": "non_blocking",
+      "description": "Inline INDEX_HTML UI does not expose newer /price params (skip_cache, ignore_pools, silent), creating API/UI drift.",
+      "source": "review"
+    },
+    {
+      "featureId": "block-timestamp-in-response",
+      "severity": "non_blocking",
+      "description": "No endpoint-level assertion currently verifies /price response shape includes block_timestamp; behavior is covered via helper/cache tests.",
+      "source": "review"
+    },
+    {
+      "featureId": "enhanced-health-endpoint",
+      "severity": "non_blocking",
+      "description": "timeout_protection unit test intentionally waits ~5s due real timeout path, slowing suite.",
+      "source": "review"
+    }
+  ],
+  "appliedUpdates": [
+    {
+      "target": "library",
+      "description": "Updated .factory/library/architecture.md with testing constraints: autouse y-module mocking fixture, FastAPI lifespan/TestClient limitation, asyncio_mode=auto note, and static openapi.json drift warning.",
+      "sourceFeature": "fail-to-none-error-handling,new-price-params,block-timestamp-in-response"
+    },
+    {
+      "target": "library",
+      "description": "Updated .factory/library/user-testing.md to document /health response includes synced and that sync checks can add ~5s latency on timeout.",
+      "sourceFeature": "enhanced-health-endpoint"
+    }
+  ],
+  "suggestedGuidanceUpdates": [
+    {
+      "target": "backend-worker skill",
+      "suggestion": "Add explicit testing guidance that FastAPI TestClient/lifespan can trigger brownie network startup and should be avoided for this repo; prefer helper-level tests with mocks.",
+      "evidence": "Observed in block-timestamp review where worker spent multiple steps attempting TestClient before reverting to helper-level tests.",
+      "isSystemic": true
+    },
+    {
+      "target": "backend-worker skill",
+      "suggestion": "In Docker verification procedure, include explicit step to restart nginx after container recreation when routing returns backend unavailable due cached DNS.",
+      "evidence": "docker-rebuild-verify found reproducible nginx stale DNS behavior after rebuild; workaround already documented in .factory/library/environment.md.",
+      "isSystemic": true
+    },
+    {
+      "target": "AGENTS.md",
+      "suggestion": "Define policy for keeping static openapi.json and inline INDEX_HTML UI synchronized with API contract changes (either mandatory regeneration/update or explicitly out-of-scope).",
+      "evidence": "new-price-params and block-timestamp reviews both identified API/UI/spec drift risk from manual artifacts.",
+      "isSystemic": true
+    },
+    {
+      "target": "AGENTS.md",
+      "suggestion": "Document expected handling for detect-secrets baseline state to avoid repeated --no-verify commits when .secrets.baseline is present but untracked.",
+      "evidence": "new-price-params review noted workaround via --no-verify because detect-secrets hook expected tracked baseline file.",
+      "isSystemic": true
+    }
+  ],
+  "rejectedObservations": [
+    {
+      "observation": "Add nginx resolver directive as part of this scrutiny run.",
+      "reason": "ambiguous"
+    },
+    {
+      "observation": "Treat one worker's non-strict TDD execution order as a process failure.",
+      "reason": "not-systemic"
+    },
+    {
+      "observation": "nginx restart-after-recreate note missing from library.",
+      "reason": "already-documented"
+    }
+  ],
+  "previousRound": null
+}

@@ -1,0 +1,56 @@
+{
+  "featureId": "block-timestamp-in-response",
+  "reviewedAt": "2026-03-02T20:05:00.000Z",
+  "commitId": "1b383d4",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "pass",
+  "codeReview": {
+    "summary": "Clean implementation of block_timestamp in /price responses. All expected behaviors are covered: block_timestamp is always present (int or null), stored in cache, returned on cache hits, backward-compatible with old entries, and gracefully handles fetch failures. Implementation follows existing patterns (lazy imports, try/except for non-critical operations, manual response dicts). Tests cover cache roundtrip, backward compat with old entries, and helper function success/failure paths. All validators passed (110 tests, mypy clean, ruff clean).",
+    "issues": [
+      {
+        "file": "src/tests/test_server.py",
+        "line": 280,
+        "severity": "non_blocking",
+        "description": "No end-to-end test verifying the /price endpoint response shape includes block_timestamp. The tests cover the _fetch_block_timestamp helper in isolation and cache roundtrip, but don't verify the assembled response dict. This is consistent with existing test patterns (other response fields like 'cached' also lack endpoint-level tests), but means VAL-CORE-016 and VAL-CORE-020 are only verified transitively through the helper + code inspection, not by an actual endpoint test."
+      },
+      {
+        "file": "src/server.py",
+        "line": 203,
+        "severity": "non_blocking",
+        "description": "Redundant .get() usage: cached.get('block_timestamp') is used in the cache hit response path, but get_cached_price() already guarantees block_timestamp is present in the dict (backward compat code adds it if missing). Using cached['block_timestamp'] would be slightly more explicit about the contract. Not a bug \u2014 just defensive coding."
+      },
+      {
+        "file": "src/server.py",
+        "line": 144,
+        "severity": "non_blocking",
+        "description": "_fetch_block_timestamp has no retry logic unlike _fetch_price (which uses @retry for transient errors). This is an intentional design choice since block_timestamp is non-critical, but a single retry on ConnectionError could improve availability of the timestamp without significant latency cost. Current approach is acceptable per the feature description ('wrap in try/except \u2014 if it fails, set block_timestamp=None')."
+      },
+      {
+        "file": "src/tests/test_cache.py",
+        "line": 89,
+        "severity": "non_blocking",
+        "description": "test_old_cache_entry_without_block_timestamp_returns_none creates a nested patch context inside the autouse isolated_cache fixture. Both patch CACHE_DIR and _cache. This works correctly (inner patch takes precedence), but is somewhat fragile \u2014 if the fixture changes, this test might silently break. The nested patch is necessary because the test needs to write a 'legacy' entry directly via cache.set() without going through set_cached_price (which would include block_timestamp). Acceptable trade-off."
+      }
+    ]
+  },
+  "sharedStateObservations": [
+    {
+      "area": "conventions",
+      "observation": "The HTML UI at GET / does not render block_timestamp in the result display, even though it's now present in all /price API responses. No convention or decision is documented about whether new API fields should be reflected in the UI. The worker correctly scoped their work to the API response per the feature description, but future features may also overlook the UI.",
+      "evidence": "src/server.py INDEX_HTML \u2014 showResult() function renders chain, token, block, amount, price, cached but not block_timestamp. The feature description says 'Add block_timestamp to /price responses' which is API-focused."
+    },
+    {
+      "area": "conventions",
+      "observation": "TestClient (httpx) cannot be used for endpoint-level tests because the FastAPI lifespan hook triggers brownie network connections that fail outside Docker. This limitation isn't documented in AGENTS.md or the skill file, and the worker spent multiple tool calls attempting to install httpx and use TestClient before abandoning the approach.",
+      "evidence": "Transcript shows: worker installed httpx, attempted TestClient tests, got lifespan startup errors, then refactored to test helper functions directly. Mission AGENTS.md says 'Tests must NOT require blockchain connections \u2014 mock all ypricemagic calls' but doesn't mention TestClient/lifespan specifically."
+    },
+    {
+      "area": "skills",
+      "observation": "The backend-worker skill's TDD step doesn't mention the TestClient limitation. Adding a note like 'Do not use FastAPI TestClient \u2014 the lifespan hook requires brownie network. Test helper functions directly with unittest.mock.' would prevent future workers from repeating this exploration.",
+      "evidence": "Skill SKILL.md step 3 says 'Write failing tests BEFORE implementation' and mentions mock patterns, but doesn't warn about TestClient. Transcript shows worker spent 4+ tool calls on the httpx/TestClient detour."
+    }
+  ],
+  "addressesFailureFrom": null,
+  "summary": "PASS. The block_timestamp feature is correctly implemented across cache.py, server.py, and tests. All 7 new tests are well-structured and verify the core behaviors: cache storage, backward compatibility with old entries, and graceful failure handling. The implementation follows existing codebase patterns (lazy imports, try/except for non-critical ops, manual response dicts). No blocking issues. Non-blocking observations: no endpoint-level test for response shape (consistent with existing patterns), redundant .get() on cache hit path, and the HTML UI doesn't render the new field. Shared state observation: the TestClient/lifespan limitation should be documented to prevent repeated exploration by future workers."
+}

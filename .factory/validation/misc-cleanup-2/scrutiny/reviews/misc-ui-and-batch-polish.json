@@ -1,0 +1,33 @@
+{
+  "featureId": "misc-ui-and-batch-polish",
+  "reviewedAt": "2026-03-02T22:15:00.000Z",
+  "commitId": "e3808af",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "pass",
+  "codeReview": {
+    "summary": "Clean, well-tested implementation of two polish items. UI URL-state restoration correctly dispatches input events to trigger the existing setupMutualExclusivity handlers. Batch _parse_amounts correctly updated to treat empty segments as None, with proper type propagation through BatchParams, _fetch_batch_prices, _prepare_batch_cache_check, and _fill_batch_results. Caching semantics are correct: None-amount tokens are cached, non-None-amount tokens skip caching. 12 new param tests and 4 new server tests provide thorough coverage of the mixed-amounts behavior.",
+    "issues": [
+      {
+        "file": "src/server.py",
+        "line": 1106,
+        "severity": "non_blocking",
+        "description": "batch-block and batch-timestamp dispatchEvent calls are no-ops. The URL restoration section (lines 1088-1101) restores 'block' and 'timestamp' params only to the single-price form (price-block, price-timestamp). There is no batch_block or batch_timestamp URL param restoration, so batch-block and batch-timestamp inputs are always empty at dispatch time. The dispatches harmlessly enable both fields (which are already enabled). Not a bug, but dead code in the current UI."
+      }
+    ]
+  },
+  "sharedStateObservations": [
+    {
+      "area": "conventions",
+      "observation": "AGENTS.md API Endpoints section only documents GET /price, GET /health, GET /health/<chain>, and GET /. The batch pricing endpoint GET /prices is missing, along with GET /check_bucket. As new features add behavior to these endpoints (like mixed amounts), the gap grows.",
+      "evidence": "AGENTS.md ## API Endpoints lists 4 endpoints; src/server.py defines additional routes: @app.get('/prices') at line ~530 and @app.get('/check_bucket') at line ~615"
+    },
+    {
+      "area": "conventions",
+      "observation": "AGENTS.md Project Layout lists only test_params.py under src/tests/, but test_server.py and test_cache.py also exist and are actively developed.",
+      "evidence": "AGENTS.md shows 'tests/test_params.py  # Unit tests for params module' but glob of src/tests/ shows test_params.py, test_server.py, and test_cache.py"
+    }
+  ],
+  "addressesFailureFrom": null,
+  "summary": "Both polish items are correctly implemented. The UI URL-state restoration dispatches input events after value restoration to trigger block/timestamp mutual exclusivity — the event listeners are already registered via setupMutualExclusivity() and the dispatch ordering works correctly for all single-form cases (batch dispatches are harmless no-ops since batch block/timestamp aren't restored from URL). The batch mixed-amounts change correctly updates _parse_amounts to treat empty comma segments as None, propagates the tuple[float | None, ...] type through the entire call chain, and handles caching semantics properly (None-amount tokens cached, amount-bearing tokens not cached). Comprehensive test coverage added: 8 new param parsing tests and 4 new server endpoint tests. All validators passed (234 tests, mypy clean, ruff clean). Pass."
+}

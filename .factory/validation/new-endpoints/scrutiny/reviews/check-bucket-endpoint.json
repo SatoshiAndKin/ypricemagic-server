@@ -1,0 +1,45 @@
+{
+  "featureId": "check-bucket-endpoint",
+  "reviewedAt": "2026-03-02T21:10:00.000Z",
+  "commitId": "64693b5",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "pass",
+  "codeReview": {
+    "summary": "The check_bucket endpoint is well-implemented and covers all 6 validation assertions (VAL-BUCKET-001 through VAL-BUCKET-006). The endpoint follows existing codebase patterns: lazy ypricemagic import, error envelope format, Prometheus counter metrics, structlog logging, and inline token validation using is_valid_address from params.py. Tests are comprehensive with 8 test cases covering happy path, error paths, multiple bucket types, and metrics. All validators passed (pytest 205 passed, mypy clean, ruff clean, format clean).",
+    "issues": [
+      {
+        "file": "src/server.py",
+        "line": 620,
+        "severity": "non_blocking",
+        "description": "Redundant None-check: `token[:10] if token else None` in the exception handler's logger.error call. By this point in the code, token is guaranteed non-None and non-empty (the function already returned 400 for those cases). Should just be `token[:10]`. Not a bug, just unnecessary defensiveness."
+      },
+      {
+        "file": "src/server.py",
+        "line": 588,
+        "severity": "non_blocking",
+        "description": "No duration Histogram for check_bucket, unlike /price and /prices which track both Counter and Histogram. check_bucket only has a Counter (check_bucket_requests_total). This is a minor observability inconsistency but not required by the validation contract."
+      },
+      {
+        "file": "src/tests/test_server.py",
+        "line": 1318,
+        "severity": "non_blocking",
+        "description": "test_prometheus_metrics_tracked is a smoke test that only verifies the endpoint returns 200 without error. It does not actually assert that the Prometheus counter was incremented. The test comment acknowledges this limitation. This is acceptable since metric behavior is implicitly validated through the endpoint's code path."
+      }
+    ]
+  },
+  "sharedStateObservations": [
+    {
+      "area": "conventions",
+      "observation": "The check_bucket endpoint performs token validation inline (checking `not token` and `is_valid_address`) rather than routing through a dedicated parse function in params.py. The /price and /prices endpoints use parse_price_params() and parse_batch_params() respectively. This is a minor pattern divergence, though justified since check_bucket only needs a single token param, making a dedicated parse function arguably over-engineered.",
+      "evidence": "src/server.py:601-605 does inline validation; compare to src/server.py:350 which calls parse_price_params() and src/server.py:430 which calls parse_batch_params()"
+    },
+    {
+      "area": "conventions",
+      "observation": "The /price and /prices endpoints have both Counter and Histogram Prometheus metrics, but /check_bucket only defines a Counter (no Histogram for duration tracking). AGENTS.md mentions 'Prometheus metrics use price_requests_total counter with chain and status labels' but doesn't specify that all endpoints need both Counter and Histogram.",
+      "evidence": "src/server.py lines 34-56: price has Counter+Histogram, batch has Counter+Histogram, check_bucket has only Counter"
+    }
+  ],
+  "addressesFailureFrom": null,
+  "summary": "The check_bucket endpoint implementation passes review. All 6 validation assertions are covered by 8 tests. The implementation follows existing patterns (lazy imports, error envelope, Prometheus metrics, structlog). Three non-blocking issues noted: a redundant None-check in the error handler, missing duration histogram (inconsistent with other endpoints), and a smoke-test-only Prometheus metrics test. No blocking issues found."
+}

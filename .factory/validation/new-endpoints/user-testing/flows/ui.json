@@ -1,0 +1,129 @@
+{
+  "groupId": "ui",
+  "testedAt": "2026-03-02T21:20:00Z",
+  "credentials": {
+    "account": "stateless-ui-validator-1",
+    "namespace": "utv-ne-ui"
+  },
+  "toolsUsed": ["agent-browser"],
+  "assertions": [
+    {
+      "id": "VAL-UI-001",
+      "title": "UI loads with new sections",
+      "status": "pass",
+      "steps": [
+        { "action": "Navigate to http://localhost:8000/", "expected": "HTML page loads with sections for batch pricing, timestamp query, and token classification", "observed": "Page loaded with h2 headings 'Single Token Price', 'Batch Token Pricing', and 'Token Classification', each containing form elements" }
+      ],
+      "evidence": {
+        "screenshots": ["ui-full-page-load.png"],
+        "consoleErrors": "Only favicon.ico 404 (benign, no app errors)",
+        "network": "GET / -> 200"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-UI-002",
+      "title": "Timestamp field in price form",
+      "status": "pass",
+      "steps": [
+        { "action": "Inspect Single Token Price form", "expected": "Timestamp input element exists alongside block number", "observed": "textbox 'Timestamp (optional)' with placeholder 'Unix epoch or ISO 8601' found in price form, placed side-by-side with Block Number input" }
+      ],
+      "evidence": {
+        "screenshots": ["ui-full-page-load.png"],
+        "consoleErrors": "none (only favicon 404)",
+        "network": "N/A"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-UI-003",
+      "title": "Timestamp and block mutually exclusive in UI",
+      "status": "pass",
+      "steps": [
+        { "action": "Type '1700000000' into timestamp input in price form", "expected": "Block input becomes disabled", "observed": "Block Number input gained [disabled] attribute, visually grayed out" },
+        { "action": "Clear timestamp input", "expected": "Block input becomes enabled again", "observed": "Block Number input re-enabled (no disabled attribute)" },
+        { "action": "Type '18000000' into block input in price form", "expected": "Timestamp input becomes disabled", "observed": "Timestamp input gained [disabled] attribute, visually grayed out" }
+      ],
+      "evidence": {
+        "screenshots": ["ui-timestamp-disables-block.png", "ui-block-disables-timestamp.png"],
+        "consoleErrors": "none (only favicon 404)",
+        "network": "N/A"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-UI-004",
+      "title": "Batch form accepts comma-separated tokens",
+      "status": "pass",
+      "steps": [
+        { "action": "Inspect Batch Token Pricing section", "expected": "Multi-token input (textarea) and submit button present", "observed": "textarea 'Token Addresses (comma-separated)' with placeholder showing two comma-separated addresses, and 'Get Prices' button found" }
+      ],
+      "evidence": {
+        "screenshots": ["ui-full-page-load.png"],
+        "consoleErrors": "none (only favicon 404)",
+        "network": "N/A"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-UI-005",
+      "title": "Batch form has optional amounts field",
+      "status": "pass",
+      "steps": [
+        { "action": "Inspect Batch Token Pricing section for amounts input", "expected": "Amounts input field present", "observed": "textbox 'Amounts (optional, comma-separated, matches token order)' with placeholder 'e.g. 1000,500' found in batch form" }
+      ],
+      "evidence": {
+        "screenshots": ["ui-full-page-load.png"],
+        "consoleErrors": "none (only favicon 404)",
+        "network": "N/A"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-UI-006",
+      "title": "Check bucket form present",
+      "status": "pass",
+      "steps": [
+        { "action": "Inspect Token Classification section", "expected": "Token input and submit button present", "observed": "h2 'Token Classification' section with textbox 'Token Address' (placeholder '0x...') and 'Check Bucket' button found" }
+      ],
+      "evidence": {
+        "screenshots": ["ui-full-page-load.png"],
+        "consoleErrors": "none (only favicon 404)",
+        "network": "N/A"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-UI-007",
+      "title": "New params (skip_cache, ignore_pools, silent) in UI",
+      "status": "pass",
+      "steps": [
+        { "action": "Inspect Single Token Price form for new parameter controls", "expected": "Controls for skip_cache, ignore_pools, and silent exist", "observed": "Found: checkbox 'Skip Cache', checkbox 'Silent', textbox 'Ignore Pools (optional, comma-separated addresses)' — all present in the price form" }
+      ],
+      "evidence": {
+        "screenshots": ["ui-full-page-load.png"],
+        "consoleErrors": "none (only favicon 404)",
+        "network": "N/A"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-UI-008",
+      "title": "Error display for new endpoints",
+      "status": "pass",
+      "steps": [
+        { "action": "Submit batch form with 'INVALID_ADDRESS' as token", "expected": "Error message from server displayed in UI", "observed": "Red error text 'Invalid token address at position 1: INVALID_ADDRESS' displayed in dark result area below batch form" },
+        { "action": "Submit check_bucket form with 'INVALID' as token", "expected": "Error message from server displayed in UI", "observed": "Red error text 'Invalid token address: INVALID' displayed in dark result area below classification form" }
+      ],
+      "evidence": {
+        "screenshots": ["ui-batch-error-display.png", "ui-bucket-error-display.png", "ui-all-errors-full-page.png"],
+        "consoleErrors": "Expected 400 errors from intentional invalid requests: GET /ethereum/prices?tokens=INVALID_ADDRESS -> 400, GET /ethereum/check_bucket?token=INVALID -> 400",
+        "network": "GET /ethereum/prices?tokens=INVALID_ADDRESS -> 400, GET /ethereum/check_bucket?token=INVALID -> 400"
+      },
+      "issues": null
+    }
+  ],
+  "frictions": [],
+  "blockers": [],
+  "summary": "Tested 8 assertions: all 8 passed. UI loads with all three new sections (single price with timestamp, batch pricing, token classification). Timestamp/block mutual exclusivity works bidirectionally via JavaScript disabled attribute. New params (skip_cache, ignore_pools, silent) have UI controls. Error messages from server render visibly in red for both batch and bucket endpoints."
+}
