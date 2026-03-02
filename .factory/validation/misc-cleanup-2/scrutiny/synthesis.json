@@ -1,0 +1,46 @@
+{
+  "milestone": "misc-cleanup-2",
+  "round": 1,
+  "status": "pass",
+  "validatorsRun": {
+    "test": {
+      "passed": true,
+      "command": "uv run pytest -x -q --tb=short -n 6",
+      "exitCode": 0
+    },
+    "typecheck": {
+      "passed": true,
+      "command": "uv run mypy src/",
+      "exitCode": 0
+    },
+    "lint": {
+      "passed": true,
+      "command": "uv run ruff check src/",
+      "exitCode": 0
+    }
+  },
+  "reviewsSummary": {
+    "total": 1,
+    "passed": 1,
+    "failed": 0,
+    "failedFeatures": []
+  },
+  "blockingIssues": [],
+  "appliedUpdates": [],
+  "suggestedGuidanceUpdates": [
+    {
+      "target": "AGENTS.md",
+      "suggestion": "Update the API Endpoints section to include GET /prices and GET /check_bucket so worker guidance reflects the actual public routes.",
+      "evidence": "Review for misc-ui-and-batch-polish found AGENTS.md documents only /price and /health routes while src/server.py includes /prices and /check_bucket.",
+      "isSystemic": false
+    },
+    {
+      "target": "AGENTS.md",
+      "suggestion": "Update Project Layout test entries to include src/tests/test_server.py and src/tests/test_cache.py in addition to test_params.py.",
+      "evidence": "Review for misc-ui-and-batch-polish found AGENTS.md test layout stale relative to active test files used in this milestone.",
+      "isSystemic": false
+    }
+  ],
+  "rejectedObservations": [],
+  "previousRound": null
+}
