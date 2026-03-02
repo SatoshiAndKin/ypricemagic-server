@@ -1,0 +1,161 @@
+{
+  "groupId": "bucket",
+  "testedAt": "2026-03-02T00:00:00Z",
+  "credentials": {
+    "account": "stateless-api-validator-4",
+    "namespace": "utv-ne-bucket"
+  },
+  "toolsUsed": ["curl"],
+  "assertions": [
+    {
+      "id": "VAL-BUCKET-001",
+      "title": "Known token returns bucket classification",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "curl -s -w '\\nHTTP_CODE:%{http_code}\\n' -H 'X-Request-ID: utv-ne-bucket-001' 'http://localhost:8000/ethereum/check_bucket?token=0x6B175474E89094C44Da98b954EedeAC495271d0F'",
+          "expected": "200 with {token, chain, bucket} where bucket is non-empty string",
+          "observed": "200 with {\"token\":\"******************************************\",\"chain\":\"ethereum\",\"bucket\":\"stable usd\"}"
+        }
+      ],
+      "evidence": {
+        "screenshots": [],
+        "consoleErrors": "n/a (API test)",
+        "network": "GET /ethereum/check_bucket?token=0x6B175474E89094C44Da98b954EedeAC495271d0F -> 200"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-BUCKET-002",
+      "title": "Missing token returns 400",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "curl -s -w '\\nHTTP_CODE:%{http_code}\\n' -H 'X-Request-ID: utv-ne-bucket-002' 'http://localhost:8000/ethereum/check_bucket'",
+          "expected": "400 with {\"error\": \"...\"}",
+          "observed": "400 with {\"error\":\"Missing required parameter: token\"}"
+        }
+      ],
+      "evidence": {
+        "screenshots": [],
+        "consoleErrors": "n/a (API test)",
+        "network": "GET /ethereum/check_bucket -> 400"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-BUCKET-003",
+      "title": "Invalid token address returns 400",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "curl -s -w '\\nHTTP_CODE:%{http_code}\\n' -H 'X-Request-ID: utv-ne-bucket-003' 'http://localhost:8000/ethereum/check_bucket?token=INVALID'",
+          "expected": "400 with {\"error\": \"...\"}",
+          "observed": "400 with {\"error\":\"Invalid token address: INVALID\"}"
+        }
+      ],
+      "evidence": {
+        "screenshots": [],
+        "consoleErrors": "n/a (API test)",
+        "network": "GET /ethereum/check_bucket?token=INVALID -> 400"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-BUCKET-004",
+      "title": "Unclassifiable token returns 200 with null bucket",
+      "status": "blocked",
+      "steps": [
+        {
+          "action": "curl -s -m 60 -H 'X-Request-ID: utv-ne-bucket-004' 'http://localhost:8000/ethereum/check_bucket?token=0x0000000000000000000000000000000000000001'",
+          "expected": "200 with bucket: null",
+          "observed": "Request timed out after 60s"
+        },
+        {
+          "action": "curl -s -H 'X-Request-ID: utv-ne-bucket-004b' 'http://localhost:8000/ethereum/check_bucket?token=0x0000000000000000000000000000000000000000'",
+          "expected": "200 with bucket: null",
+          "observed": "500 with {\"error\":\"Failed to classify token 0x0000000000000000000000000000000000000000. Check server logs.\"}"
+        },
+        {
+          "action": "curl -s -m 90 -H 'X-Request-ID: utv-ne-bucket-004d' 'http://localhost:8000/ethereum/check_bucket?token=0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2'",
+          "expected": "200 with bucket: null",
+          "observed": "200 with bucket: \"chainlink feed\" (WETH is classified)"
+        }
+      ],
+      "evidence": {
+        "screenshots": [],
+        "consoleErrors": "n/a (API test)",
+        "network": "Multiple attempts: timeout, 500, or classified token. No null-bucket response observed."
+      },
+      "issues": "Cannot find a token from the API surface that returns bucket:null. Non-contract addresses either timeout (>60s) or raise exceptions (500). Known tokens return a classification. The null-bucket code path (y.check_bucket returning None) is verified in unit tests but not triggerable from curl without knowing a specific unclassifiable-but-resolvable token."
+    },
+    {
+      "id": "VAL-BUCKET-005",
+      "title": "No block parameter required",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "curl -s -w '\\nHTTP_CODE:%{http_code}\\n' -H 'X-Request-ID: utv-ne-bucket-005' 'http://localhost:8000/ethereum/check_bucket?token=0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48'",
+          "expected": "200 — endpoint succeeds without block param",
+          "observed": "200 with {\"token\":\"******************************************\",\"chain\":\"ethereum\",\"bucket\":\"stable usd\"}"
+        }
+      ],
+      "evidence": {
+        "screenshots": [],
+        "consoleErrors": "n/a (API test)",
+        "network": "GET /ethereum/check_bucket?token=0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48 -> 200"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-BUCKET-006",
+      "title": "check_bucket exception returns 500",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "curl -s -w '\\nHTTP_CODE:%{http_code}\\n' -H 'X-Request-ID: utv-ne-bucket-004b' 'http://localhost:8000/ethereum/check_bucket?token=0x0000000000000000000000000000000000000000'",
+          "expected": "500 with {\"error\": \"...\"} consistent envelope",
+          "observed": "500 with {\"error\":\"Failed to classify token 0x0000000000000000000000000000000000000000. Check server logs.\"}"
+        }
+      ],
+      "evidence": {
+        "screenshots": [],
+        "consoleErrors": "n/a (API test)",
+        "network": "GET /ethereum/check_bucket?token=0x0000000000000000000000000000000000000000 -> 500"
+      },
+      "issues": null
+    }
+  ],
+  "frictions": [
+    {
+      "description": "Token addresses in responses are redacted to 42 asterisks (logger.py behavior mentioned in known quirks). The token field shows '******************************************' instead of the actual address, which could confuse API consumers.",
+      "resolved": true,
+      "resolution": "Known behavior documented in user-testing.md quirks section. Not a bug.",
+      "affectedAssertions": ["VAL-BUCKET-001", "VAL-BUCKET-005"]
+    },
+    {
+      "description": "Non-contract and dead addresses cause requests to hang until nginx proxy_read_timeout (120s), making it impossible to test the null-bucket path from the API surface.",
+      "resolved": false,
+      "resolution": "No resolution from API surface; null-bucket behavior verified only in unit tests.",
+      "affectedAssertions": ["VAL-BUCKET-004"]
+    }
+  ],
+  "blockers": [
+    {
+      "description": "VAL-BUCKET-004 requires a token that check_bucket returns None for, but no such token could be identified from the API surface. Non-contract addresses timeout or raise exceptions; known tokens always classify into a bucket.",
+      "affectedAssertions": ["VAL-BUCKET-004"],
+      "quickFixAttempted": "Tried zero address (0x0...0 -> 500 exception), burn address (0x0...dEaD -> timeout), address 0x0...1 (timeout), WETH (classified as 'chainlink feed'). Unit tests confirm the null-bucket code path works with mocked return value."
+    }
+  ],
+  "commandsRun": [
+    "curl -s -w '\\nHTTP_CODE:%{http_code}\\n' -H 'X-Request-ID: utv-ne-bucket-001' 'http://localhost:8000/ethereum/check_bucket?token=0x6B175474E89094C44Da98b954EedeAC495271d0F'",
+    "curl -s -w '\\nHTTP_CODE:%{http_code}\\n' -H 'X-Request-ID: utv-ne-bucket-002' 'http://localhost:8000/ethereum/check_bucket'",
+    "curl -s -w '\\nHTTP_CODE:%{http_code}\\n' -H 'X-Request-ID: utv-ne-bucket-003' 'http://localhost:8000/ethereum/check_bucket?token=INVALID'",
+    "curl -s -m 60 -H 'X-Request-ID: utv-ne-bucket-004' 'http://localhost:8000/ethereum/check_bucket?token=0x0000000000000000000000000000000000000001'",
+    "curl -s -H 'X-Request-ID: utv-ne-bucket-004b' 'http://localhost:8000/ethereum/check_bucket?token=0x0000000000000000000000000000000000000000'",
+    "curl -s -m 60 -H 'X-Request-ID: utv-ne-bucket-004c' 'http://localhost:8000/ethereum/check_bucket?token=0x000000000000000000000000000000000000dEaD'",
+    "curl -s -m 90 -H 'X-Request-ID: utv-ne-bucket-004d' 'http://localhost:8000/ethereum/check_bucket?token=0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2'",
+    "curl -s -w '\\nHTTP_CODE:%{http_code}\\n' -H 'X-Request-ID: utv-ne-bucket-005' 'http://localhost:8000/ethereum/check_bucket?token=0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48'"
+  ],
+  "summary": "Tested 6 assertions: 4 passed (VAL-BUCKET-001, 002, 003, 005, 006), 1 blocked (VAL-BUCKET-004: cannot trigger null-bucket from API surface). VAL-BUCKET-006 confirmed via zero address triggering 500 with correct error envelope."
+}

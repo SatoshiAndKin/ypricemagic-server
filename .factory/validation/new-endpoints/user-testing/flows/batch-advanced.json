@@ -1,0 +1,166 @@
+{
+  "groupId": "batch-advanced",
+  "testedAt": "2026-03-02T21:21:00Z",
+  "credentials": {
+    "account": "stateless-api-validator-3",
+    "namespace": "utv-ne-batch-b"
+  },
+  "toolsUsed": ["curl"],
+  "assertions": [
+    {
+      "id": "VAL-BATCH-009",
+      "title": "Partial failure returns null prices",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "GET /ethereum/prices?tokens=USDC,0x0000...0000&block=18000012",
+          "expected": "HTTP 200 with array containing one numeric price and one null price",
+          "observed": "HTTP 200. Array: [{price:1.0, cached:false}, {price:null, cached:false}]. Partial failure handled correctly."
+        }
+      ],
+      "evidence": {
+        "command": "curl -s -H 'X-Request-ID: utv-ne-batch-b-009' 'http://localhost:8000/ethereum/prices?tokens=0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48,0x0000000000000000000000000000000000000000&block=18000012'",
+        "httpStatus": 200,
+        "responseBody": "[{\"token\":\"******************************************\",\"block\":18000012,\"price\":1.0,\"block_timestamp\":1693067039,\"cached\":false},{\"token\":\"******************************************\",\"block\":18000012,\"price\":null,\"block_timestamp\":1693067039,\"cached\":false}]",
+        "notes": "First element (USDC) has numeric price 1.0, second element (zero address) has price:null. Both have block_timestamp and cached fields. Response is 200 even with partial failure."
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-BATCH-010",
+      "title": "Batch with timestamp param works",
+      "status": "fail",
+      "steps": [
+        {
+          "action": "GET /ethereum/prices?tokens=USDC,DAI&timestamp=1693067039",
+          "expected": "HTTP 200 with both results sharing the same resolved block",
+          "observed": "HTTP 502 with error: 'Failed to resolve timestamp 1693067039 to block: Attribute BlockAtTimestamp.timestamp: expected type is datetime. Got: 1693067039'"
+        }
+      ],
+      "evidence": {
+        "command": "curl -s -H 'X-Request-ID: utv-ne-batch-b-010' 'http://localhost:8000/ethereum/prices?tokens=0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48,0x6B175474E89094C44Da98b954EedeAC495271d0F&timestamp=1693067039'",
+        "httpStatus": 502,
+        "responseBody": "{\"error\": \"Chain backend is unavailable\"}",
+        "containerLog": "batch_timestamp_resolution_failed error=\"Attribute BlockAtTimestamp.timestamp: expected type is 'datetime'. Got: 1693067039\"",
+        "notes": "Bug: _resolve_block_from_timestamp passes int to get_block_at_timestamp but ypricemagic expects a datetime object. Same bug affects /price?timestamp= (seen in other validator logs). Retried once after 5s delay, same result."
+      },
+      "issues": "Timestamp resolution fails for batch endpoint. get_block_at_timestamp expects datetime, but server passes int. This is the same bug affecting the single /price?timestamp= endpoint."
+    },
+    {
+      "id": "VAL-BATCH-011",
+      "title": "Batch with timestamp and amounts combined",
+      "status": "fail",
+      "steps": [
+        {
+          "action": "GET /ethereum/prices?tokens=USDC,DAI&timestamp=1693067039&amounts=1000,500",
+          "expected": "HTTP 200 with resolved block and amounts applied",
+          "observed": "HTTP 502 - same timestamp resolution bug as VAL-BATCH-010"
+        }
+      ],
+      "evidence": {
+        "command": "curl -s -H 'X-Request-ID: utv-ne-batch-b-011' 'http://localhost:8000/ethereum/prices?tokens=0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48,0x6B175474E89094C44Da98b954EedeAC495271d0F&timestamp=1693067039&amounts=1000,500'",
+        "httpStatus": 502,
+        "responseBody": "{\"error\": \"Chain backend is unavailable\"}",
+        "notes": "Blocked by same timestamp resolution bug as VAL-BATCH-010. Cannot test amounts+timestamp combination because timestamp resolution fails before amounts are processed."
+      },
+      "issues": "Same timestamp resolution bug as VAL-BATCH-010: get_block_at_timestamp expects datetime, server passes int."
+    },
+    {
+      "id": "VAL-BATCH-012",
+      "title": "Too many tokens returns 400",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "GET /ethereum/prices?tokens=<101 addresses>&block=18000012",
+          "expected": "HTTP 400 with error mentioning max token count",
+          "observed": "HTTP 400 with error: 'Too many tokens: 101. Maximum allowed is 100.'"
+        }
+      ],
+      "evidence": {
+        "command": "curl -s -H 'X-Request-ID: utv-ne-batch-b-012' 'http://localhost:8000/ethereum/prices?tokens=<101 generated 0x-prefixed addresses>&block=18000012'",
+        "httpStatus": 400,
+        "responseBody": "{\"error\":\"Too many tokens: 101. Maximum allowed is 100.\"}",
+        "notes": "101 addresses generated programmatically. Server correctly rejects with 400 and descriptive message."
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-BATCH-013",
+      "title": "Batch results include block_timestamp",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "GET /ethereum/prices?tokens=USDC,DAI&block=18000012",
+          "expected": "HTTP 200 with block_timestamp field in every element",
+          "observed": "HTTP 200. Both elements have block_timestamp:1693067039."
+        }
+      ],
+      "evidence": {
+        "command": "curl -s -H 'X-Request-ID: utv-ne-batch-b-013' 'http://localhost:8000/ethereum/prices?tokens=0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48,0x6B175474E89094C44Da98b954EedeAC495271d0F&block=18000012'",
+        "httpStatus": 200,
+        "responseBody": "[{\"token\":\"******************************************\",\"block\":18000012,\"price\":1.0,\"block_timestamp\":1693067039,\"cached\":true},{\"token\":\"******************************************\",\"block\":18000012,\"price\":1.0,\"block_timestamp\":1693067039,\"cached\":false}]",
+        "notes": "Both elements contain block_timestamp field with Unix epoch integer 1693067039. First element was cache hit (from VAL-BATCH-009 batch), second was fresh fetch. Both have block_timestamp."
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-BATCH-014",
+      "title": "Batch results cached individually",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "Step 1: Batch GET /ethereum/prices?tokens=USDC,DAI&block=18000012 (from VAL-BATCH-013)",
+          "expected": "USDC priced and cached from batch",
+          "observed": "USDC returned with price:1.0 in batch response"
+        },
+        {
+          "action": "Step 2: Single GET /ethereum/price?token=USDC&block=18000012",
+          "expected": "cached:true from the batch-written cache entry",
+          "observed": "HTTP 200 with cached:true, price:1.0, block_timestamp:1693067039"
+        }
+      ],
+      "evidence": {
+        "command": "curl -s -H 'X-Request-ID: utv-ne-batch-b-014' 'http://localhost:8000/ethereum/price?token=0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48&block=18000012'",
+        "httpStatus": 200,
+        "responseBody": "{\"chain\":\"ethereum\",\"token\":\"******************************************\",\"block\":18000012,\"price\":1.0,\"cached\":true,\"block_timestamp\":1693067039}",
+        "notes": "After batch request at block 18000012, individual /price request for same token+block returns cached:true. Confirms batch writes individual cache entries."
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-BATCH-015",
+      "title": "Batch supports skip_cache and silent params",
+      "status": "blocked",
+      "steps": [
+        {
+          "action": "GET /ethereum/prices?tokens=USDC,DAI&block=18000012&skip_cache=true&silent=true",
+          "expected": "Params accepted and forwarded to get_prices internally",
+          "observed": "HTTP 200, both elements show cached:false despite cache entries existing (skip_cache observable). Params accepted without error."
+        }
+      ],
+      "evidence": {
+        "command": "curl -s -H 'X-Request-ID: utv-ne-batch-b-015' 'http://localhost:8000/ethereum/prices?tokens=0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48,0x6B175474E89094C44Da98b954EedeAC495271d0F&block=18000012&skip_cache=true&silent=true'",
+        "httpStatus": 200,
+        "responseBody": "[{\"token\":\"******************************************\",\"block\":18000012,\"price\":1.0,\"block_timestamp\":1693067039,\"cached\":false},{\"token\":\"******************************************\",\"block\":18000012,\"price\":1.0,\"block_timestamp\":1693067039,\"cached\":false}]",
+        "notes": "Observable: skip_cache=true causes cached:false even though cache entries exist from prior requests. silent=true is accepted without error. However, confirming kwargs are forwarded to get_prices() internally requires unit test inspection, not user-surface testing."
+      },
+      "issues": "Assertion requires 'unit test verifying kwargs' as evidence. Internal kwargs forwarding to get_prices() cannot be fully verified from user surface alone. Observable behavior (skip_cache bypasses cache, silent accepted) is consistent with correct forwarding, but not conclusive proof."
+    }
+  ],
+  "frictions": [
+    {
+      "description": "Token addresses in responses are redacted with asterisks (42-char strings), making it harder to verify token ordering in batch responses. Had to rely on position matching rather than address comparison.",
+      "resolved": true,
+      "resolution": "Used input order position to verify correct mapping since the documentation mentions this is existing logger.py behavior.",
+      "affectedAssertions": ["VAL-BATCH-009", "VAL-BATCH-013", "VAL-BATCH-014"]
+    }
+  ],
+  "blockers": [
+    {
+      "description": "Timestamp resolution is broken: _resolve_block_from_timestamp passes int to get_block_at_timestamp, but ypricemagic expects a datetime object. Error: 'Attribute BlockAtTimestamp.timestamp: expected type is datetime. Got: 1693067039'. This affects all timestamp-based batch requests.",
+      "affectedAssertions": ["VAL-BATCH-010", "VAL-BATCH-011"],
+      "quickFixAttempted": "Retried VAL-BATCH-010 once after 5s delay. Same 502 error. Confirmed via docker compose logs that the error is consistent and deterministic (type mismatch, not transient)."
+    }
+  ],
+  "summary": "Tested 7 assertions: 4 passed (VAL-BATCH-009, VAL-BATCH-012, VAL-BATCH-013, VAL-BATCH-014), 2 failed (VAL-BATCH-010, VAL-BATCH-011 — timestamp resolution bug: server passes int to get_block_at_timestamp which expects datetime), 1 blocked (VAL-BATCH-015 — internal kwargs forwarding requires unit test, not verifiable from user surface)."
+}

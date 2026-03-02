@@ -1,0 +1,206 @@
+{
+  "groupId": "nginx-routing",
+  "testedAt": "2026-03-02T00:00:00Z",
+  "credentials": {
+    "account": "stateless-api-validator-5",
+    "namespace": "utv-ne-nginx"
+  },
+  "toolsUsed": ["curl"],
+  "assertions": [
+    {
+      "id": "VAL-NGINX-001",
+      "title": "/prices routes to correct chain",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "curl -s -w '\\nHTTP_CODE:%{http_code}' -H 'X-Request-ID: utv-ne-nginx-001' 'http://localhost:8000/ethereum/prices?tokens=0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48&block=18000000'",
+          "expected": "HTTP 200 or valid error, not 404",
+          "observed": "HTTP 200 with valid JSON array containing price result: [{\"token\":\"...\",\"block\":18000000,\"price\":1.0,\"block_timestamp\":null,\"cached\":true}]"
+        }
+      ],
+      "evidence": {
+        "screenshots": [],
+        "consoleErrors": "n/a (API test)",
+        "network": "GET /ethereum/prices?tokens=0xA0b8...&block=18000000 -> 200"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-NGINX-002",
+      "title": "/check_bucket routes to correct chain",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "curl -s -w '\\nHTTP_CODE:%{http_code}' -H 'X-Request-ID: utv-ne-nginx-002' 'http://localhost:8000/arbitrum/check_bucket?token=0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9'",
+          "expected": "HTTP 200 or valid error, not 404",
+          "observed": "HTTP 200 with {\"token\":\"...\",\"chain\":\"arbitrum\",\"bucket\":\"stable usd\"}"
+        }
+      ],
+      "evidence": {
+        "screenshots": [],
+        "consoleErrors": "n/a (API test)",
+        "network": "GET /arbitrum/check_bucket?token=0xFd08... -> 200"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-NGINX-003",
+      "title": "All four chains route /prices",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "curl GET /ethereum/prices (no tokens param)",
+          "expected": "Non-404 response",
+          "observed": "HTTP 400 {\"error\":\"Missing required parameter: tokens\"}"
+        },
+        {
+          "action": "curl GET /arbitrum/prices (no tokens param)",
+          "expected": "Non-404 response",
+          "observed": "HTTP 400 {\"error\":\"Missing required parameter: tokens\"}"
+        },
+        {
+          "action": "curl GET /optimism/prices (no tokens param)",
+          "expected": "Non-404 response",
+          "observed": "HTTP 400 {\"error\":\"Missing required parameter: tokens\"}"
+        },
+        {
+          "action": "curl GET /base/prices (no tokens param)",
+          "expected": "Non-404 response",
+          "observed": "HTTP 400 {\"error\":\"Missing required parameter: tokens\"}"
+        }
+      ],
+      "evidence": {
+        "screenshots": [],
+        "consoleErrors": "n/a (API test)",
+        "network": "GET /ethereum/prices -> 400, GET /arbitrum/prices -> 400, GET /optimism/prices -> 400, GET /base/prices -> 400"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-NGINX-004",
+      "title": "All four chains route /check_bucket",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "curl GET /ethereum/check_bucket (no token param)",
+          "expected": "Non-404 response",
+          "observed": "HTTP 400 {\"error\":\"Missing required parameter: token\"}"
+        },
+        {
+          "action": "curl GET /arbitrum/check_bucket (no token param)",
+          "expected": "Non-404 response",
+          "observed": "HTTP 400 {\"error\":\"Missing required parameter: token\"}"
+        },
+        {
+          "action": "curl GET /optimism/check_bucket (no token param)",
+          "expected": "Non-404 response",
+          "observed": "HTTP 400 {\"error\":\"Missing required parameter: token\"}"
+        },
+        {
+          "action": "curl GET /base/check_bucket (no token param)",
+          "expected": "Non-404 response",
+          "observed": "HTTP 400 {\"error\":\"Missing required parameter: token\"}"
+        }
+      ],
+      "evidence": {
+        "screenshots": [],
+        "consoleErrors": "n/a (API test)",
+        "network": "GET /ethereum/check_bucket -> 400, GET /arbitrum/check_bucket -> 400, GET /optimism/check_bucket -> 400, GET /base/check_bucket -> 400"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-NGINX-005",
+      "title": "Existing routes unaffected",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "curl GET /ethereum/price?token=0xA0b8...&block=18000000",
+          "expected": "HTTP 200",
+          "observed": "HTTP 200 with {\"chain\":\"ethereum\",\"token\":\"...\",\"block\":18000000,\"price\":1.0,\"cached\":true,\"block_timestamp\":null}"
+        },
+        {
+          "action": "curl GET /health",
+          "expected": "HTTP 200",
+          "observed": "HTTP 200 with {\"status\":\"ok\",\"chain\":\"ethereum\",\"block\":24572409,\"synced\":true}"
+        },
+        {
+          "action": "curl GET /",
+          "expected": "HTTP 200",
+          "observed": "HTTP 200 (HTML content)"
+        }
+      ],
+      "evidence": {
+        "screenshots": [],
+        "consoleErrors": "n/a (API test)",
+        "network": "GET /ethereum/price -> 200, GET /health -> 200, GET / -> 200"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-NGINX-006",
+      "title": "Invalid chain returns 404",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "curl GET /polygon/prices?tokens=0xA0b8...",
+          "expected": "HTTP 404 from nginx",
+          "observed": "HTTP 404 with nginx default 404 page: '404 Not Found' / nginx/1.29.5"
+        }
+      ],
+      "evidence": {
+        "screenshots": [],
+        "consoleErrors": "n/a (API test)",
+        "network": "GET /polygon/prices -> 404"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-CROSS-008",
+      "title": "Multi-chain new endpoints",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "curl GET /ethereum/prices?tokens=0xA0b8...&block=18000000 (valid data)",
+          "expected": "HTTP 200 with price data",
+          "observed": "HTTP 200 with [{\"token\":\"...\",\"block\":18000000,\"price\":1.0,\"block_timestamp\":null,\"cached\":true}]"
+        },
+        {
+          "action": "curl GET /ethereum/check_bucket?token=0xA0b8... (valid data)",
+          "expected": "HTTP 200 with bucket data",
+          "observed": "HTTP 200 with {\"token\":\"...\",\"chain\":\"ethereum\",\"bucket\":\"stable usd\"}"
+        },
+        {
+          "action": "curl GET /arbitrum/check_bucket?token=0xFd08... (valid data)",
+          "expected": "HTTP 200 with bucket data",
+          "observed": "HTTP 200 with {\"token\":\"...\",\"chain\":\"arbitrum\",\"bucket\":\"stable usd\"}"
+        },
+        {
+          "action": "curl GET /{chain}/prices and /{chain}/check_bucket for all 4 chains (missing params)",
+          "expected": "All return non-404 (400 with error message proves routing works)",
+          "observed": "ethereum: /prices=400 /check_bucket=400; arbitrum: /prices=400 /check_bucket=400; optimism: /prices=400 /check_bucket=400; base: /prices=400 /check_bucket=400"
+        }
+      ],
+      "evidence": {
+        "screenshots": [],
+        "consoleErrors": "n/a (API test)",
+        "network": "GET /ethereum/prices -> 200, GET /ethereum/check_bucket -> 200, GET /arbitrum/check_bucket -> 200, all 4 chains /prices -> 400, all 4 chains /check_bucket -> 400"
+      },
+      "issues": null
+    }
+  ],
+  "frictions": [],
+  "blockers": [],
+  "commandsRun": [
+    "curl -s -w '\\nHTTP_CODE:%{http_code}' -H 'X-Request-ID: utv-ne-nginx-001' 'http://localhost:8000/ethereum/prices?tokens=0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48&block=18000000'",
+    "curl -s -w '\\nHTTP_CODE:%{http_code}' -H 'X-Request-ID: utv-ne-nginx-002' 'http://localhost:8000/arbitrum/check_bucket?token=0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9'",
+    "curl -s -w 'HTTP_CODE:%{http_code}' -H 'X-Request-ID: utv-ne-nginx-003b-{chain}' 'http://localhost:8000/{chain}/prices' (for ethereum, arbitrum, optimism, base)",
+    "curl -s -w 'HTTP_CODE:%{http_code}' -H 'X-Request-ID: utv-ne-nginx-004b-{chain}' 'http://localhost:8000/{chain}/check_bucket' (for ethereum, arbitrum, optimism, base)",
+    "curl -s -w '\\nHTTP_CODE:%{http_code}' -H 'X-Request-ID: utv-ne-nginx-005-price' 'http://localhost:8000/ethereum/price?token=0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48&block=18000000'",
+    "curl -s -w '\\nHTTP_CODE:%{http_code}' -H 'X-Request-ID: utv-ne-nginx-005-health' 'http://localhost:8000/health'",
+    "curl -s -o /dev/null -w 'HTTP_CODE:%{http_code}' -H 'X-Request-ID: utv-ne-nginx-005-root' 'http://localhost:8000/'",
+    "curl -s -w '\\nHTTP_CODE:%{http_code}' -H 'X-Request-ID: utv-ne-nginx-006' 'http://localhost:8000/polygon/prices?tokens=0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48'",
+    "curl -s -w '\\nHTTP_CODE:%{http_code}' -H 'X-Request-ID: utv-ne-nginx-cross008-*' for /ethereum/prices, /ethereum/check_bucket, /arbitrum/check_bucket (valid data), plus all 4 chains with missing params"
+  ],
+  "summary": "Tested 7 assertions: 7 passed, 0 failed, 0 blocked. All nginx routing for /prices and /check_bucket endpoints confirmed working across all four chains (ethereum, arbitrum, optimism, base). Existing routes (/price, /health, /) remain unaffected. Invalid chain (polygon) correctly returns 404."
+}

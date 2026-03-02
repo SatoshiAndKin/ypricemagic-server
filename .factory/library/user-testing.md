@@ -10,7 +10,8 @@ Testing surface: tools, URLs, setup steps, isolation notes, known quirks.
 - Base URL: http://localhost:8000
 - Chain-specific: http://localhost:8000/{chain}/price, /prices, /check_bucket, /health
 - Aggregate health: http://localhost:8000/health
-- Prometheus: http://localhost:8000/metrics
+- Prometheus (chain-specific): http://localhost:8000/{chain}/metrics/
+- OpenAPI (chain-specific): http://localhost:8000/{chain}/openapi.json
 - Browser UI: http://localhost:8000/
 - `GET /health` response shape includes `{status, chain, block, synced}` where `synced` is `true`, `false`, or `null`
 
@@ -34,8 +35,10 @@ Testing surface: tools, URLs, setup steps, isolation notes, known quirks.
 - First price request after container start may be slow (cold cache, brownie warming up)
 - Chain containers are independent — a test on ethereum doesn't affect arbitrum
 - `/health` may take up to ~5 seconds when sync checks timeout (`check_node_async` is wrapped with a 5s timeout)
+- nginx may mask backend 5xx details with generic `{"error":"Chain backend is unavailable"}`
 - For unresolvable-price testing, `0x0000000000000000000000000000000000000000` fails fast; some other dead addresses may run until nginx `proxy_read_timeout` (120s)
 - After a long-running timed-out price request, the same chain backend may briefly return `502` via nginx until the in-flight request clears
+- No known live token currently triggers `/check_bucket` with `bucket:null`; this path is easiest to verify via unit tests/mocking
 
 ## Flow Validator Guidance: API (curl)
 - Use only your assigned assertion IDs; do not validate unrelated assertions.
@@ -43,3 +46,10 @@ Testing surface: tools, URLs, setup steps, isolation notes, known quirks.
 - Do not restart containers, clear cache directories, or change service state during flow tests.
 - Keep tests user-surface only (HTTP calls via `curl`); do not modify app source code in flow validation.
 - If an assertion depends on logs, use `docker compose logs --tail` for observation only.
+
+## Flow Validator Guidance: Browser UI
+- Use only your assigned assertion IDs and data namespace.
+- Use a dedicated browser session name for your run; do not reuse another validator's session.
+- Do not modify server state, restart services, or clear cache during UI validation.
+- Keep checks user-surface only via the rendered HTML UI and network responses triggered by UI actions.
+- If an assertion requires backend-only fault injection, mark it blocked and explain why it is not testable from UI alone.

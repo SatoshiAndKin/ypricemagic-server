@@ -1,0 +1,222 @@
+{
+  "groupId": "timestamp",
+  "testedAt": "2026-03-02T21:21:42Z",
+  "credentials": {
+    "account": "stateless-api-validator-1",
+    "namespace": "utv-ne-ts"
+  },
+  "toolsUsed": ["curl"],
+  "assertions": [
+    {
+      "id": "VAL-TS-001",
+      "title": "Unix epoch timestamp resolves to correct block",
+      "status": "fail",
+      "steps": [
+        {
+          "action": "GET /ethereum/price?token=0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48&timestamp=1700000000 with X-Request-ID: utv-ne-ts-001",
+          "expected": "HTTP 200 with resolved block number and price",
+          "observed": "HTTP 502 — {\"error\": \"Chain backend is unavailable\"}"
+        }
+      ],
+      "evidence": {
+        "screenshots": [],
+        "consoleErrors": "n/a (API test)",
+        "network": "GET /ethereum/price?token=...&timestamp=1700000000 -> 502",
+        "containerLog": "timestamp_resolution_failed: \"Attribute BlockAtTimestamp.timestamp: expected type is 'datetime'. Got: 1700000000\""
+      },
+      "issues": "Bug in _resolve_block_from_timestamp: passes raw int (Unix epoch) to get_block_at_timestamp which expects a datetime object. The server returns 502 (masked by nginx proxy_intercept_errors as 'Chain backend is unavailable'). Server-side error logged as timestamp_resolution_failed."
+    },
+    {
+      "id": "VAL-TS-002",
+      "title": "ISO 8601 timestamp resolves correctly",
+      "status": "fail",
+      "steps": [
+        {
+          "action": "GET /ethereum/price?token=0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48&timestamp=2023-11-14T22:13:20Z with X-Request-ID: utv-ne-ts-002",
+          "expected": "HTTP 200 with block matching VAL-TS-001 (same epoch)",
+          "observed": "HTTP 502 — {\"error\": \"Chain backend is unavailable\"}"
+        }
+      ],
+      "evidence": {
+        "screenshots": [],
+        "consoleErrors": "n/a (API test)",
+        "network": "GET /ethereum/price?token=...&timestamp=2023-11-14T22:13:20Z -> 502",
+        "containerLog": "timestamp_resolution_failed: \"Attribute BlockAtTimestamp.timestamp: expected type is 'datetime'. Got: 1700000000\""
+      },
+      "issues": "Same root cause as VAL-TS-001. ISO 8601 is correctly parsed to epoch int (1700000000) by params.py, but _resolve_block_from_timestamp passes the int to get_block_at_timestamp which expects datetime."
+    },
+    {
+      "id": "VAL-TS-003",
+      "title": "timestamp and block mutually exclusive",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "GET /ethereum/price?token=0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48&timestamp=1700000000&block=18000000 with X-Request-ID: utv-ne-ts-003",
+          "expected": "HTTP 400 with error about mutual exclusivity",
+          "observed": "HTTP 400 — {\"error\":\"Parameters 'timestamp' and 'block' are mutually exclusive. Provide only one.\"}"
+        }
+      ],
+      "evidence": {
+        "screenshots": [],
+        "consoleErrors": "n/a (API test)",
+        "network": "GET /ethereum/price?...&timestamp=1700000000&block=18000000 -> 400",
+        "responseHeaders": "x-request-id: utv-ne-ts-003, Content-Type: application/json"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-TS-004",
+      "title": "Invalid timestamp format returns 400",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "GET /ethereum/price?token=0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48&timestamp=not-a-timestamp with X-Request-ID: utv-ne-ts-004",
+          "expected": "HTTP 400 with error about invalid timestamp",
+          "observed": "HTTP 400 — {\"error\":\"Invalid timestamp format: 'not-a-timestamp'. Expected Unix epoch or ISO 8601.\"}"
+        }
+      ],
+      "evidence": {
+        "screenshots": [],
+        "consoleErrors": "n/a (API test)",
+        "network": "GET /ethereum/price?...&timestamp=not-a-timestamp -> 400",
+        "responseHeaders": "x-request-id: utv-ne-ts-004, Content-Type: application/json"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-TS-005",
+      "title": "Future timestamp returns 400",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "GET /ethereum/price?token=0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48&timestamp=9999999999 with X-Request-ID: utv-ne-ts-005",
+          "expected": "HTTP 400 with error about future timestamp",
+          "observed": "HTTP 400 — {\"error\":\"Timestamp cannot be in the future.\"}"
+        }
+      ],
+      "evidence": {
+        "screenshots": [],
+        "consoleErrors": "n/a (API test)",
+        "network": "GET /ethereum/price?...&timestamp=9999999999 -> 400",
+        "responseHeaders": "x-request-id: utv-ne-ts-005, Content-Type: application/json"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-TS-006",
+      "title": "Timestamp with no token still validates token first",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "GET /ethereum/price?timestamp=1700000000 with X-Request-ID: utv-ne-ts-006",
+          "expected": "HTTP 400 with 'Missing required parameter: token'",
+          "observed": "HTTP 400 — {\"error\":\"Missing required parameter: token\"}"
+        }
+      ],
+      "evidence": {
+        "screenshots": [],
+        "consoleErrors": "n/a (API test)",
+        "network": "GET /ethereum/price?timestamp=1700000000 -> 400",
+        "responseHeaders": "x-request-id: utv-ne-ts-006, Content-Type: application/json"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-TS-007",
+      "title": "Timestamp response includes resolved block",
+      "status": "fail",
+      "steps": [
+        {
+          "action": "Attempted same request as VAL-TS-001 (GET /ethereum/price?token=...&timestamp=1700000000)",
+          "expected": "HTTP 200 with numeric 'block' field in response",
+          "observed": "HTTP 502 — timestamp resolution fails before block can be resolved, so no response body to inspect"
+        }
+      ],
+      "evidence": {
+        "screenshots": [],
+        "consoleErrors": "n/a (API test)",
+        "network": "GET /ethereum/price?token=...&timestamp=1700000000 -> 502"
+      },
+      "issues": "Cannot verify resolved block in response because timestamp resolution itself is broken (same root cause as VAL-TS-001: int passed where datetime expected). Once the bug is fixed, this assertion can be re-validated."
+    },
+    {
+      "id": "VAL-TS-008",
+      "title": "Timestamp resolution failure returns 502",
+      "status": "blocked",
+      "steps": [
+        {
+          "action": "Reviewed server code and observed natural resolution failure behavior",
+          "expected": "HTTP 502 with {\"error\": \"...\"} explaining timestamp resolution failed",
+          "observed": "Server does return 502 with descriptive error, but nginx proxy_intercept_errors masks the body with generic 'Chain backend is unavailable'. Evidence requirement specifies 'unit test with mocked get_block_at_timestamp raising -> 502'."
+        }
+      ],
+      "evidence": {
+        "screenshots": [],
+        "consoleErrors": "n/a (API test)",
+        "network": "Observed 502 from user surface, but body is masked by nginx",
+        "containerLog": "Server-side error handler correctly catches and returns 502 with descriptive message, confirmed in server.py lines 428-440"
+      },
+      "issues": "Cannot fully validate from user surface: (1) The assertion's evidence requirement is 'unit test with mocked get_block_at_timestamp raising -> 502' which requires backend fault injection unavailable via curl. (2) Even natural failures show nginx masking the server's 502 body via proxy_intercept_errors, so the user-facing error message is generic rather than descriptive."
+    },
+    {
+      "id": "VAL-CROSS-003",
+      "title": "Timestamp-resolved prices cached by block",
+      "status": "fail",
+      "steps": [
+        {
+          "action": "Step 1: GET /ethereum/price?token=0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48&timestamp=1700000000 to get resolved block B",
+          "expected": "HTTP 200 with resolved block number",
+          "observed": "HTTP 502 — timestamp resolution fails (same bug as VAL-TS-001)"
+        },
+        {
+          "action": "Step 2 (not executed): GET /ethereum/price?token=...&block=B to verify cached:true",
+          "expected": "HTTP 200 with cached:true",
+          "observed": "Could not execute — Step 1 failed, no resolved block to use"
+        }
+      ],
+      "evidence": {
+        "screenshots": [],
+        "consoleErrors": "n/a (API test)",
+        "network": "GET /ethereum/price?token=...&timestamp=1700000000 -> 502 (Step 1 failed)"
+      },
+      "issues": "Cannot verify caching behavior because timestamp resolution is broken. Depends on VAL-TS-001 being fixed first. Once timestamp→block resolution works, re-test: (1) fetch price with timestamp, note resolved block, (2) fetch price with that block number, verify cached:true."
+    }
+  ],
+  "frictions": [
+    {
+      "description": "nginx proxy_intercept_errors masks all 502 response bodies from the backend, replacing descriptive error messages with generic 'Chain backend is unavailable'. This prevents users from seeing timestamp resolution error details.",
+      "resolved": false,
+      "resolution": null,
+      "affectedAssertions": ["VAL-TS-001", "VAL-TS-002", "VAL-TS-008"]
+    }
+  ],
+  "blockers": [
+    {
+      "description": "Timestamp resolution bug: _resolve_block_from_timestamp in server.py passes a raw int (Unix epoch) to get_block_at_timestamp, which expects a datetime object. Error: 'Attribute BlockAtTimestamp.timestamp: expected type is datetime. Got: 1700000000'. This blocks all timestamp-to-block resolution flows.",
+      "affectedAssertions": ["VAL-TS-001", "VAL-TS-002", "VAL-TS-007", "VAL-CROSS-003"],
+      "quickFixAttempted": "Retried requests multiple times (utv-ne-ts-001, utv-ne-ts-001-r2, utv-ne-ts-001-d). Error is deterministic, not transient. Fix requires converting int epoch to datetime before calling get_block_at_timestamp (e.g., datetime.utcfromtimestamp(timestamp))."
+    },
+    {
+      "description": "VAL-TS-008 requires unit test with mocked get_block_at_timestamp — cannot inject backend faults from curl user surface.",
+      "affectedAssertions": ["VAL-TS-008"],
+      "quickFixAttempted": "Reviewed server code to confirm error handling path exists (server.py lines 428-440). The code correctly catches exceptions and returns 502, but cannot validate the full contract from user surface."
+    }
+  ],
+  "commandsRun": [
+    "curl -s -w '\\nHTTP_CODE:%{http_code}' -H 'X-Request-ID: utv-ne-ts-001' 'http://localhost:8000/ethereum/price?token=0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48&timestamp=1700000000'",
+    "curl -s -w '\\nHTTP_CODE:%{http_code}' --max-time 120 -H 'X-Request-ID: utv-ne-ts-001-r2' 'http://localhost:8000/ethereum/price?token=0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48&timestamp=1700000000'",
+    "curl -si --max-time 30 -H 'X-Request-ID: utv-ne-ts-001-d' 'http://localhost:8000/ethereum/price?token=0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48&timestamp=1700000000'",
+    "curl -s -w '\\nHTTP_CODE:%{http_code}' -H 'X-Request-ID: utv-ne-ts-002' 'http://localhost:8000/ethereum/price?token=0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48&timestamp=2023-11-14T22:13:20Z'",
+    "curl -si --max-time 30 -H 'X-Request-ID: utv-ne-ts-002-d' 'http://localhost:8000/ethereum/price?token=0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48&timestamp=2023-11-14T22:13:20Z'",
+    "curl -s -w '\\nHTTP_CODE:%{http_code}' -H 'X-Request-ID: utv-ne-ts-003' 'http://localhost:8000/ethereum/price?token=0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48&timestamp=1700000000&block=18000000'",
+    "curl -si -H 'X-Request-ID: utv-ne-ts-003-d' 'http://localhost:8000/ethereum/price?token=0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48&timestamp=1700000000&block=18000000'",
+    "curl -s -w '\\nHTTP_CODE:%{http_code}' -H 'X-Request-ID: utv-ne-ts-004' 'http://localhost:8000/ethereum/price?token=0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48&timestamp=not-a-timestamp'",
+    "curl -si -H 'X-Request-ID: utv-ne-ts-004-d' 'http://localhost:8000/ethereum/price?token=0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48&timestamp=not-a-timestamp'",
+    "curl -s -w '\\nHTTP_CODE:%{http_code}' -H 'X-Request-ID: utv-ne-ts-005' 'http://localhost:8000/ethereum/price?token=0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48&timestamp=9999999999'",
+    "curl -si -H 'X-Request-ID: utv-ne-ts-005-d' 'http://localhost:8000/ethereum/price?token=0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48&timestamp=9999999999'",
+    "curl -s -w '\\nHTTP_CODE:%{http_code}' -H 'X-Request-ID: utv-ne-ts-006' 'http://localhost:8000/ethereum/price?timestamp=1700000000'",
+    "curl -si -H 'X-Request-ID: utv-ne-ts-006-d' 'http://localhost:8000/ethereum/price?timestamp=1700000000'",
+    "docker compose logs ypm-ethereum --tail=30"
+  ],
+  "summary": "Tested 9 assertions: 4 passed (VAL-TS-003, VAL-TS-004, VAL-TS-005, VAL-TS-006), 4 failed (VAL-TS-001, VAL-TS-002, VAL-TS-007, VAL-CROSS-003), 1 blocked (VAL-TS-008). Root cause: _resolve_block_from_timestamp passes int epoch to get_block_at_timestamp which expects datetime. All timestamp→block resolution flows are broken."
+}
