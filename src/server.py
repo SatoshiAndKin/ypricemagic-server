@@ -21,7 +21,7 @@ from tenacity import (
 
 from src.cache import get_cached_price, set_cached_price
 from src.logger import configure_logging, get_logger
-from src.params import ParseError, parse_batch_params, parse_price_params
+from src.params import ParseError, is_valid_address, parse_batch_params, parse_price_params
 
 if TYPE_CHECKING:
     from src.params import BatchParams
@@ -51,6 +51,11 @@ batch_request_duration_seconds = Histogram(
     "batch_request_duration_seconds",
     "Batch request duration",
     ["chain"],
+)
+check_bucket_requests_total = Counter(
+    "check_bucket_requests_total",
+    "Total check_bucket requests",
+    ["chain", "status"],
 )
 
 
@@ -581,6 +586,57 @@ async def prices(
     )
 
     return results
+
+
+@app.get("/check_bucket")
+async def check_bucket(
+    token: str | None = Query(None),
+) -> Any:
+    """Token classification endpoint.
+
+    Returns the pricing bucket classification for a token.
+
+    Response:
+    - token: the token address
+    - chain: the chain name
+    - bucket: classification string (e.g., "atoken", "curve lp") or null if unclassifiable
+    """
+    if not token:
+        check_bucket_requests_total.labels(chain=CHAIN_NAME, status="bad_request").inc()
+        return _make_error_response(400, "Missing required parameter: token")
+
+    if not is_valid_address(token):
+        check_bucket_requests_total.labels(chain=CHAIN_NAME, status="bad_request").inc()
+        return _make_error_response(400, f"Invalid token address: {token}")
+
+    try:
+        from y import check_bucket as y_check_bucket
+
+        bucket = await y_check_bucket(token, sync=False)
+        check_bucket_requests_total.labels(chain=CHAIN_NAME, status="ok").inc()
+        logger.info(
+            "check_bucket_success",
+            chain=CHAIN_NAME,
+            token=token[:10],
+            bucket=bucket,
+        )
+        return {
+            "token": token,
+            "chain": CHAIN_NAME,
+            "bucket": bucket,
+        }
+    except Exception as e:
+        check_bucket_requests_total.labels(chain=CHAIN_NAME, status="error").inc()
+        logger.error(
+            "check_bucket_failed",
+            chain=CHAIN_NAME,
+            token=token[:10] if token else None,
+            error=str(e),
+        )
+        return _make_error_response(
+            500,
+            f"Failed to classify token {token}. Check server logs.",
+        )
 
 
 INDEX_HTML = """<!DOCTYPE html>

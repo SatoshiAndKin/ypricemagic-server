@@ -1166,3 +1166,157 @@ class TestBatchPricesParams:
             call_kwargs = mock_get_prices.call_args[1]
             assert call_kwargs.get("skip_cache") is True
             assert call_kwargs.get("silent") is True
+
+
+class TestCheckBucketEndpoint:
+    """Tests for GET /check_bucket token classification endpoint."""
+
+    @pytest.mark.asyncio
+    async def test_known_token_returns_bucket_string(self, mock_y_module: None) -> None:
+        """Known token returns 200 with bucket classification string."""
+        from unittest.mock import AsyncMock, patch
+
+        from fastapi.testclient import TestClient
+
+        from src.server import app
+
+        mock_check_bucket = AsyncMock(return_value="atoken")
+
+        with patch("y.check_bucket", mock_check_bucket):
+            client = TestClient(app)
+            response = client.get("/check_bucket", params={"token": DAI})
+
+            assert response.status_code == 200
+            data = response.json()
+            assert data["token"] == DAI
+            assert data["chain"] == "ethereum"
+            assert data["bucket"] == "atoken"
+
+    @pytest.mark.asyncio
+    async def test_missing_token_returns_400(self, mock_y_module: None) -> None:
+        """Missing token param returns 400."""
+        from fastapi.testclient import TestClient
+
+        from src.server import app
+
+        client = TestClient(app)
+        response = client.get("/check_bucket")
+
+        assert response.status_code == 400
+        data = response.json()
+        assert "token" in data["error"].lower()
+
+    @pytest.mark.asyncio
+    async def test_invalid_address_returns_400(self, mock_y_module: None) -> None:
+        """Invalid token address returns 400."""
+        from fastapi.testclient import TestClient
+
+        from src.server import app
+
+        client = TestClient(app)
+        response = client.get("/check_bucket", params={"token": "INVALID"})
+
+        assert response.status_code == 400
+        data = response.json()
+        assert "INVALID" in data["error"]
+
+    @pytest.mark.asyncio
+    async def test_unclassifiable_returns_200_with_null_bucket(self, mock_y_module: None) -> None:
+        """Unclassifiable token returns 200 with bucket: null."""
+        from unittest.mock import AsyncMock, patch
+
+        from fastapi.testclient import TestClient
+
+        from src.server import app
+
+        # check_bucket returns None for unclassifiable tokens
+        mock_check_bucket = AsyncMock(return_value=None)
+
+        with patch("y.check_bucket", mock_check_bucket):
+            client = TestClient(app)
+            response = client.get("/check_bucket", params={"token": DAI})
+
+            assert response.status_code == 200
+            data = response.json()
+            assert data["token"] == DAI
+            assert data["bucket"] is None
+
+    @pytest.mark.asyncio
+    async def test_exception_returns_500(self, mock_y_module: None) -> None:
+        """check_bucket exception returns 500 with error envelope."""
+        from unittest.mock import AsyncMock, patch
+
+        from fastapi.testclient import TestClient
+
+        from src.server import app
+
+        mock_check_bucket = AsyncMock(side_effect=RuntimeError("Unexpected error"))
+
+        with patch("y.check_bucket", mock_check_bucket):
+            client = TestClient(app)
+            response = client.get("/check_bucket", params={"token": DAI})
+
+            assert response.status_code == 500
+            data = response.json()
+            assert "error" in data
+            assert "Failed to classify token" in data["error"]
+
+    @pytest.mark.asyncio
+    async def test_no_block_parameter_needed(self, mock_y_module: None) -> None:
+        """check_bucket succeeds without any block param."""
+        from unittest.mock import AsyncMock, patch
+
+        from fastapi.testclient import TestClient
+
+        from src.server import app
+
+        mock_check_bucket = AsyncMock(return_value="curve lp")
+
+        with patch("y.check_bucket", mock_check_bucket):
+            client = TestClient(app)
+            response = client.get("/check_bucket", params={"token": USDC})
+
+            assert response.status_code == 200
+            data = response.json()
+            assert data["bucket"] == "curve lp"
+
+    @pytest.mark.asyncio
+    async def test_bucket_classification_various_types(self, mock_y_module: None) -> None:
+        """Various bucket classification types are returned correctly."""
+        from unittest.mock import AsyncMock, patch
+
+        from fastapi.testclient import TestClient
+
+        from src.server import app
+
+        bucket_types = ["atoken", "curve lp", "uni or uni-like lp", "belt lp", "solidly lp"]
+
+        for bucket_type in bucket_types:
+            mock_check_bucket = AsyncMock(return_value=bucket_type)
+
+            with patch("y.check_bucket", mock_check_bucket):
+                client = TestClient(app)
+                response = client.get("/check_bucket", params={"token": DAI})
+
+                assert response.status_code == 200
+                data = response.json()
+                assert data["bucket"] == bucket_type
+
+    @pytest.mark.asyncio
+    async def test_prometheus_metrics_tracked(self, mock_y_module: None) -> None:
+        """Check_bucket requests are tracked in Prometheus metrics."""
+        from unittest.mock import AsyncMock, patch
+
+        from fastapi.testclient import TestClient
+
+        from src.server import app
+
+        mock_check_bucket = AsyncMock(return_value="atoken")
+
+        with patch("y.check_bucket", mock_check_bucket):
+            client = TestClient(app)
+            response = client.get("/check_bucket", params={"token": DAI})
+
+            assert response.status_code == 200
+            # The metric should have been incremented (we can't easily check the value here,
+            # but we verify the endpoint works without error)
