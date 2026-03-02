@@ -1,0 +1,45 @@
+{
+  "featureId": "batch-pricing-endpoint",
+  "reviewedAt": "2026-03-02T21:10:00.000Z",
+  "commitId": "0430f1e",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "pass",
+  "codeReview": {
+    "summary": "Solid implementation of the batch pricing endpoint. The feature adds GET /prices with comprehensive parameter validation (parse_batch_params, _parse_tokens, _parse_amounts), parallel pricing via ypricemagic get_prices, per-token caching with correct cache-skip semantics for amount-based requests, and Prometheus metrics. All 15 expectedBehavior items are covered by tests (55 new tests). Code follows existing patterns (lazy imports, ParseError/ParseSuccess unions, manual response dicts, error format). Helper functions (_resolve_batch_block, _prepare_batch_cache_check, _fill_batch_results) keep complexity manageable. The decomposition mirrors the single /price endpoint patterns closely.",
+    "issues": [
+      {
+        "file": "src/server.py",
+        "line": 570,
+        "severity": "non_blocking",
+        "description": "Dead code in fetch_amounts filtering: `if params.amounts[i] is not None` can never be False because params.amounts is tuple[float, ...] (never contains None). The subsequent `if len(fetch_amounts) != len(indices_to_fetch): fetch_amounts = None` guard is also unreachable. When amounts are provided, all tokens skip cache, so indices_to_fetch == range(len(tokens)) and fetch_amounts == params.amounts. Simplify to `fetch_amounts = params.amounts`."
+      },
+      {
+        "file": "src/server.py",
+        "line": 290,
+        "severity": "non_blocking",
+        "description": "_resolve_batch_block return type `int | tuple[int, JSONResponse]` uses a sentinel 0 as the first tuple element solely to distinguish error from success via isinstance check. This works but is an unusual pattern — a dedicated error class or raising an exception (as done in the /price endpoint) would be more idiomatic."
+      },
+      {
+        "file": "src/server.py",
+        "line": 210,
+        "severity": "non_blocking",
+        "description": "No defensive length check on get_prices result: if the upstream get_prices returns fewer elements than tokens (despite fail_to_None=True), the enumerate loop in _fetch_batch_prices would silently produce a shorter prices list, and _fill_batch_results would later IndexError. A guard like `assert len(results) == len(tokens)` or padding to expected length would make this more robust."
+      }
+    ]
+  },
+  "sharedStateObservations": [
+    {
+      "area": "conventions",
+      "observation": "The batch /prices response elements omit 'chain' field that the single /price endpoint includes. This is per-spec but creates an inconsistency in API response shapes. The mission AGENTS.md documents the error format convention but not the response shape convention for different endpoints.",
+      "evidence": "src/server.py:395 - batch results have {token, block, price, block_timestamp, cached} vs src/server.py:508 single /price results have {chain, token, block, price, cached, block_timestamp}"
+    },
+    {
+      "area": "conventions",
+      "observation": "New Prometheus metrics (batch_requests_total, batch_request_duration_seconds) were added but the architecture library doc only documents the original price_requests_total and price_request_duration_seconds metrics.",
+      "evidence": "src/server.py:43-51 defines batch metrics; .factory/library/architecture.md Prometheus section only lists price_requests_total and price_request_duration_seconds"
+    }
+  ],
+  "addressesFailureFrom": null,
+  "summary": "The batch-pricing-endpoint feature passes review. Implementation is complete and correct across params.py (BatchParams dataclass, parse_batch_params with token/amount/timestamp/boolean validation, max 100 token limit), server.py (GET /prices endpoint with cache-aware batching, parallel fetch via get_prices, partial-failure 200 semantics, Prometheus metrics), and comprehensive tests (55 new tests covering all 15 expectedBehavior items). Three non-blocking code quality issues noted: dead code in fetch_amounts filtering, unusual return type pattern in _resolve_batch_block, and missing defensive length check on get_prices result. Two shared state observations about undocumented metrics and response shape inconsistency."
+}

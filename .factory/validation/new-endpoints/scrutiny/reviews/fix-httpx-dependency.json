@@ -1,0 +1,21 @@
+{
+  "featureId": "fix-httpx-dependency",
+  "reviewedAt": "2026-03-02T21:15:00.000Z",
+  "commitId": "f312158",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "pass",
+  "codeReview": {
+    "summary": "Clean, minimal fix that adds httpx>=0.27,<1.0 to dev dependencies in pyproject.toml and updates the deptry DEP002 ignore list. The version constraint correctly avoids pre-release httpx 1.0.dev3 which lacks BaseTransport (required by starlette's TestClient). The uv.lock was properly regenerated with httpx 0.28.1 and its httpcore dependency. All 221 tests pass, mypy and ruff are clean. The change is exactly what was needed — nothing more, nothing less.",
+    "issues": []
+  },
+  "sharedStateObservations": [
+    {
+      "area": "conventions",
+      "observation": "The worker discovered that uv's prerelease resolution also affects dev dependencies (httpx 1.0.dev3 pulled in instead of stable 0.28.x). The existing AGENTS.md lesson about pre-release deps focuses on transitive build deps, but this is a distinct scenario: a direct dev dependency resolving to a pre-release. The version pinning pattern (>=0.27,<1.0) used here could be documented as a general convention for any new dependency added to a project with prerelease = allow.",
+      "evidence": "Transcript shows worker first added unpinned 'httpx', got httpx 1.0.dev3 which broke TestClient (missing BaseTransport), then fixed with 'httpx>=0.27,<1.0'. pyproject.toml [tool.uv] has prerelease = 'allow'."
+    }
+  ],
+  "addressesFailureFrom": null,
+  "summary": "Pass. The feature correctly adds httpx as a dev dependency with a stable version constraint, updates deptry config, and regenerates the lockfile. The implementation is minimal, correct, and fully verified. The worker handled the pre-release resolution issue well by pinning to <1.0."
+}

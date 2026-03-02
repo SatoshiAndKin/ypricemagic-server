@@ -1,0 +1,79 @@
+{
+  "milestone": "new-endpoints",
+  "round": 1,
+  "status": "pass",
+  "validatorsRun": {
+    "test": {
+      "passed": true,
+      "command": "uv run pytest -x -q --tb=short -n 6",
+      "exitCode": 0
+    },
+    "typecheck": {
+      "passed": true,
+      "command": "uv run mypy src/",
+      "exitCode": 0
+    },
+    "lint": {
+      "passed": true,
+      "command": "uv run ruff check src/",
+      "exitCode": 0
+    }
+  },
+  "reviewsSummary": {
+    "total": 7,
+    "passed": 7,
+    "failed": 0,
+    "failedFeatures": []
+  },
+  "blockingIssues": [],
+  "appliedUpdates": [],
+  "suggestedGuidanceUpdates": [
+    {
+      "target": "AGENTS.md",
+      "suggestion": "Document at the project-root guidance level that API errors should use the `{\"error\": \"<message>\"}` envelope consistently, including validation errors, so workers outside mission-specific context preserve the same response contract.",
+      "evidence": "cross-area-polish reviewer noted mission AGENTS.md contains this rule while root AGENTS.md does not.",
+      "isSystemic": true
+    },
+    {
+      "target": "skills/backend-worker",
+      "suggestion": "Add an explicit exception path for verification-only and HTML-only features where no code changes are expected, clarifying when TDD and commit steps are not applicable and what verification evidence is required instead.",
+      "evidence": "nginx-routing-update and html-ui-update reviews both flagged mismatch between mandatory TDD/commit skill steps and legitimate no-code/HTML-only work.",
+      "isSystemic": true
+    },
+    {
+      "target": "AGENTS.md",
+      "suggestion": "Add a note for projects with `prerelease = \"allow\"` to pin direct dependencies with stable upper bounds when required (e.g., `<1.0`) to avoid pre-release breakages in dev tooling.",
+      "evidence": "fix-httpx-dependency review observed `httpx` initially resolved to `1.0.dev3` and required explicit stable-range pinning.",
+      "isSystemic": false
+    },
+    {
+      "target": "AGENTS.md",
+      "suggestion": "Clarify handoff commitId convention for verification-only features that make no code changes (e.g., whether reuse of prior commit IDs is acceptable or commitId may be omitted).",
+      "evidence": "nginx-routing-update review observed verification-only work reused a non-nginx commit ID due lack of explicit convention.",
+      "isSystemic": false
+    }
+  ],
+  "rejectedObservations": [
+    {
+      "observation": "Timestamp feature observation that static openapi.json was not regenerated.",
+      "reason": "superseded-by-later-feature: cross-area-polish removed the static openapi artifact and validated `/openapi.json` generation."
+    },
+    {
+      "observation": "Batch response shape inconsistency (`/prices` items omit `chain`).",
+      "reason": "intentional-contract: milestone spec defines `/prices` array items without `chain`; no correctness failure."
+    },
+    {
+      "observation": "check_bucket uses inline token validation instead of params.py parser helper.",
+      "reason": "acceptable-pattern: single-parameter endpoint keeps validation simple and aligns with existing code style without introducing complexity."
+    },
+    {
+      "observation": "check_bucket lacks a duration histogram metric.",
+      "reason": "non-blocking-and-optional: not required by contract and no demonstrated operational incident from current counter-only instrumentation."
+    },
+    {
+      "observation": "UI URL prefill/history behavior removed but undocumented.",
+      "reason": "ambiguous-product-intent: unclear whether removal was deliberate UX simplification or regression; needs product decision before guidance change."
+    }
+  ],
+  "previousRound": null
+}

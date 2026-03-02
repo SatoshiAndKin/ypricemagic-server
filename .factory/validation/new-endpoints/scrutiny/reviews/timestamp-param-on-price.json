@@ -1,0 +1,34 @@
+{
+  "featureId": "timestamp-param-on-price",
+  "reviewedAt": "2026-03-02T20:40:00Z",
+  "commitId": "efb6c2b",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "pass",
+  "codeReview": {
+    "summary": "Solid implementation of timestamp query param for GET /price. parse_timestamp() in params.py correctly handles Unix epoch (int/float) and ISO 8601 with proper validation (negative, zero, future). Mutual exclusivity with block param is enforced after individual parsing, which is the right order (report parse errors before exclusivity). The server.py changes resolve timestamps to blocks via get_block_at_timestamp, return 502 on resolution failure, and reuse the resolved block for caching. 25 new tests comprehensively cover all 9 expected behaviors. Refactoring of error handling into _make_error_response and _handle_price_error is a clean improvement. HTML UI updated with timestamp fields and client-side mutual exclusivity. BatchParams also received timestamp support which is a sensible extension.",
+    "issues": [
+      {
+        "file": "src/server.py",
+        "line": 289,
+        "severity": "non_blocking",
+        "description": "Redundant exception tuple: `except (RetryError, ValueError, Exception) as e:` — Exception already catches RetryError and ValueError. This works correctly but reads as if the three types are distinct. Should be simplified to `except Exception as e:` for clarity."
+      },
+      {
+        "file": "src/server.py",
+        "line": 206,
+        "severity": "non_blocking",
+        "description": "Diagnostic information loss in _handle_price_error: the `msg` variable (str(inner)) is computed and used for pattern matching but never logged. The previous code logged `error=type(e).__name__` for generic exceptions. Now all errors log as 'price_lookup_failed' without the error type or message, making production debugging harder."
+      }
+    ]
+  },
+  "sharedStateObservations": [
+    {
+      "area": "conventions",
+      "observation": "The architecture.md notes that 'openapi.json at repo root is a static export and can drift from live FastAPI routes/params; regenerate it after endpoint or query parameter changes.' The timestamp parameter was added to /price and /prices endpoints but openapi.json was not regenerated in this commit. This may be handled by a separate feature or process.",
+      "evidence": "git show efb6c2b --stat shows changes only to src/params.py, src/server.py, and test files. No openapi.json update. architecture.md explicitly warns about drift."
+    }
+  ],
+  "addressesFailureFrom": null,
+  "summary": "The timestamp feature is well-implemented with comprehensive test coverage (25 new tests, 142 total passing). All 9 expected behaviors from the feature spec are covered: Unix/ISO 8601 resolution, mutual exclusivity with block, invalid/future timestamps, token-first validation, resolved block in response, caching by resolved block, and RPC failure handling. Two non-blocking code quality issues found: a redundant exception tuple and loss of error diagnostic info in refactored error handler. The worker followed the skill procedure (TDD approach, all validators run). Pass."
+}
