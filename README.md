@@ -36,47 +36,115 @@ The API is available at `http://localhost:8000` (or `$PORT`). A browser UI is se
 
 ## API
 
-All requests go through nginx on port 8000.
+All requests go through nginx on port 8000. An interactive browser UI is served at `/`.
 
 ### `GET /price`
 
-| Parameter | Required | Description |
-|-----------|----------|-------------|
-| `chain`   | yes      | `ethereum`, `arbitrum`, `optimism`, or `base` |
-| `token`   | yes      | ERC-20 token address (`0x...`) |
-| `block`   | no       | Block number; defaults to latest |
+Fetch the USD price for a single token.
+
+| Parameter      | Required | Description |
+|----------------|----------|-------------|
+| `chain`        | yes      | `ethereum`, `arbitrum`, `optimism`, or `base` |
+| `token`        | yes      | ERC-20 token address (`0x...`) |
+| `block`        | no       | Block number; defaults to latest. Mutually exclusive with `timestamp`. |
+| `timestamp`    | no       | Unix epoch (e.g. `1700000000`) or ISO 8601 (e.g. `2023-11-14T22:13:20Z`). Resolves to a block via `get_block_at_timestamp`. Mutually exclusive with `block`. |
+| `amount`       | no       | Human-readable token units for price-impact-aware pricing. |
+| `skip_cache`   | no       | `true` to bypass the disk cache. |
+| `ignore_pools` | no       | Comma-separated pool addresses to exclude from routing. |
+| `silent`       | no       | `true` to suppress verbose upstream logging. |
 
 **Example:**
 ```bash
-curl "http://localhost:8000/price?chain=ethereum&token=0x6B175474E89094C44Da98b954EedeAC495271d0F"
+curl "http://localhost:8000/price?chain=ethereum&token=<TOKEN_ADDR>"
 ```
 
 **Response:**
 ```json
 {
   "chain": "ethereum",
-  "token": "0x6B175474E89094C44Da98b954EedeAC495271d0F",
+  "token": "<TOKEN_ADDR>",
   "block": 21900000,
   "price": 1.0,
-  "cached": false
+  "cached": false,
+  "block_timestamp": 1740000000
+}
+```
+
+### `GET /prices`
+
+Batch pricing — fetch USD prices for multiple tokens in one request.
+
+| Parameter    | Required | Description |
+|--------------|----------|-------------|
+| `chain`      | yes      | Chain name |
+| `tokens`     | yes      | Comma-separated ERC-20 token addresses |
+| `block`      | no       | Block number; defaults to latest. Mutually exclusive with `timestamp`. |
+| `timestamp`  | no       | Unix epoch or ISO 8601; resolves to a block. Mutually exclusive with `block`. |
+| `amounts`    | no       | Comma-separated amounts (must match token order) |
+| `skip_cache` | no       | `true` to bypass cache |
+| `silent`     | no       | `true` to suppress verbose logging |
+
+**Example:**
+```bash
+curl "http://localhost:8000/prices?chain=ethereum&tokens=<DAI_ADDR>,<USDC_ADDR>"
+```
+
+**Response:**
+```json
+[
+  {
+    "token": "<DAI_ADDR>",
+    "block": 21900000,
+    "price": 1.0,
+    "block_timestamp": 1740000000,
+    "cached": false
+  },
+  {
+    "token": "<USDC_ADDR>",
+    "block": 21900000,
+    "price": 1.0,
+    "block_timestamp": 1740000000,
+    "cached": false
+  }
+]
+```
+
+Tokens that fail to price return `null` for `price` (HTTP 200 is still returned).
+
+### `GET /check_bucket`
+
+Returns the pricing bucket classification for a token (e.g. `"atoken"`, `"curve lp"`).
+
+| Parameter | Required | Description |
+|-----------|----------|-------------|
+| `chain`   | yes      | Chain name |
+| `token`   | yes      | ERC-20 token address |
+
+**Example:**
+```bash
+curl "http://localhost:8000/check_bucket?chain=ethereum&token=<TOKEN_ADDR>"
+```
+
+**Response:**
+```json
+{
+  "token": "<TOKEN_ADDR>",
+  "chain": "ethereum",
+  "bucket": "stable"
 }
 ```
 
 ### `GET /health`
 
-Returns health of the ethereum backend (representative aggregate check).
+Returns health of the ethereum backend (representative aggregate check). Includes a `synced` field indicating node sync status (`true`, `false`, or `null` if unknown).
+
+```json
+{"status": "ok", "chain": "ethereum", "block": 21900000, "synced": true}
+```
 
 ### `GET /health/{chain}`
 
-Returns health of a specific chain backend.
-
-```bash
-curl "http://localhost:8000/health/arbitrum"
-```
-
-```json
-{"status": "ok", "chain": "arbitrum", "block": 123456789}
-```
+Returns health of a specific chain backend (same response shape as `/health`).
 
 ## Supported Chains
 
@@ -90,7 +158,7 @@ curl "http://localhost:8000/health/arbitrum"
 ## Tech Stack
 
 - **Python 3.12**, managed by [uv](https://github.com/astral-sh/uv)
-- **ypricemagic 5.2.5** — price resolution
+- **ypricemagic** (latest master) — price resolution
 - **brownie** — EVM network/web3 management
 - **dank_mids** — batched async RPC calls
 - **FastAPI** + **uvicorn** — HTTP server
