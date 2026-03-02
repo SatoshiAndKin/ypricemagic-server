@@ -19,6 +19,17 @@ Architectural decisions, patterns discovered.
 - Response dicts are built manually (not Pydantic models)
 - Error responses use `{"error": "<message>"}` format consistently
 - Cache key: `"{token_lower}:{block}"` — amount queries bypass cache entirely
+- Browser UI is an inline `INDEX_HTML` string in `src/server.py` and must be updated manually when API inputs/outputs change
+
+## Testing Constraints
+
+- `src/tests/conftest.py` uses an `autouse=True` fixture to mock `y`, `y.time`, and `y.exceptions` in `sys.modules` to prevent real brownie/ypricemagic network initialization during tests
+- FastAPI lifespan startup connects brownie networks, so endpoint-level `TestClient` tests can fail outside the Docker runtime; prefer unit tests around helper functions with explicit mocking
+- `pytest` is configured with `asyncio_mode = "auto"` in `pyproject.toml`; async tests can run without explicit `@pytest.mark.asyncio` markers
+
+## OpenAPI Artifact
+
+- `openapi.json` at repo root is a static export and can drift from live FastAPI routes/params; regenerate it after endpoint or query parameter changes
 
 ## Prometheus Metrics
 

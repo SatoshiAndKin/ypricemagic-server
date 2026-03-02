@@ -1,0 +1,38 @@
+{
+  "featureId": "fail-to-none-error-handling",
+  "reviewedAt": "2026-03-02T20:15:00.000Z",
+  "commitId": "f907bdb",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "pass",
+  "codeReview": {
+    "summary": "Clean, correct implementation that fully satisfies all feature requirements. _fetch_price was refactored to use get_price(..., fail_to_None=True), returning None instead of raising ValueError when no price is found. The retry decorator was properly restricted to transient errors only (ConnectionError, TimeoutError, OSError) via retry_if_exception_type. The price() endpoint correctly maps None -> 404 without retry, NaN/Inf/negative -> 502 via ValueError, and transient errors -> retry up to 2 attempts. The old 'No price returned' exception-path 404 handler was removed in favor of the cleaner None-return check. 14 well-structured unit tests cover all specified scenarios including edge cases (zero price, amount parameter forwarding). pytest-asyncio was properly added as a dev dependency with asyncio_mode='auto' config.",
+    "issues": [
+      {
+        "file": "src/server.py",
+        "line": 115,
+        "severity": "non_blocking",
+        "description": "In commit f907bdb, _fetch_price passes amount=None explicitly to get_price when no amount is provided (via `amount=amount`). While functionally harmless if get_price handles None gracefully, it differs from the pattern of only passing kwargs when they have meaningful values. This was later corrected in a subsequent commit that conditionally builds the kwargs dict. Not a bug, but worth noting the commit was incrementally improved."
+      }
+    ]
+  },
+  "sharedStateObservations": [
+    {
+      "area": "conventions",
+      "observation": "The conftest.py introduces an autouse=True fixture pattern for mocking the 'y' module (ypricemagic) in tests. This is a critical pattern for any test file that imports from src/server.py — without it, brownie network connections would be attempted. This pattern isn't documented in AGENTS.md or the mission AGENTS.md under testing notes, though the mission AGENTS.md does say 'Tests must NOT require blockchain connections — mock all ypricemagic calls'.",
+      "evidence": "src/tests/conftest.py — autouse mock_y_module fixture that patches sys.modules['y'], sys.modules['y.time'], sys.modules['y.exceptions']. Any future test file adding server tests must be aware this fixture exists and is autouse."
+    },
+    {
+      "area": "conventions",
+      "observation": "pytest-asyncio with asyncio_mode='auto' was added as a project-wide config in pyproject.toml. This means all async test functions are automatically treated as asyncio tests without needing the @pytest.mark.asyncio decorator. However, the tests still explicitly use @pytest.mark.asyncio decorators, which is redundant but harmless. Future test contributors should know about this global setting.",
+      "evidence": "pyproject.toml [tool.pytest.ini_options] asyncio_mode = 'auto'; all test methods in src/tests/test_server.py still use @pytest.mark.asyncio"
+    },
+    {
+      "area": "skills",
+      "observation": "The backend-worker skill says 'Write Tests First (TDD)' but the transcript skeleton suggests tests and implementation were done together rather than strict TDD (write failing tests first, then implement). The worker followed the spirit of the procedure by including comprehensive tests, but the strict test-first approach wasn't followed. This is a minor deviation that didn't affect quality.",
+      "evidence": "Handoff skillFeedback.followedProcedure is true, transcript shows tests were written alongside implementation rather than strictly before."
+    }
+  ],
+  "addressesFailureFrom": null,
+  "summary": "Feature passes review. The implementation correctly refactors _fetch_price to use fail_to_None=True, returning None (-> 404) without retry for unknown tokens, while restricting tenacity retry to transient network errors (ConnectionError, TimeoutError, OSError). NaN/Inf/negative validation is preserved (-> 502). 14 unit tests comprehensively cover all expected behaviors including edge cases. All verification commands passed (61 tests, mypy clean, ruff clean). One non-blocking observation about explicit amount=None forwarding in the original commit, which was later improved in subsequent commits. No bugs or blocking issues found."
+}

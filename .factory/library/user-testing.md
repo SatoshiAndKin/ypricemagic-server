@@ -12,6 +12,7 @@ Testing surface: tools, URLs, setup steps, isolation notes, known quirks.
 - Aggregate health: http://localhost:8000/health
 - Prometheus: http://localhost:8000/metrics
 - Browser UI: http://localhost:8000/
+- `GET /health` response shape includes `{status, chain, block, synced}` where `synced` is `true`, `false`, or `null`
 
 ### Known good test tokens (Ethereum)
 - USDC: 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48
@@ -32,3 +33,4 @@ Testing surface: tools, URLs, setup steps, isolation notes, known quirks.
 - Token addresses may appear redacted in responses (42-char asterisks) — this is existing behavior from logger.py
 - First price request after container start may be slow (cold cache, brownie warming up)
 - Chain containers are independent — a test on ethereum doesn't affect arbitrum
+- `/health` may take up to ~5 seconds when sync checks timeout (`check_node_async` is wrapped with a 5s timeout)

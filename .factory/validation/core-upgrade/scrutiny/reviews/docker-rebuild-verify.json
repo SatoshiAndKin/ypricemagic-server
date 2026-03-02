@@ -1,0 +1,26 @@
+{
+  "featureId": "docker-rebuild-verify",
+  "reviewedAt": "2026-03-02T20:05:00.000Z",
+  "commitId": "e5f1553",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "pass",
+  "codeReview": {
+    "summary": "Verification-only feature with a single documentation commit. Worker rebuilt Docker containers, verified all 5 services (4 chains + nginx) started healthy, confirmed /health returns 200 with status:ok and synced:true, confirmed /price endpoint returns correct price responses with block_timestamp. Discovered and diagnosed nginx DNS caching issue when containers are recreated (direct container access via port 8001 worked, but nginx proxy on 8000 returned 'Chain backend is unavailable'). Worker correctly identified this as stale DNS entries in nginx, resolved it with `docker compose restart nginx`, and documented the finding in .factory/library/environment.md. The single-line diff is appropriate documentation of an operational gotcha. All 117 tests pass. Feature fulfills VAL-CORE-002 (server starts with updated dependency) and VAL-CORE-003 (existing price lookup works after upgrade).",
+    "issues": []
+  },
+  "sharedStateObservations": [
+    {
+      "area": "skills",
+      "observation": "The backend-worker skill's Docker rebuild procedure says 'Actually run docker compose build and docker compose up -d, Wait for healthchecks and verify with curl' but does not mention the nginx restart step that may be needed after container recreation. The worker discovered this during execution and documented it in environment.md, but future workers following the skill procedure alone may hit the same stale-DNS issue before checking environment.md.",
+      "evidence": ".factory/skills/backend-worker/SKILL.md section '6. Manual Verification' — only mentions build + up + wait + curl. Worker transcript shows multiple failed curl attempts via localhost:8000 before diagnosing the nginx DNS issue and running `docker compose restart nginx`."
+    },
+    {
+      "area": "conventions",
+      "observation": "The AGENTS.md for the mission says 'DO NOT touch docker-compose.yml service definitions (volumes, env vars, healthchecks) — only nginx.conf changes allowed'. However, the nginx DNS caching issue could be mitigated by adding a `resolver` directive in nginx.conf to use Docker's embedded DNS with a short TTL. This is allowed by the boundaries but wasn't explored. Not blocking — the restart workaround is adequate — but worth noting as a potential improvement.",
+      "evidence": "nginx.conf uses static upstream references (proxy_pass http://ypm-ethereum:8001). Docker's embedded DNS at 127.0.0.11 could be set as resolver with a short valid= TTL to avoid stale entries."
+    }
+  ],
+  "addressesFailureFrom": null,
+  "summary": "PASS. Verification-only feature successfully confirmed Docker build and deployment of the updated ypricemagic-server. All containers build and start healthy, /health and /price endpoints return correct responses. The only code change is a single documentation line in .factory/library/environment.md documenting the nginx restart requirement after container recreation — a real operational issue the worker diagnosed during verification. No blocking issues found."
+}
