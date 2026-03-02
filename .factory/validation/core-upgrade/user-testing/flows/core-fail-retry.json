@@ -1,0 +1,147 @@
+{
+  "groupId": "core-fail-retry",
+  "testedAt": "2026-03-02T20:12:00Z",
+  "credentials": {
+    "account": "not-required-api-flow-2",
+    "namespace": "ns_core_failretry"
+  },
+  "toolsUsed": ["curl", "uv run pytest"],
+  "assertions": [
+    {
+      "id": "VAL-CORE-004",
+      "title": "Token with no price returns 404 via fail_to_None",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "GET /ethereum/price?token=0x0000000000000000000000000000000000000000&block=18000030",
+          "expected": "HTTP 404 with error message about no price found",
+          "observed": "HTTP 404 with {\"error\":\"No price found for 0x0000000000000000000000000000000000000000 at block 18000030\"}"
+        },
+        {
+          "action": "Check container logs for exception stack traces",
+          "expected": "No exception stack traces; only a warning-level 'price_not_found' log",
+          "observed": "Container logs show: 'failed to get price for [ZERO_ADDRESS]' (from ypricemagic) and structured warning 'price_not_found' with request_id. No exception stack traces."
+        },
+        {
+          "action": "Verify None return is not retried (unit test: TestFetchPriceNoneReturn::test_none_return_no_retry)",
+          "expected": "get_price called exactly once (no retry for None return)",
+          "observed": "Unit test passes — mock.assert_called_once() confirms no retry for None return"
+        }
+      ],
+      "evidence": {
+        "curlResponse": "HTTP 404 — {\"error\":\"No price found for 0x0000000000000000000000000000000000000000 at block 18000030\"}",
+        "containerLogs": "warning: price_not_found, request_id=4fe14738-7716-488e-af5e-0a3ab5c0cba8, token=0x00000000, block=18000030. No exception stack traces.",
+        "unitTests": "TestFetchPriceNoneReturn::test_none_return_no_retry PASSED, TestFetchPriceNoneReturn::test_none_return_with_amount PASSED"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-CORE-005",
+      "title": "Invalid price values still rejected",
+      "status": "blocked",
+      "steps": [
+        {
+          "action": "Attempted to validate from API surface",
+          "expected": "GET /price returning 502 when get_price returns NaN/Inf/negative",
+          "observed": "Cannot trigger NaN/Inf/negative return from get_price via user-surface curl requests — these values come from internal ypricemagic computation"
+        },
+        {
+          "action": "Ran unit tests as alternative evidence (TestFetchPriceInvalidValues)",
+          "expected": "4 tests pass: nan, inf, -inf, negative all raise ValueError",
+          "observed": "All 4 unit tests PASSED: test_nan_raises_value_error, test_inf_raises_value_error, test_negative_inf_raises_value_error, test_negative_raises_value_error"
+        },
+        {
+          "action": "Verified server.py endpoint handler catches ValueError and returns 502",
+          "expected": "Code path: ValueError with 'Invalid price value' or 'Negative price' → JSONResponse(status_code=502)",
+          "observed": "Confirmed in server.py lines: except (RetryError, ValueError) catches it, 'Invalid price value' in msg or 'Negative price' in msg → 502"
+        }
+      ],
+      "evidence": {
+        "unitTests": "TestFetchPriceInvalidValues: 4/4 PASSED (nan, inf, -inf, negative all raise ValueError). TestFetchPriceNoRetryForValueError: 1/1 PASSED (ValueError not retried).",
+        "codeReview": "server.py _fetch_price: math.isnan/isinf/negative checks → ValueError. /price endpoint: catches ValueError → 502 with error envelope."
+      },
+      "issues": "Cannot be proven from user-surface-only behavior. The assertion requires mocking get_price to return NaN/Inf/negative, which is impossible via curl. Unit tests (which pass) are the correct evidence type per the validation contract."
+    },
+    {
+      "id": "VAL-CORE-006",
+      "title": "Retry logic preserved for transient errors",
+      "status": "blocked",
+      "steps": [
+        {
+          "action": "Attempted to validate from API surface",
+          "expected": "Observe retry behavior on transient ConnectionError/TimeoutError/OSError",
+          "observed": "Cannot trigger transient RPC errors from user-surface curl requests — these are internal infrastructure failures"
+        },
+        {
+          "action": "Ran unit tests as alternative evidence (TestFetchPriceRetry)",
+          "expected": "4 tests pass: ConnectionError retries+succeeds, TimeoutError retries+succeeds, OSError retries+succeeds, exhausted retries raises RetryError",
+          "observed": "All 4 unit tests PASSED: test_connection_error_retries_and_succeeds, test_timeout_error_retries, test_os_error_retries, test_connection_error_exhausts_retries"
+        },
+        {
+          "action": "Verified retry decorator configuration in server.py",
+          "expected": "@retry with stop_after_attempt(2), retry_if_exception_type((ConnectionError, TimeoutError, OSError))",
+          "observed": "Confirmed in server.py: @retry(stop=stop_after_attempt(2), wait=wait_exponential(multiplier=1, min=1, max=4), retry=retry_if_exception_type((ConnectionError, TimeoutError, OSError)))"
+        },
+        {
+          "action": "Verified None return does NOT trigger retry (unit test)",
+          "expected": "None from fail_to_None bypasses retry",
+          "observed": "TestFetchPriceNoneReturn::test_none_return_no_retry PASSED — get_price called once only"
+        }
+      ],
+      "evidence": {
+        "unitTests": "TestFetchPriceRetry: 4/4 PASSED. TestFetchPriceNoneReturn: 2/2 PASSED (None not retried). TestFetchPriceNoRetryForValueError: 1/1 PASSED (ValueError not retried).",
+        "codeReview": "server.py @retry decorator configured correctly: stop_after_attempt(2), retry_if_exception_type((ConnectionError, TimeoutError, OSError)). Only exceptions trigger retry — None return passes through immediately."
+      },
+      "issues": "Cannot be proven from user-surface-only behavior. The assertion requires mocking get_price to raise ConnectionError on first call then succeed, which is impossible via curl. Unit tests (which pass) are the correct evidence type per the validation contract."
+    },
+    {
+      "id": "VAL-CORE-015",
+      "title": "New params are optional — existing requests unaffected",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "GET /ethereum/price?token=0x6B175474E89094C44Da98b954EedeAC495271d0F&block=18000030 (no new params)",
+          "expected": "HTTP 200 with standard response shape: {chain, token, block, price, cached, block_timestamp}",
+          "observed": "HTTP 200 with {\"chain\":\"ethereum\",\"token\":\"0x6B17...\",\"block\":18000030,\"price\":1.0,\"cached\":true,\"block_timestamp\":1693067255}"
+        },
+        {
+          "action": "Verify all expected response keys present",
+          "expected": "Keys: chain, token, block, price, cached, block_timestamp",
+          "observed": "All 6 keys present. No missing keys, no extra unexpected keys."
+        },
+        {
+          "action": "Verify response field types and values",
+          "expected": "price is numeric, block matches request, chain is ethereum",
+          "observed": "price=1.0 (float), block=18000030 (matches request), chain='ethereum' (correct), block_timestamp=1693067255 (valid Unix epoch)"
+        }
+      ],
+      "evidence": {
+        "curlResponse": "HTTP 200 — {\"chain\":\"ethereum\",\"token\":\"0x6B175474E89094C44Da98b954EedeAC495271d0F\",\"block\":18000030,\"price\":1.0,\"cached\":true,\"block_timestamp\":1693067255}",
+        "responseValidation": "All 6 expected keys present (chain, token, block, price, cached, block_timestamp). price is numeric, block matches request, chain is 'ethereum'. Response is superset of pre-upgrade shape with additive block_timestamp."
+      },
+      "issues": null
+    }
+  ],
+  "frictions": [
+    {
+      "description": "First unresolvable-token test (0x0000...0001) timed out after 120s — ypricemagic's exhaustive pricing attempts for some addresses exceed nginx's proxy_read_timeout of 120s. Had to use the zero address (0x0000...0000) which resolves faster.",
+      "resolved": true,
+      "resolution": "Used 0x0000000000000000000000000000000000000000 (zero address) instead, which fails quickly in ypricemagic",
+      "affectedAssertions": ["VAL-CORE-004"]
+    },
+    {
+      "description": "After the timed-out request, subsequent requests to the same container returned 502 'Chain backend is unavailable' from nginx — likely the container was still processing the hung request. Had to wait ~10s for recovery.",
+      "resolved": true,
+      "resolution": "Waited for container to finish processing the previous request before retrying",
+      "affectedAssertions": ["VAL-CORE-004"]
+    }
+  ],
+  "blockers": [
+    {
+      "description": "VAL-CORE-005 and VAL-CORE-006 require mocking get_price internals (returning NaN/Inf/negative, or raising ConnectionError) which cannot be done through curl API requests. These assertions' evidence types are explicitly 'unit test with mocked get_price', making them inherently non-testable from the user surface. All relevant unit tests pass (9/9).",
+      "affectedAssertions": ["VAL-CORE-005", "VAL-CORE-006"],
+      "quickFixAttempted": "Ran the existing unit tests (TestFetchPriceInvalidValues: 4 passed, TestFetchPriceRetry: 4 passed, TestFetchPriceNoRetryForValueError: 1 passed) as alternative evidence confirming the behaviors are correctly implemented."
+    }
+  ],
+  "summary": "Tested 4 assertions: 2 passed (VAL-CORE-004: unresolvable token returns 404 with no exception traces; VAL-CORE-015: existing requests work identically with no new params), 2 blocked (VAL-CORE-005, VAL-CORE-006: require unit-test-level mocking of get_price internals, not achievable from API surface — all 9 relevant unit tests pass as alternative evidence)."
+}

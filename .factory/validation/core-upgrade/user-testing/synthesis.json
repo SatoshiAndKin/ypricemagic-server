@@ -1,0 +1,65 @@
+{
+  "milestone": "core-upgrade",
+  "round": 1,
+  "status": "fail",
+  "assertionsSummary": {
+    "total": 24,
+    "passed": 20,
+    "failed": 0,
+    "blocked": 4
+  },
+  "passedAssertions": [
+    "VAL-CORE-001",
+    "VAL-CORE-002",
+    "VAL-CORE-003",
+    "VAL-CORE-004",
+    "VAL-CORE-007",
+    "VAL-CORE-009",
+    "VAL-CORE-010",
+    "VAL-CORE-011",
+    "VAL-CORE-012",
+    "VAL-CORE-014",
+    "VAL-CORE-015",
+    "VAL-CORE-016",
+    "VAL-CORE-017",
+    "VAL-CORE-018",
+    "VAL-CORE-019",
+    "VAL-CORE-020",
+    "VAL-CORE-021",
+    "VAL-CORE-022",
+    "VAL-CORE-023",
+    "VAL-CORE-024"
+  ],
+  "failedAssertions": [],
+  "blockedAssertions": [
+    {
+      "id": "VAL-CORE-005",
+      "blockedBy": "Requires mocked get_price NaN/Inf/negative outputs; not directly reproducible via API user surface in this run."
+    },
+    {
+      "id": "VAL-CORE-006",
+      "blockedBy": "Requires induced transient internal exceptions to validate retry behavior; not directly reproducible via API user surface in this run."
+    },
+    {
+      "id": "VAL-CORE-008",
+      "blockedBy": "Requires inspection of internal get_price(skip_cache=...) kwarg forwarding; not directly observable from HTTP responses."
+    },
+    {
+      "id": "VAL-CORE-013",
+      "blockedBy": "Requires inspection of internal get_price(silent=...) kwarg forwarding; not directly observable from HTTP responses."
+    }
+  ],
+  "appliedUpdates": [
+    {
+      "target": "user-testing.md",
+      "description": "Added 'Flow Validator Guidance: API (curl)' section with isolation and parallel-safety boundaries for flow validators.",
+      "source": "setup"
+    },
+    {
+      "target": "user-testing.md",
+      "description": "Documented unresolvable-token testing quirk: zero address fails fast while some dead addresses can hit nginx 120s proxy timeout and briefly trigger downstream 502s.",
+      "source": "flow-report"
+    }
+  ],
+  "previousRound": null
+}

@@ -1,0 +1,114 @@
+{
+  "groupId": "core-block-timestamp",
+  "testedAt": "2026-03-02T00:00:00Z",
+  "credentials": {
+    "account": "not-required-api-flow-4",
+    "namespace": "ns_core_timestamp"
+  },
+  "toolsUsed": ["curl", "pytest"],
+  "assertions": [
+    {
+      "id": "VAL-CORE-016",
+      "title": "Price response includes block_timestamp",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "curl GET /ethereum/price?token=0x6B175474E89094C44Da98b954EedeAC495271d0F&block=18000050",
+          "expected": "HTTP 200 with block_timestamp field as Unix epoch integer > 1,400,000,000",
+          "observed": "HTTP 200, response: {chain: ethereum, token: 0x6B17...d0F, block: 18000050, price: 1.0, cached: false, block_timestamp: 1693067495}"
+        }
+      ],
+      "evidence": {
+        "screenshots": [],
+        "consoleErrors": "n/a (API test)",
+        "network": "GET /ethereum/price?token=0x6B175474E89094C44Da98b954EedeAC495271d0F&block=18000050 -> 200, block_timestamp=1693067495 (> 1,400,000,000)"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-CORE-017",
+      "title": "block_timestamp stored in cache and returned on hits",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "curl GET /ethereum/price?token=0x6B175474E89094C44Da98b954EedeAC495271d0F&block=18000050 (first request to prime cache)",
+          "expected": "HTTP 200 with cached:false and block_timestamp present",
+          "observed": "HTTP 200, cached: false, block_timestamp: 1693067495"
+        },
+        {
+          "action": "curl GET /ethereum/price?token=0x6B175474E89094C44Da98b954EedeAC495271d0F&block=18000050 (second request, cache hit)",
+          "expected": "HTTP 200 with cached:true and block_timestamp matching original (1693067495)",
+          "observed": "HTTP 200, cached: true, block_timestamp: 1693067495 — matches original"
+        }
+      ],
+      "evidence": {
+        "screenshots": [],
+        "consoleErrors": "n/a (API test)",
+        "network": "GET /ethereum/price?...&block=18000050 -> 200 (cached:true, block_timestamp:1693067495 matches original)"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-CORE-018",
+      "title": "block_timestamp present when block omitted",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "curl GET /ethereum/price?token=0x6B175474E89094C44Da98b954EedeAC495271d0F (no block param)",
+          "expected": "HTTP 200 with both block (numeric) and block_timestamp (numeric) fields present",
+          "observed": "HTTP 200, block: 24572025, block_timestamp: 1772481815 — both present"
+        }
+      ],
+      "evidence": {
+        "screenshots": [],
+        "consoleErrors": "n/a (API test)",
+        "network": "GET /ethereum/price?token=0x6B17...d0F -> 200, block=24572025, block_timestamp=1772481815"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-CORE-019",
+      "title": "Old cache entries without block_timestamp handled gracefully",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "Cannot inject old-format cache entries via API surface. Verified via existing unit test: TestBlockTimestampInCache::test_old_cache_entry_without_block_timestamp_returns_none",
+          "expected": "Unit test passes: old cache entry {price, cached_at} without block_timestamp returns block_timestamp: None on cache hit",
+          "observed": "Unit test PASSED — old cache entry returns price: 99.0 and block_timestamp: None (not a crash)"
+        }
+      ],
+      "evidence": {
+        "screenshots": [],
+        "consoleErrors": "n/a",
+        "network": "n/a (unit test verification)",
+        "unitTest": "src/tests/test_cache.py::TestBlockTimestampInCache::test_old_cache_entry_without_block_timestamp_returns_none -> PASSED"
+      },
+      "issues": "Cannot be proven from user-surface-only API calls (requires injecting old-format cache entries). Validated via passing unit test instead."
+    },
+    {
+      "id": "VAL-CORE-020",
+      "title": "block_timestamp fetch failure is non-fatal",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "Cannot trigger get_block_timestamp_async failure via API surface. Verified via existing unit tests: TestFetchBlockTimestamp::test_returns_none_on_exception and test_returns_none_on_connection_error",
+          "expected": "Unit tests pass: when get_block_timestamp_async raises RuntimeError or ConnectionError, _fetch_block_timestamp returns None (non-fatal)",
+          "observed": "Both unit tests PASSED — RuntimeError and ConnectionError both return None instead of crashing"
+        }
+      ],
+      "evidence": {
+        "screenshots": [],
+        "consoleErrors": "n/a",
+        "network": "n/a (unit test verification)",
+        "unitTests": [
+          "src/tests/test_server.py::TestFetchBlockTimestamp::test_returns_none_on_exception -> PASSED",
+          "src/tests/test_server.py::TestFetchBlockTimestamp::test_returns_none_on_connection_error -> PASSED"
+        ]
+      },
+      "issues": "Cannot be proven from user-surface-only API calls (requires mocking RPC failure). Validated via passing unit tests instead."
+    }
+  ],
+  "frictions": [],
+  "blockers": [],
+  "summary": "Tested 5 assertions: 5 passed. VAL-CORE-016/017/018 validated via live API curl requests. VAL-CORE-019/020 validated via passing unit tests (require mocked internal state not injectable from API surface)."
+}

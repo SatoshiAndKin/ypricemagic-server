@@ -34,3 +34,12 @@ Testing surface: tools, URLs, setup steps, isolation notes, known quirks.
 - First price request after container start may be slow (cold cache, brownie warming up)
 - Chain containers are independent — a test on ethereum doesn't affect arbitrum
 - `/health` may take up to ~5 seconds when sync checks timeout (`check_node_async` is wrapped with a 5s timeout)
+- For unresolvable-price testing, `0x0000000000000000000000000000000000000000` fails fast; some other dead addresses may run until nginx `proxy_read_timeout` (120s)
+- After a long-running timed-out price request, the same chain backend may briefly return `502` via nginx until the in-flight request clears
+
+## Flow Validator Guidance: API (curl)
+- Use only your assigned assertion IDs; do not validate unrelated assertions.
+- Use only your assigned data namespace token/block pairs so cache interactions remain isolated across parallel validators.
+- Do not restart containers, clear cache directories, or change service state during flow tests.
+- Keep tests user-surface only (HTTP calls via `curl`); do not modify app source code in flow validation.
+- If an assertion depends on logs, use `docker compose logs --tail` for observation only.
