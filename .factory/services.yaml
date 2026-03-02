@@ -1,7 +1,7 @@
 commands:
   install: uv sync --extra dev
   test: uv run pytest -x -q --tb=short -n 6
-  lint: uv run ruff check .
+  lint: uv run ruff check src/
   format_check: uv run ruff format --check .
   format: uv run ruff format .
   typecheck: uv run mypy src/
