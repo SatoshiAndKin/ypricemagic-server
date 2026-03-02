@@ -421,7 +421,7 @@ wheels = [
 
 [[package]]
 name = "dank-mids"
-version = "4.20.202"
+version = "4.20.205"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aiofiles" },
@@ -438,9 +438,9 @@ dependencies = [
     { name = "typed-envs" },
     { name = "web3" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/38/9c/0d0fd55b6db1046d41325e61d25f73306930ea87488bb504ed35c112d586/dank_mids-4.20.202.tar.gz", hash = "sha256:ea5564d93b9b18d9a13136c588eea788769f362f518b4f4c63082de46a97170c", size = 12760733, upload-time = "2026-02-26T09:34:17.861Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/be/e5/72d649b02c9cc14761d2532adde3cbfde0e1a49dea751893c58131240281/dank_mids-4.20.205.tar.gz", hash = "sha256:b2c9f27c02950cb5cd4428670ffc70f7adf6075dcc192e7cad8e3927f22d64a9", size = 13097576, upload-time = "2026-03-02T18:23:50.632Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/81/2f/13a2f96331ba12fee3545890e6a9482b248ea82411e494be64b83a4c150f/dank_mids-4.20.202-py3-none-any.whl", hash = "sha256:17ac23c6fe8b1ff3e9311ff06ef852e91254105ae8daec3078cc79f724f69d3c", size = 13615218, upload-time = "2026-02-26T09:34:20.671Z" },
+    { url = "https://files.pythonhosted.org/packages/11/7a/d651ced89f12e7b9800f3b06d65031a63777793f8cd348afd5999daff6e0/dank_mids-4.20.205-py3-none-any.whl", hash = "sha256:1142fbeea0010a8acf6e9ce43b34038583a0bf1f83c2a892260e5520026fc838", size = 13959443, upload-time = "2026-03-02T18:23:54.049Z" },
 ]
 
 [[package]]
@@ -2208,8 +2208,8 @@ wheels = [
 
 [[package]]
 name = "ypricemagic"
-version = "0.0.1.dev1429"
-source = { git = "https://github.com/SatoshiAndKin/ypricemagic.git?rev=master#298f604479454b69c6793044194b1aee535a0bc8" }
+version = "0.0.1.dev1435"
+source = { git = "https://github.com/SatoshiAndKin/ypricemagic.git?rev=master#728edd7ce0ae3b54f5b5bd979eea9f8b0ca88d89" }
 dependencies = [
     { name = "aiosqlite" },
     { name = "asyncpg" },
