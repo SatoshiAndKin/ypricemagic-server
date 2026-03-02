@@ -25,3 +25,4 @@ Environment variables, external dependencies, and setup notes.
 - OrbStack running on macOS
 - .env file at repo root with RPC_URL_ETHEREUM, RPC_URL_ARBITRUM, RPC_URL_OPTIMISM, RPC_URL_BASE, ETHERSCAN_TOKEN
 - Build is sensitive to dependency resolution — check [tool.uv] constraints if build fails
+- **nginx restart after container recreation**: When chain containers are recreated (e.g., after `docker compose build`), nginx may cache stale DNS entries for the container hostnames. Run `docker compose restart nginx` after recreating containers to ensure proper routing.
