@@ -649,17 +649,25 @@ INDEX_HTML = """<!DOCTYPE html>
     * { box-sizing: border-box; }
     body { font-family: system-ui, sans-serif; max-width: 900px; margin: 0 auto; padding: 20px; background: #f5f5f5; }
     h1 { margin-bottom: 20px; color: #333; }
+    h2 { margin: 30px 0 15px; color: #444; font-size: 20px; border-bottom: 2px solid #ddd; padding-bottom: 8px; }
     form { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 20px; }
     .form-group { margin-bottom: 16px; }
+    .form-row { display: flex; gap: 16px; }
+    .form-row .form-group { flex: 1; }
     label { display: block; font-weight: 600; margin-bottom: 6px; color: #555; }
-    input, select { width: 100%; padding: 10px; font-size: 14px; border: 1px solid #ddd; border-radius: 4px; }
-    input { font-family: monospace; }
-    input:focus, select:focus { outline: none; border-color: #0066cc; }
+    input, select, textarea { width: 100%; padding: 10px; font-size: 14px; border: 1px solid #ddd; border-radius: 4px; }
+    input, textarea { font-family: monospace; }
+    input:focus, select:focus, textarea:focus { outline: none; border-color: #0066cc; }
+    input:disabled { background: #f0f0f0; color: #999; }
+    textarea { min-height: 80px; resize: vertical; }
+    .checkbox-group { display: flex; align-items: center; gap: 8px; }
+    .checkbox-group input { width: auto; }
+    .checkbox-group label { margin-bottom: 0; font-weight: normal; }
     button { padding: 12px 24px; font-size: 16px; cursor: pointer; background: #0066cc; color: white; border: none; border-radius: 4px; }
     button:hover { background: #0052a3; }
     button:disabled { opacity: 0.6; cursor: not-allowed; }
-    #result { background: #1e1e1e; color: #d4d4d4; padding: 20px; border-radius: 8px; display: none; }
-    #result.show { display: block; }
+    .result { background: #1e1e1e; color: #d4d4d4; padding: 20px; border-radius: 8px; display: none; margin-top: 20px; }
+    .result.show { display: block; }
     .error { color: #e74c3c; }
     .result-header { color: #888; margin-bottom: 12px; font-size: 14px; }
     .field { margin-bottom: 12px; }
@@ -667,51 +675,174 @@ INDEX_HTML = """<!DOCTYPE html>
     .field-value { color: #4ec9b0; word-break: break-all; }
     .field-value.number { color: #b5cea8; font-size: 24px; }
     .field-value .dim { color: #888; font-size: 11px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+    th, td { padding: 10px; text-align: left; border-bottom: 1px solid #333; }
+    th { color: #888; font-size: 12px; text-transform: uppercase; }
+    td { color: #d4d4d4; font-family: monospace; font-size: 13px; }
+    td.null { color: #666; font-style: italic; }
+    .hint { font-size: 12px; color: #888; margin-top: 4px; }
   </style>
 </head>
 <body>
   <h1>ypricemagic Price Lookup</h1>
 
-  <form id="form">
-    <div class="form-group">
-      <label for="chain">Chain</label>
-      <select id="chain">
-        <option value="ethereum">Ethereum</option>
-        <option value="arbitrum">Arbitrum</option>
-        <option value="optimism">Optimism</option>
-        <option value="base">Base</option>
-      </select>
-    </div>
-    <div class="form-group">
-      <label for="token">Token Address</label>
-      <input type="text" id="token" placeholder="0x..." value="0x6B175474E89094C44Da98b954EedeAC495271d0F">
-    </div>
-    <div class="form-group">
-      <label for="block">Block Number (optional, blank for latest)</label>
-      <input type="text" id="block" placeholder="e.g. 18000000">
-    </div>
-    <div class="form-group">
-      <label for="amount">Amount (optional, token units for price impact)</label>
-      <input type="text" id="amount" placeholder="e.g. 1000">
-    </div>
-    <button type="submit" id="submit">Get Price</button>
-  </form>
+  <!-- Global Chain Selector -->
+  <div class="form-group">
+    <label for="chain">Chain (applies to all forms)</label>
+    <select id="chain">
+      <option value="ethereum">Ethereum</option>
+      <option value="arbitrum">Arbitrum</option>
+      <option value="optimism">Optimism</option>
+      <option value="base">Base</option>
+    </select>
+  </div>
 
-  <div id="result"></div>
+  <!-- Single Price Form -->
+  <h2>Single Token Price</h2>
+  <form id="price-form">
+    <div class="form-group">
+      <label for="price-token">Token Address</label>
+      <input type="text" id="price-token" placeholder="0x..." value="0x6B175474E89094C44Da98b954EedeAC495271d0F">
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label for="price-block">Block Number (optional)</label>
+        <input type="text" id="price-block" placeholder="e.g. 18000000">
+        <div class="hint">Leave blank for latest block</div>
+      </div>
+      <div class="form-group">
+        <label for="price-timestamp">Timestamp (optional)</label>
+        <input type="text" id="price-timestamp" placeholder="Unix epoch or ISO 8601">
+        <div class="hint">e.g. 1700000000 or 2023-11-14T22:13:20Z</div>
+      </div>
+    </div>
+    <div class="form-group">
+      <label for="price-amount">Amount (optional, token units for price impact)</label>
+      <input type="text" id="price-amount" placeholder="e.g. 1000">
+    </div>
+    <div class="form-row">
+      <div class="form-group checkbox-group">
+        <input type="checkbox" id="price-skip-cache">
+        <label for="price-skip-cache">Skip Cache</label>
+      </div>
+      <div class="form-group checkbox-group">
+        <input type="checkbox" id="price-silent">
+        <label for="price-silent">Silent</label>
+      </div>
+    </div>
+    <div class="form-group">
+      <label for="price-ignore-pools">Ignore Pools (optional, comma-separated addresses)</label>
+      <input type="text" id="price-ignore-pools" placeholder="0xabc...,0xdef...">
+    </div>
+    <button type="submit" id="price-submit">Get Price</button>
+  </form>
+  <div id="price-result" class="result"></div>
+
+  <!-- Batch Pricing Form -->
+  <h2>Batch Token Pricing</h2>
+  <form id="batch-form">
+    <div class="form-group">
+      <label for="batch-tokens">Token Addresses (comma-separated)</label>
+      <textarea id="batch-tokens" placeholder="0x6B175474E89094C44Da98b954EedeAC495271d0F,0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"></textarea>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label for="batch-block">Block Number (optional)</label>
+        <input type="text" id="batch-block" placeholder="e.g. 18000000">
+      </div>
+      <div class="form-group">
+        <label for="batch-timestamp">Timestamp (optional)</label>
+        <input type="text" id="batch-timestamp" placeholder="Unix epoch or ISO 8601">
+      </div>
+    </div>
+    <div class="form-group">
+      <label for="batch-amounts">Amounts (optional, comma-separated, matches token order)</label>
+      <input type="text" id="batch-amounts" placeholder="e.g. 1000,500">
+    </div>
+    <div class="form-row">
+      <div class="form-group checkbox-group">
+        <input type="checkbox" id="batch-skip-cache">
+        <label for="batch-skip-cache">Skip Cache</label>
+      </div>
+      <div class="form-group checkbox-group">
+        <input type="checkbox" id="batch-silent">
+        <label for="batch-silent">Silent</label>
+      </div>
+    </div>
+    <button type="submit" id="batch-submit">Get Prices</button>
+  </form>
+  <div id="batch-result" class="result"></div>
+
+  <!-- Token Classification Form -->
+  <h2>Token Classification</h2>
+  <form id="bucket-form">
+    <div class="form-group">
+      <label for="bucket-token">Token Address</label>
+      <input type="text" id="bucket-token" placeholder="0x...">
+    </div>
+    <button type="submit" id="bucket-submit">Check Bucket</button>
+  </form>
+  <div id="bucket-result" class="result"></div>
 
   <script>
-    const form = document.getElementById('form');
-    const result = document.getElementById('result');
-    const submit = document.getElementById('submit');
+    // Utility functions
+    function getChain() {
+      return document.getElementById('chain').value;
+    }
 
-    function showResult(data) {
-      result.className = 'show';
+    function showError(resultEl, msg) {
+      resultEl.className = 'result show';
+      resultEl.innerHTML = '<div class="error">' + msg + '</div>';
+    }
+
+    function showLoading(resultEl, msg) {
+      resultEl.className = 'result show';
+      resultEl.innerHTML = '<div class="result-header">' + msg + '</div>';
+    }
+
+    // Timestamp/Block mutual exclusivity
+    function setupMutualExclusivity(blockId, timestampId) {
+      const blockInput = document.getElementById(blockId);
+      const timestampInput = document.getElementById(timestampId);
+
+      blockInput.addEventListener('input', function() {
+        if (this.value.trim()) {
+          timestampInput.disabled = true;
+        } else {
+          timestampInput.disabled = false;
+        }
+      });
+
+      timestampInput.addEventListener('input', function() {
+        if (this.value.trim()) {
+          blockInput.disabled = true;
+        } else {
+          blockInput.disabled = false;
+        }
+      });
+    }
+
+    setupMutualExclusivity('price-block', 'price-timestamp');
+    setupMutualExclusivity('batch-block', 'batch-timestamp');
+
+    // Single Price Form
+    const priceForm = document.getElementById('price-form');
+    const priceResult = document.getElementById('price-result');
+    const priceSubmit = document.getElementById('price-submit');
+
+    function showPriceResult(data) {
+      priceResult.className = 'result show';
+      const timestampField = data.block_timestamp != null ? `
+        <div class="field">
+          <div class="field-label">Block Timestamp</div>
+          <div class="field-value">${data.block_timestamp}</div>
+        </div>` : '';
       const amountField = data.amount != null ? `
         <div class="field">
           <div class="field-label">Amount</div>
           <div class="field-value">${data.amount}</div>
         </div>` : '';
-      result.innerHTML = `
+      priceResult.innerHTML = `
         <div class="result-header">Price Result</div>
         <div class="field">
           <div class="field-label">Chain</div>
@@ -724,7 +855,7 @@ INDEX_HTML = """<!DOCTYPE html>
         <div class="field">
           <div class="field-label">Block</div>
           <div class="field-value">${data.block}</div>
-        </div>${amountField}
+        </div>${timestampField}${amountField}
         <div class="field">
           <div class="field-label">Price (USD per token)</div>
           <div class="field-value number">${data.price}</div>
@@ -736,57 +867,191 @@ INDEX_HTML = """<!DOCTYPE html>
       `;
     }
 
-    function showError(msg) {
-      result.className = 'show';
-      result.innerHTML = '<div class="error">' + msg + '</div>';
-    }
-
-    form.addEventListener('submit', async (e) => {
+    priceForm.addEventListener('submit', async (e) => {
       e.preventDefault();
-      const chain = document.getElementById('chain').value;
-      const token = document.getElementById('token').value.trim();
-      const block = document.getElementById('block').value.trim();
-      const amount = document.getElementById('amount').value.trim();
+      const chain = getChain();
+      const token = document.getElementById('price-token').value.trim();
+      const block = document.getElementById('price-block').value.trim();
+      const timestamp = document.getElementById('price-timestamp').value.trim();
+      const amount = document.getElementById('price-amount').value.trim();
+      const skipCache = document.getElementById('price-skip-cache').checked;
+      const silent = document.getElementById('price-silent').checked;
+      const ignorePools = document.getElementById('price-ignore-pools').value.trim();
 
-      submit.disabled = true;
-      submit.textContent = 'Fetching...';
-      result.className = 'show';
-      result.innerHTML = '<div class="result-header">Fetching price...</div>';
+      priceSubmit.disabled = true;
+      priceSubmit.textContent = 'Fetching...';
+      showLoading(priceResult, 'Fetching price...');
 
       try {
         const params = new URLSearchParams({ token });
         if (block) params.set('block', block);
+        if (timestamp) params.set('timestamp', timestamp);
         if (amount) params.set('amount', amount);
+        if (skipCache) params.set('skip_cache', 'true');
+        if (silent) params.set('silent', 'true');
+        if (ignorePools) params.set('ignore_pools', ignorePools);
 
         const res = await fetch('/' + chain + '/price?' + params.toString());
         const data = await res.json();
 
         if (data.error) {
-          showError(data.error);
+          showError(priceResult, data.error);
         } else {
-          showResult(data);
-          const url = new URL(window.location.href);
-          url.searchParams.set('chain', chain);
-          url.searchParams.set('token', token);
-          if (block) url.searchParams.set('block', block);
-          else url.searchParams.delete('block');
-          if (amount) url.searchParams.set('amount', amount);
-          else url.searchParams.delete('amount');
-          window.history.replaceState({}, '', url.toString());
+          showPriceResult(data);
         }
       } catch (err) {
-        showError('Request failed: ' + err.message);
+        showError(priceResult, 'Request failed: ' + err.message);
       } finally {
-        submit.disabled = false;
-        submit.textContent = 'Get Price';
+        priceSubmit.disabled = false;
+        priceSubmit.textContent = 'Get Price';
       }
     });
 
+    // Batch Pricing Form
+    const batchForm = document.getElementById('batch-form');
+    const batchResult = document.getElementById('batch-result');
+    const batchSubmit = document.getElementById('batch-submit');
+
+    function showBatchResult(data) {
+      batchResult.className = 'result show';
+      if (!Array.isArray(data)) {
+        showError(batchResult, data.error || 'Unexpected response format');
+        return;
+      }
+
+      let rows = '';
+      for (const item of data) {
+        const priceDisplay = item.price !== null ? item.price : '<span class="null">null</span>';
+        const cachedDisplay = item.cached ? 'yes' : 'no';
+        const tsDisplay = item.block_timestamp !== null ? item.block_timestamp : '-';
+        rows += `<tr>
+          <td>${item.token}</td>
+          <td>${item.block}</td>
+          <td>${priceDisplay}</td>
+          <td>${tsDisplay}</td>
+          <td>${cachedDisplay}</td>
+        </tr>`;
+      }
+
+      batchResult.innerHTML = `
+        <div class="result-header">Batch Results (${data.length} tokens)</div>
+        <table>
+          <thead>
+            <tr>
+              <th>Token</th>
+              <th>Block</th>
+              <th>Price</th>
+              <th>Timestamp</th>
+              <th>Cached</th>
+            </tr>
+          </thead>
+          <tbody>${rows}</tbody>
+        </table>
+      `;
+    }
+
+    batchForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const chain = getChain();
+      const tokens = document.getElementById('batch-tokens').value.trim();
+      const block = document.getElementById('batch-block').value.trim();
+      const timestamp = document.getElementById('batch-timestamp').value.trim();
+      const amounts = document.getElementById('batch-amounts').value.trim();
+      const skipCache = document.getElementById('batch-skip-cache').checked;
+      const silent = document.getElementById('batch-silent').checked;
+
+      if (!tokens) {
+        showError(batchResult, 'Token addresses are required');
+        return;
+      }
+
+      batchSubmit.disabled = true;
+      batchSubmit.textContent = 'Fetching...';
+      showLoading(batchResult, 'Fetching batch prices...');
+
+      try {
+        const params = new URLSearchParams({ tokens });
+        if (block) params.set('block', block);
+        if (timestamp) params.set('timestamp', timestamp);
+        if (amounts) params.set('amounts', amounts);
+        if (skipCache) params.set('skip_cache', 'true');
+        if (silent) params.set('silent', 'true');
+
+        const res = await fetch('/' + chain + '/prices?' + params.toString());
+        const data = await res.json();
+
+        if (data.error) {
+          showError(batchResult, data.error);
+        } else {
+          showBatchResult(data);
+        }
+      } catch (err) {
+        showError(batchResult, 'Request failed: ' + err.message);
+      } finally {
+        batchSubmit.disabled = false;
+        batchSubmit.textContent = 'Get Prices';
+      }
+    });
+
+    // Token Classification Form
+    const bucketForm = document.getElementById('bucket-form');
+    const bucketResult = document.getElementById('bucket-result');
+    const bucketSubmit = document.getElementById('bucket-submit');
+
+    function showBucketResult(data) {
+      bucketResult.className = 'result show';
+      const bucketDisplay = data.bucket !== null ? data.bucket : '<span class="null">null</span>';
+      bucketResult.innerHTML = `
+        <div class="result-header">Classification Result</div>
+        <div class="field">
+          <div class="field-label">Token</div>
+          <div class="field-value"><span class="dim">${data.token}</span></div>
+        </div>
+        <div class="field">
+          <div class="field-label">Chain</div>
+          <div class="field-value">${data.chain}</div>
+        </div>
+        <div class="field">
+          <div class="field-label">Bucket</div>
+          <div class="field-value">${bucketDisplay}</div>
+        </div>
+      `;
+    }
+
+    bucketForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const chain = getChain();
+      const token = document.getElementById('bucket-token').value.trim();
+
+      if (!token) {
+        showError(bucketResult, 'Token address is required');
+        return;
+      }
+
+      bucketSubmit.disabled = true;
+      bucketSubmit.textContent = 'Checking...';
+      showLoading(bucketResult, 'Classifying token...');
+
+      try {
+        const res = await fetch('/' + chain + '/check_bucket?token=' + encodeURIComponent(token));
+        const data = await res.json();
+
+        if (data.error) {
+          showError(bucketResult, data.error);
+        } else {
+          showBucketResult(data);
+        }
+      } catch (err) {
+        showError(bucketResult, 'Request failed: ' + err.message);
+      } finally {
+        bucketSubmit.disabled = false;
+        bucketSubmit.textContent = 'Check Bucket';
+      }
+    });
+
+    // Load URL params
     const params = new URLSearchParams(window.location.search);
     if (params.get('chain')) document.getElementById('chain').value = params.get('chain');
-    if (params.get('token')) document.getElementById('token').value = params.get('token');
-    if (params.get('block')) document.getElementById('block').value = params.get('block');
-    if (params.get('amount')) document.getElementById('amount').value = params.get('amount');
   </script>
 </body>
 </html>"""
