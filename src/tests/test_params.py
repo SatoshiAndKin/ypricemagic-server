@@ -6,6 +6,7 @@ from src.params import (
     parse_bool_param,
     parse_ignore_pools,
     parse_price_params,
+    parse_timestamp,
 )
 
 DAI = "0x6B175474E89094C44Da98b954EedeAC495271d0F"
@@ -340,3 +341,116 @@ class TestParsePriceParamsNewFields:
         assert result.data.skip_cache is False
         assert result.data.silent is False
         assert result.data.ignore_pools == ()
+
+
+class TestParseTimestamp:
+    """Tests for parse_timestamp function."""
+
+    def test_valid_unix_epoch_integer(self) -> None:
+        """Unix epoch as integer string is accepted."""
+        result = parse_timestamp("1700000000")
+        assert isinstance(result, int)
+        assert result == 1700000000
+
+    def test_valid_unix_epoch_float(self) -> None:
+        """Unix epoch as float string is accepted (decimal part discarded)."""
+        result = parse_timestamp("1700000000.123")
+        assert isinstance(result, int)
+        assert result == 1700000000
+
+    def test_valid_iso8601_with_z(self) -> None:
+        """ISO 8601 with Z suffix is accepted."""
+        result = parse_timestamp("2023-11-14T22:13:20Z")
+        assert isinstance(result, int)
+        # 2023-11-14T22:13:20Z = 1700000000
+        assert result == 1700000000
+
+    def test_valid_iso8601_with_plus_offset(self) -> None:
+        """ISO 8601 with +00:00 offset is accepted."""
+        result = parse_timestamp("2023-11-14T22:13:20+00:00")
+        assert isinstance(result, int)
+        assert result == 1700000000
+
+    def test_invalid_format(self) -> None:
+        """Invalid format returns ParseError."""
+        result = parse_timestamp("not-a-timestamp")
+        assert isinstance(result, ParseError)
+        assert "timestamp" in result.error.lower()
+
+    def test_negative_timestamp(self) -> None:
+        """Negative timestamp returns ParseError."""
+        result = parse_timestamp("-100")
+        assert isinstance(result, ParseError)
+        assert "negative" in result.error.lower()
+
+    def test_zero_timestamp(self) -> None:
+        """Zero timestamp returns ParseError."""
+        result = parse_timestamp("0")
+        assert isinstance(result, ParseError)
+        assert "zero" in result.error.lower() or "positive" in result.error.lower()
+
+    def test_future_timestamp(self) -> None:
+        """Future timestamp (far in the future) returns ParseError."""
+        result = parse_timestamp("9999999999")
+        assert isinstance(result, ParseError)
+        assert "future" in result.error.lower()
+
+    def test_none_returns_none(self) -> None:
+        """None input returns None (parameter not provided)."""
+        result = parse_timestamp(None)
+        assert result is None
+
+    def test_empty_string_returns_none(self) -> None:
+        """Empty string returns None (parameter not provided)."""
+        result = parse_timestamp("")
+        assert result is None
+
+    def test_iso8601_with_timezone_name(self) -> None:
+        """ISO 8601 with timezone name (like UTC) is not accepted."""
+        result = parse_timestamp("2023-11-14T22:13:20 UTC")
+        assert isinstance(result, ParseError)
+
+
+class TestParsePriceParamsTimestamp:
+    """Tests for timestamp parameter in parse_price_params."""
+
+    def test_timestamp_without_block(self) -> None:
+        """Timestamp without block is accepted."""
+        result = parse_price_params(DAI, None, None, None, None, None, "1700000000")
+        assert isinstance(result, ParseSuccess)
+        assert result.data.timestamp == 1700000000
+        assert result.data.block is None
+
+    def test_timestamp_and_block_mutually_exclusive(self) -> None:
+        """Both timestamp and block returns ParseError."""
+        result = parse_price_params(DAI, "18000000", None, None, None, None, "1700000000")
+        assert isinstance(result, ParseError)
+        assert "mutually exclusive" in result.error.lower()
+
+    def test_timestamp_invalid_format(self) -> None:
+        """Invalid timestamp format returns ParseError."""
+        result = parse_price_params(DAI, None, None, None, None, None, "invalid")
+        assert isinstance(result, ParseError)
+        assert "timestamp" in result.error.lower()
+
+    def test_timestamp_future(self) -> None:
+        """Future timestamp returns ParseError."""
+        result = parse_price_params(DAI, None, None, None, None, None, "9999999999")
+        assert isinstance(result, ParseError)
+        assert "future" in result.error.lower()
+
+    def test_timestamp_with_other_params(self) -> None:
+        """Timestamp works with other params like amount, skip_cache, etc."""
+        result = parse_price_params(DAI, None, "1000", "true", None, "true", "1700000000")
+        assert isinstance(result, ParseSuccess)
+        assert result.data.timestamp == 1700000000
+        assert result.data.amount == 1000.0
+        assert result.data.skip_cache is True
+        assert result.data.silent is True
+
+    def test_no_timestamp_no_block(self) -> None:
+        """Omitting both timestamp and block is valid (uses latest block)."""
+        result = parse_price_params(DAI)
+        assert isinstance(result, ParseSuccess)
+        assert result.data.timestamp is None
+        assert result.data.block is None

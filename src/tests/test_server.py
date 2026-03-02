@@ -9,6 +9,203 @@ USDC = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"
 WETH = "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"
 
 
+class TestTimestampResolution:
+    """Tests for timestamp parameter resolution in the price endpoint."""
+
+    @pytest.mark.asyncio
+    async def test_timestamp_resolves_to_block(self, mock_y_module: None) -> None:
+        """Timestamp is resolved to a block number via get_block_at_timestamp."""
+        from fastapi.testclient import TestClient
+
+        from src.server import app
+
+        mock_get_block_at_timestamp = AsyncMock(return_value=18000000)
+        mock_get_price = AsyncMock(return_value=1.0)
+        mock_get_block_timestamp = AsyncMock(return_value=1700000000)
+        mock_chain = type("MockChain", (), {"height": 19000000})()
+
+        with (
+            patch("y.get_block_at_timestamp", mock_get_block_at_timestamp),
+            patch("y.get_price", mock_get_price),
+            patch("y.get_block_timestamp_async", mock_get_block_timestamp),
+            patch("brownie.chain", mock_chain),
+        ):
+            client = TestClient(app)
+            response = client.get(
+                "/price",
+                params={"token": DAI, "timestamp": "1700000000"},
+            )
+
+            assert response.status_code == 200
+            data = response.json()
+            assert data["block"] == 18000000
+            assert data["price"] == 1.0
+            # get_block_at_timestamp should be called with the timestamp
+            mock_get_block_at_timestamp.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_iso8601_timestamp_resolves(self, mock_y_module: None) -> None:
+        """ISO 8601 timestamp is resolved to the same block as equivalent Unix epoch."""
+        from fastapi.testclient import TestClient
+
+        from src.server import app
+
+        mock_get_block_at_timestamp = AsyncMock(return_value=18000000)
+        mock_get_price = AsyncMock(return_value=1.0)
+        mock_get_block_timestamp = AsyncMock(return_value=1700000000)
+        mock_chain = type("MockChain", (), {"height": 19000000})()
+
+        with (
+            patch("y.get_block_at_timestamp", mock_get_block_at_timestamp),
+            patch("y.get_price", mock_get_price),
+            patch("y.get_block_timestamp_async", mock_get_block_timestamp),
+            patch("brownie.chain", mock_chain),
+        ):
+            client = TestClient(app)
+            response = client.get(
+                "/price",
+                params={"token": DAI, "timestamp": "2023-11-14T22:13:20Z"},
+            )
+
+            assert response.status_code == 200
+            data = response.json()
+            assert data["block"] == 18000000
+
+    @pytest.mark.asyncio
+    async def test_timestamp_and_block_returns_400(self, mock_y_module: None) -> None:
+        """Both timestamp and block parameters returns 400."""
+        from fastapi.testclient import TestClient
+
+        from src.server import app
+
+        mock_chain = type("MockChain", (), {"height": 19000000})()
+
+        with patch("brownie.chain", mock_chain):
+            client = TestClient(app)
+            response = client.get(
+                "/price",
+                params={"token": DAI, "timestamp": "1700000000", "block": "18000000"},
+            )
+
+            assert response.status_code == 400
+            data = response.json()
+            assert "mutually exclusive" in data["error"].lower()
+
+    @pytest.mark.asyncio
+    async def test_invalid_timestamp_returns_400(self, mock_y_module: None) -> None:
+        """Invalid timestamp format returns 400."""
+        from fastapi.testclient import TestClient
+
+        from src.server import app
+
+        mock_chain = type("MockChain", (), {"height": 19000000})()
+
+        with patch("brownie.chain", mock_chain):
+            client = TestClient(app)
+            response = client.get(
+                "/price",
+                params={"token": DAI, "timestamp": "not-a-timestamp"},
+            )
+
+            assert response.status_code == 400
+            data = response.json()
+            assert "timestamp" in data["error"].lower()
+
+    @pytest.mark.asyncio
+    async def test_future_timestamp_returns_400(self, mock_y_module: None) -> None:
+        """Future timestamp returns 400."""
+        from fastapi.testclient import TestClient
+
+        from src.server import app
+
+        mock_chain = type("MockChain", (), {"height": 19000000})()
+
+        with patch("brownie.chain", mock_chain):
+            client = TestClient(app)
+            response = client.get(
+                "/price",
+                params={"token": DAI, "timestamp": "9999999999"},
+            )
+
+            assert response.status_code == 400
+            data = response.json()
+            assert "future" in data["error"].lower()
+
+    @pytest.mark.asyncio
+    async def test_timestamp_without_token_validates_token_first(self, mock_y_module: None) -> None:
+        """Missing token with timestamp validates token first."""
+        from fastapi.testclient import TestClient
+
+        from src.server import app
+
+        mock_chain = type("MockChain", (), {"height": 19000000})()
+
+        with patch("brownie.chain", mock_chain):
+            client = TestClient(app)
+            response = client.get(
+                "/price",
+                params={"timestamp": "1700000000"},
+            )
+
+            assert response.status_code == 400
+            data = response.json()
+            assert "token" in data["error"].lower()
+
+    @pytest.mark.asyncio
+    async def test_timestamp_resolution_failure_returns_502(self, mock_y_module: None) -> None:
+        """When get_block_at_timestamp fails (RPC error), returns 502."""
+        from fastapi.testclient import TestClient
+
+        from src.server import app
+
+        mock_get_block_at_timestamp = AsyncMock(side_effect=ConnectionError("RPC failed"))
+        mock_chain = type("MockChain", (), {"height": 19000000})()
+
+        with (
+            patch("y.get_block_at_timestamp", mock_get_block_at_timestamp),
+            patch("brownie.chain", mock_chain),
+        ):
+            client = TestClient(app)
+            response = client.get(
+                "/price",
+                params={"token": DAI, "timestamp": "1700000000"},
+            )
+
+            assert response.status_code == 502
+            data = response.json()
+            assert "timestamp" in data["error"].lower()
+
+    @pytest.mark.asyncio
+    async def test_response_includes_resolved_block(self, mock_y_module: None) -> None:
+        """The response from a timestamp-based query includes the resolved block number."""
+        from fastapi.testclient import TestClient
+
+        from src.server import app
+
+        mock_get_block_at_timestamp = AsyncMock(return_value=18000000)
+        mock_get_price = AsyncMock(return_value=1.0)
+        mock_get_block_timestamp = AsyncMock(return_value=1700000000)
+        mock_chain = type("MockChain", (), {"height": 19000000})()
+
+        with (
+            patch("y.get_block_at_timestamp", mock_get_block_at_timestamp),
+            patch("y.get_price", mock_get_price),
+            patch("y.get_block_timestamp_async", mock_get_block_timestamp),
+            patch("brownie.chain", mock_chain),
+        ):
+            client = TestClient(app)
+            response = client.get(
+                "/price",
+                params={"token": DAI, "timestamp": "1700000000"},
+            )
+
+            assert response.status_code == 200
+            data = response.json()
+            assert data["block"] == 18000000
+            assert "price" in data
+            assert data["cached"] is False
+
+
 class TestFetchPriceNoneReturn:
     """Test that None return from get_price results in None return (no retry, no exception)."""
 

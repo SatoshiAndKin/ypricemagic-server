@@ -1,9 +1,13 @@
 import re
 from dataclasses import dataclass
+from datetime import UTC, datetime, timedelta
 
 ADDRESS_REGEX = re.compile(r"^0x[a-fA-F0-9]{40}$")
 
 MAX_BLOCK = 2**63
+
+# Buffer for future timestamp validation (allows slight clock skew)
+TIMESTAMP_FUTURE_BUFFER_SECONDS = 300  # 5 minutes
 
 
 def is_valid_address(address: str) -> bool:
@@ -18,6 +22,7 @@ class PriceParams:
     skip_cache: bool = False
     ignore_pools: tuple[str, ...] = ()
     silent: bool = False
+    timestamp: int | None = None
 
 
 @dataclass
@@ -78,6 +83,95 @@ def parse_ignore_pools(value: str | None) -> tuple[str, ...] | ParseError:
     return tuple(addresses)
 
 
+def parse_timestamp(value: str | None) -> int | None | ParseError:
+    """Parse timestamp parameter.
+
+    Accepts:
+    - Unix epoch as integer string (e.g., '1700000000')
+    - Unix epoch as float string (e.g., '1700000000.123' - decimal discarded)
+    - ISO 8601 with timezone (e.g., '2023-11-14T22:13:20Z' or '2023-11-14T22:13:20+00:00')
+
+    Validates:
+    - Not negative
+    - Not zero
+    - Not in the future (compared to current time + buffer)
+
+    Returns Unix epoch as int on success.
+    Returns None for missing/empty values.
+    Returns ParseError for invalid values.
+    """
+    if value is None or value == "":
+        return None
+
+    stripped = value.strip()
+
+    # Try parsing as Unix epoch (int or float)
+    parsed = _parse_unix_timestamp(stripped)
+    if parsed is not None:
+        return parsed
+
+    # Try ISO 8601 format
+    return _parse_iso8601_timestamp(stripped)
+
+
+def _parse_unix_timestamp(value: str) -> int | None | ParseError:
+    """Parse Unix epoch timestamp string."""
+    try:
+        parsed_float = float(value)
+    except ValueError:
+        return None  # Not a number, caller should try other formats
+
+    if parsed_float < 0:
+        return ParseError("Timestamp cannot be negative.")
+    if parsed_float == 0:
+        return ParseError("Timestamp cannot be zero.")
+
+    parsed = int(parsed_float)
+
+    # Validate not in future
+    now = datetime.now(UTC)
+    max_allowed = now + timedelta(seconds=TIMESTAMP_FUTURE_BUFFER_SECONDS)
+    if parsed > max_allowed.timestamp():
+        return ParseError("Timestamp cannot be in the future.")
+
+    return parsed
+
+
+def _parse_iso8601_timestamp(value: str) -> int | ParseError:
+    """Parse ISO 8601 timestamp string."""
+    iso_patterns = [
+        "%Y-%m-%dT%H:%M:%SZ",
+        "%Y-%m-%dT%H:%M:%S%z",
+    ]
+
+    parsed_dt: datetime | None = None
+    for pattern in iso_patterns:
+        try:
+            parsed_dt = datetime.strptime(value, pattern)
+            break
+        except ValueError:
+            continue
+
+    if parsed_dt is None:
+        return ParseError(f"Invalid timestamp format: '{value}'. Expected Unix epoch or ISO 8601.")
+
+    # Ensure timezone-aware (add UTC if naive)
+    if parsed_dt.tzinfo is None:
+        parsed_dt = parsed_dt.replace(tzinfo=UTC)
+
+    # Validate not in future
+    now = datetime.now(UTC)
+    max_allowed = now + timedelta(seconds=TIMESTAMP_FUTURE_BUFFER_SECONDS)
+    if parsed_dt > max_allowed:
+        return ParseError("Timestamp cannot be in the future.")
+
+    epoch = int(parsed_dt.timestamp())
+    if epoch <= 0:
+        return ParseError("Timestamp cannot be zero or negative.")
+
+    return epoch
+
+
 def _parse_block(block: str | None) -> int | None | ParseError:
     """Parse block parameter."""
     if block is None:
@@ -119,6 +213,7 @@ def parse_price_params(
     skip_cache: str | None = None,
     ignore_pools: str | None = None,
     silent: str | None = None,
+    timestamp: str | None = None,
 ) -> ParseResult:
     if not token:
         return ParseError("Missing required parameter: token")
@@ -146,6 +241,16 @@ def parse_price_params(
     if isinstance(parsed_ignore_pools, ParseError):
         return parsed_ignore_pools
 
+    parsed_timestamp = parse_timestamp(timestamp)
+    if isinstance(parsed_timestamp, ParseError):
+        return parsed_timestamp
+
+    # Mutual exclusivity check: timestamp and block cannot both be provided
+    if parsed_timestamp is not None and parsed_block is not None:
+        return ParseError(
+            "Parameters 'timestamp' and 'block' are mutually exclusive. Provide only one."
+        )
+
     return ParseSuccess(
         data=PriceParams(
             token=token,
@@ -154,5 +259,6 @@ def parse_price_params(
             skip_cache=parsed_skip_cache,
             ignore_pools=parsed_ignore_pools,
             silent=parsed_silent,
+            timestamp=parsed_timestamp,
         )
     )

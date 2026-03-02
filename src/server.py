@@ -182,6 +182,43 @@ async def _fetch_block_timestamp(block: int) -> int | None:
         return None
 
 
+async def _resolve_block_from_timestamp(timestamp: int) -> int:
+    """Resolve a Unix timestamp to a block number.
+
+    Raises Exception on RPC failure.
+    """
+    from y import get_block_at_timestamp
+
+    return await get_block_at_timestamp(timestamp, sync=False)
+
+
+def _make_error_response(status: int, message: str) -> JSONResponse:
+    """Create a JSON error response."""
+    return JSONResponse(status_code=status, content={"error": message})
+
+
+def _handle_price_error(e: Exception, token: str, block: int, duration_ms: int) -> JSONResponse:
+    """Handle exceptions from price fetching and return appropriate response."""
+    inner = e.__cause__ if isinstance(e, RetryError) else e
+    msg = str(inner)
+    price_requests_total.labels(chain=CHAIN_NAME, status="error").inc()
+    logger.error(
+        "price_lookup_failed",
+        token=token[:10],
+        block=block,
+        duration_ms=duration_ms,
+    )
+    if "Invalid price value" in msg or "Negative price" in msg:
+        return _make_error_response(
+            502,
+            f"Price source returned invalid value for {token} at block {block}",
+        )
+    return _make_error_response(
+        500,
+        f"Price lookup failed for {token} at block {block}. Check server logs.",
+    )
+
+
 @app.get("/price")
 async def price(
     token: str | None = Query(None),
@@ -190,17 +227,33 @@ async def price(
     skip_cache: str | None = Query(None),
     ignore_pools: str | None = Query(None),
     silent: str | None = Query(None),
+    timestamp: str | None = Query(None),
 ) -> Any:
-    result = parse_price_params(token, block, amount, skip_cache, ignore_pools, silent)
+    result = parse_price_params(token, block, amount, skip_cache, ignore_pools, silent, timestamp)
     if isinstance(result, ParseError):
         price_requests_total.labels(chain=CHAIN_NAME, status="bad_request").inc()
-        return JSONResponse(status_code=400, content={"error": result.error})
+        return _make_error_response(400, result.error)
 
     params = result.data
 
     from brownie import chain as brownie_chain
 
-    actual_block = params.block if params.block is not None else brownie_chain.height
+    # Determine the block to use
+    if params.timestamp is not None:
+        try:
+            actual_block = await _resolve_block_from_timestamp(params.timestamp)
+        except Exception as e:
+            logger.error(
+                "timestamp_resolution_failed",
+                timestamp=params.timestamp,
+                error=str(e),
+            )
+            return _make_error_response(
+                502,
+                f"Failed to resolve timestamp {params.timestamp} to block: {e}",
+            )
+    else:
+        actual_block = params.block if params.block is not None else brownie_chain.height
 
     # Check cache only if: no amount AND not skip_cache
     if params.amount is None and not params.skip_cache:
@@ -233,54 +286,17 @@ async def price(
             ignore_pools=params.ignore_pools,
             silent=params.silent,
         )
-    except (RetryError, ValueError) as e:
+    except (RetryError, ValueError, Exception) as e:
         duration_ms = int((time.monotonic() - start) * 1000)
-        inner = e.__cause__ if isinstance(e, RetryError) else e
-        msg = str(inner)
-        price_requests_total.labels(chain=CHAIN_NAME, status="error").inc()
-        logger.error(
-            "price_lookup_failed",
-            token=params.token[:10],
-            block=actual_block,
-            duration_ms=duration_ms,
-        )
-        if "Invalid price value" in msg or "Negative price" in msg:
-            return JSONResponse(
-                status_code=502,
-                content={
-                    "error": f"Price source returned invalid value for {params.token} at block {actual_block}"
-                },
-            )
-        return JSONResponse(
-            status_code=500,
-            content={
-                "error": f"Price lookup failed for {params.token} at block {actual_block}. Check server logs."
-            },
-        )
-    except Exception as e:
-        duration_ms = int((time.monotonic() - start) * 1000)
-        price_requests_total.labels(chain=CHAIN_NAME, status="error").inc()
-        logger.error(
-            "price_lookup_error",
-            token=params.token[:10],
-            block=actual_block,
-            duration_ms=duration_ms,
-            error=type(e).__name__,
-        )
-        return JSONResponse(
-            status_code=500,
-            content={
-                "error": f"Price lookup failed for {params.token} at block {actual_block}. Check server logs."
-            },
-        )
+        return _handle_price_error(e, params.token, actual_block, duration_ms)
 
     # Handle None return from get_price with fail_to_None=True
     if price_float is None:
         price_requests_total.labels(chain=CHAIN_NAME, status="not_found").inc()
         logger.warning("price_not_found", token=params.token[:10], block=actual_block)
-        return JSONResponse(
-            status_code=404,
-            content={"error": f"No price found for {params.token} at block {actual_block}"},
+        return _make_error_response(
+            404,
+            f"No price found for {params.token} at block {actual_block}",
         )
 
     duration_ms = int((time.monotonic() - start) * 1000)
