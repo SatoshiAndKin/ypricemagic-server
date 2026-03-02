@@ -10,7 +10,13 @@ from fastapi import FastAPI, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse
 from prometheus_client import Counter, Histogram, make_asgi_app
-from tenacity import RetryError, retry, stop_after_attempt, wait_exponential
+from tenacity import (
+    RetryError,
+    retry,
+    retry_if_exception_type,
+    stop_after_attempt,
+    wait_exponential,
+)
 
 from src.cache import get_cached_price, set_cached_price
 from src.logger import configure_logging, get_logger
@@ -99,13 +105,17 @@ async def health() -> dict[str, Any]:
         )
 
 
-@retry(stop=stop_after_attempt(2), wait=wait_exponential(multiplier=1, min=1, max=4))
-async def _fetch_price(token: str, block: int, amount: float | None = None) -> float:
+@retry(
+    stop=stop_after_attempt(2),
+    wait=wait_exponential(multiplier=1, min=1, max=4),
+    retry=retry_if_exception_type((ConnectionError, TimeoutError, OSError)),
+)
+async def _fetch_price(token: str, block: int, amount: float | None = None) -> float | None:
     from y import get_price
 
-    p = await get_price(token, block, amount=amount, sync=False)  # type: ignore[call-overload]
+    p = await get_price(token, block, amount=amount, fail_to_None=True, sync=False)  # type: ignore[call-overload]
     if p is None:
-        raise ValueError(f"No price returned for {token} at block {block}")
+        return None
     price_float = float(p)
     if math.isnan(price_float) or math.isinf(price_float):
         raise ValueError(f"Invalid price value {p} for {token} at block {block}")
@@ -157,13 +167,6 @@ async def price(
         duration_ms = int((time.monotonic() - start) * 1000)
         inner = e.__cause__ if isinstance(e, RetryError) else e
         msg = str(inner)
-        if "No price returned" in msg:
-            price_requests_total.labels(chain=CHAIN_NAME, status="not_found").inc()
-            logger.warning("price_not_found", token=params.token[:10], block=actual_block)
-            return JSONResponse(
-                status_code=404,
-                content={"error": f"No price found for {params.token} at block {actual_block}"},
-            )
         price_requests_total.labels(chain=CHAIN_NAME, status="error").inc()
         logger.error(
             "price_lookup_failed",
@@ -199,6 +202,15 @@ async def price(
             content={
                 "error": f"Price lookup failed for {params.token} at block {actual_block}. Check server logs."
             },
+        )
+
+    # Handle None return from get_price with fail_to_None=True
+    if price_float is None:
+        price_requests_total.labels(chain=CHAIN_NAME, status="not_found").inc()
+        logger.warning("price_not_found", token=params.token[:10], block=actual_block)
+        return JSONResponse(
+            status_code=404,
+            content={"error": f"No price found for {params.token} at block {actual_block}"},
         )
 
     duration_ms = int((time.monotonic() - start) * 1000)
