@@ -35,6 +35,9 @@ def get_cached_price(token: str, block: int) -> dict[str, object] | None:
         key = make_key(token, block)
         entry = cache.get(key)
         if entry is not None and isinstance(entry, dict) and "price" in entry:
+            # Ensure block_timestamp is present (backward compat with old entries)
+            if "block_timestamp" not in entry:
+                entry["block_timestamp"] = None
             return cast(dict[str, object], entry)
         return None
     except Exception as e:
@@ -42,13 +45,16 @@ def get_cached_price(token: str, block: int) -> dict[str, object] | None:
         return None
 
 
-def set_cached_price(token: str, block: int, price: float) -> None:
+def set_cached_price(
+    token: str, block: int, price: float, block_timestamp: int | None = None
+) -> None:
     try:
         cache = get_cache()
         key = make_key(token, block)
         entry: dict[str, object] = {
             "price": price,
             "cached_at": datetime.now(UTC).isoformat(),
+            "block_timestamp": block_timestamp,
         }
         cache.set(key, entry)
     except Exception as e:

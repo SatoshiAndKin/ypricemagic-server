@@ -277,3 +277,38 @@ class TestFetchPriceNewParams:
                 ignore_pools=ignore_pools,
                 silent=True,
             )
+
+
+class TestFetchBlockTimestamp:
+    """Tests for _fetch_block_timestamp helper function."""
+
+    @pytest.mark.asyncio
+    async def test_returns_timestamp_on_success(self, mock_y_module: None) -> None:
+        """On success, returns the Unix epoch timestamp."""
+        from src.server import _fetch_block_timestamp
+
+        mock_get_block_timestamp = AsyncMock(return_value=1700000000)
+        with patch("y.get_block_timestamp_async", mock_get_block_timestamp):
+            result = await _fetch_block_timestamp(18000000)
+            assert result == 1700000000
+            mock_get_block_timestamp.assert_called_once_with(18000000)
+
+    @pytest.mark.asyncio
+    async def test_returns_none_on_exception(self, mock_y_module: None) -> None:
+        """On exception, returns None (error is logged but not raised)."""
+        from src.server import _fetch_block_timestamp
+
+        mock_get_block_timestamp = AsyncMock(side_effect=RuntimeError("RPC error"))
+        with patch("y.get_block_timestamp_async", mock_get_block_timestamp):
+            result = await _fetch_block_timestamp(18000000)
+            assert result is None
+
+    @pytest.mark.asyncio
+    async def test_returns_none_on_connection_error(self, mock_y_module: None) -> None:
+        """ConnectionError is caught and returns None."""
+        from src.server import _fetch_block_timestamp
+
+        mock_get_block_timestamp = AsyncMock(side_effect=ConnectionError("Network error"))
+        with patch("y.get_block_timestamp_async", mock_get_block_timestamp):
+            result = await _fetch_block_timestamp(18000000)
+            assert result is None

@@ -144,6 +144,24 @@ async def _fetch_price(
     return price_float
 
 
+async def _fetch_block_timestamp(block: int) -> int | None:
+    """Fetch the Unix epoch timestamp for a block.
+
+    Returns the timestamp on success, None on failure.
+    """
+    try:
+        from y import get_block_timestamp_async
+
+        return await get_block_timestamp_async(block)
+    except Exception as e:
+        logger.warning(
+            "block_timestamp_fetch_failed",
+            block=block,
+            error=str(e),
+        )
+        return None
+
+
 @app.get("/price")
 async def price(
     token: str | None = Query(None),
@@ -182,6 +200,7 @@ async def price(
                 "block": actual_block,
                 "price": cached["price"],
                 "cached": True,
+                "block_timestamp": cached.get("block_timestamp"),
             }
 
     start = time.monotonic()
@@ -245,8 +264,12 @@ async def price(
         )
 
     duration_ms = int((time.monotonic() - start) * 1000)
+
+    # Fetch block timestamp
+    block_timestamp = await _fetch_block_timestamp(actual_block)
+
     if params.amount is None:
-        set_cached_price(params.token, actual_block, price_float)
+        set_cached_price(params.token, actual_block, price_float, block_timestamp=block_timestamp)
     price_requests_total.labels(chain=CHAIN_NAME, status="ok").inc()
     price_request_duration_seconds.labels(chain=CHAIN_NAME).observe(duration_ms / 1000)
     logger.info(
@@ -265,6 +288,7 @@ async def price(
         "block": actual_block,
         "price": price_float,
         "cached": False,
+        "block_timestamp": block_timestamp,
     }
     if params.amount is not None:
         response["amount"] = params.amount
