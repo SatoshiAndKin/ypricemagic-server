@@ -1098,24 +1098,21 @@ bucketForm.addEventListener('submit', async (e) => {
 document.getElementById('chain').addEventListener('change', () => {
   const chain = getChain();
 
-  // Update From/To to chain defaults if no custom override
-  const customPairs = getCustomPairs();
-  if (!customPairs[chain]) {
-    const pair = getEffectivePair(chain);
-    quoteFromInput.value = pair.from;
-    quoteToInput.value = pair.to;
+  // Update From/To to chain's effective pair (custom if set, else factory default)
+  const pair = getEffectivePair(chain);
+  quoteFromInput.value = pair.from;
+  quoteToInput.value = pair.to;
 
-    // Reset suppressModal flags for the autocomplete instances
-    const fromAc = autocompleteInstances.get(quoteFromInput);
-    const toAc = autocompleteInstances.get(quoteToInput);
-    if (fromAc) {
-      fromAc.suppressModal = true;
-      fromAc.wasUserEdited = false;
-    }
-    if (toAc) {
-      toAc.suppressModal = true;
-      toAc.wasUserEdited = false;
-    }
+  // Reset suppressModal flags for the autocomplete instances
+  const fromAc = autocompleteInstances.get(quoteFromInput);
+  const toAc = autocompleteInstances.get(quoteToInput);
+  if (fromAc) {
+    fromAc.suppressModal = true;
+    fromAc.wasUserEdited = false;
+  }
+  if (toAc) {
+    toAc.suppressModal = true;
+    toAc.wasUserEdited = false;
   }
 
   // Re-search all open autocompletes
