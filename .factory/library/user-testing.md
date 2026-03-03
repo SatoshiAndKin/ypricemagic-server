@@ -30,6 +30,7 @@ Testing surface: tools, URLs, setup steps, isolation notes, known quirks.
 - During longer automation runs, agent-browser sessions can also bounce to `about:blank` between separate command invocations; prefer grouped command sequences and re-check page URL before interacting
 - The tokenlist import UI uses a dynamically-created hidden file input; direct file-upload automation may fail, but calling the app's `importTokenlistFile()` function with a synthesized `File` object is a reliable equivalent
 - If containers stop mid-run, recover with `docker compose up -d` and re-check `curl -sf http://localhost:8000/ethereum/health` before resuming
+- `docker stack config -c docker-compose.yml` can fail when `depends_on` uses extended `condition` syntax (`service_healthy`); Swarm ignores `depends_on` at deploy time, so validate this separately from deploy section checks.
 
 ## Test Isolation
 
@@ -43,3 +44,11 @@ Each browser session gets fresh localStorage. Use incognito/private windows if n
 - For static-ui-extraction validation, avoid mutating tokenlist/localStorage settings unless required by the assigned assertion.
 - Capture clear evidence for each assertion: UI snapshot/screenshot plus matching network or terminal proof where specified.
 - If session instability occurs, prefer fewer larger automation steps (instead of many small calls) and include explicit waits before snapshots.
+
+## Flow Validator Guidance: deploy-cli
+
+- Use terminal-based validation (docker compose, docker stack config, grep/curl, and docker logs) for deploy assertions.
+- Keep execution scoped to `/Users/bryan/code/ypricemagic-server` and localhost services only.
+- Use a unique temporary evidence namespace per validator run (for example, `/tmp/utv-zero-downtime-<group>`).
+- Do not modify deployment/business logic files during validation; only read, run, and verify expected behavior.
+- If Docker services are already running, reuse them instead of resetting shared volumes unless an assertion explicitly requires restart behavior.
