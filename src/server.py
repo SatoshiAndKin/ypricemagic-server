@@ -665,7 +665,7 @@ async def check_bucket(
         )
         return _make_error_response(
             500,
-            f"Failed to classify token {token}. Check server logs.",
+            f"Failed to classify token {token}: {e}",
         )
 
 
@@ -693,7 +693,7 @@ INDEX_HTML = """<!DOCTYPE html>
     .checkbox-group { display: flex; align-items: center; gap: 8px; }
     .checkbox-group input { width: auto; }
     .checkbox-group label { margin-bottom: 0; font-weight: normal; }
-    button { padding: 12px 24px; font-size: 16px; cursor: pointer; background: #0066cc; color: white; border: none; border-radius: 4px; }
+    button { padding: 12px 24px; font-size: 16px; cursor: pointer; background: #0066cc; color: white; border: none; border-radius: 4px; min-width: 160px; text-align: center; }
     button:hover { background: #0052a3; }
     button:disabled { opacity: 0.6; cursor: not-allowed; }
     .result { background: #1e1e1e; color: #d4d4d4; padding: 20px; border-radius: 8px; display: none; margin-top: 20px; }
@@ -716,7 +716,7 @@ INDEX_HTML = """<!DOCTYPE html>
     .token-row input.token-amt { flex: 1; min-width: 100px; }
     .token-row .btn-remove { background: #e74c3c; color: white; border: none; border-radius: 4px; padding: 10px 12px; cursor: pointer; font-size: 14px; line-height: 1; flex-shrink: 0; }
     .token-row .btn-remove:hover { background: #c0392b; }
-    .btn-add { background: #27ae60; color: white; border: none; border-radius: 4px; padding: 8px 16px; cursor: pointer; font-size: 14px; margin-top: 4px; }
+    .btn-add { background: #27ae60; color: white; border: none; border-radius: 4px; padding: 12px 24px; cursor: pointer; font-size: 16px; margin-top: 4px; min-width: 160px; text-align: center; }
     .btn-add:hover { background: #219a52; }
   </style>
 </head>
@@ -1127,7 +1127,7 @@ INDEX_HTML = """<!DOCTYPE html>
 
       bucketSubmit.disabled = true;
       bucketSubmit.textContent = 'Checking...';
-      showLoading(bucketResult, 'Classifying token...');
+      showLoading(bucketResult, 'Classifying token (this may take 10-30s)...');
 
       try {
         const res = await fetch('/' + chain + '/check_bucket?token=' + encodeURIComponent(token));
