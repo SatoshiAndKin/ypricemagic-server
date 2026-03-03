@@ -2021,3 +2021,523 @@ class TestCrossAreaBackwardsCompat:
             assert response2.status_code == 200
             assert "amount" in response2.json()
             assert response2.json()["amount"] == 1000.0
+
+
+class TestQuoteEndpoint:
+    """Tests for the /quote endpoint."""
+
+    @pytest.mark.asyncio
+    async def test_quote_returns_valid_response(self, mock_y_module: None) -> None:
+        """GET /quote with valid params returns 200 with correct schema."""
+        from fastapi.testclient import TestClient
+
+        from src.server import app
+
+        # Mock prices: USDC = $1, WETH = $2000
+        mock_get_price = AsyncMock(side_effect=[1.0, 2000.0])
+        mock_get_block_timestamp = AsyncMock(return_value=1700000000)
+        mock_chain = type("MockChain", (), {"height": 19000000})()
+
+        with (
+            patch("y.get_price", mock_get_price),
+            patch("y.get_block_timestamp_async", mock_get_block_timestamp),
+            patch("brownie.chain", mock_chain),
+        ):
+            client = TestClient(app)
+            response = client.get(
+                "/quote",
+                params={"from": USDC, "to": WETH, "amount": "1000"},
+            )
+
+            assert response.status_code == 200
+            data = response.json()
+            # Verify schema
+            assert "from" in data
+            assert "to" in data
+            assert "amount" in data
+            assert "output_amount" in data
+            assert "block" in data
+            assert "chain" in data
+            assert "block_timestamp" in data
+            assert "route" in data
+            # Verify values
+            assert data["from"] == USDC
+            assert data["to"] == WETH
+            assert data["amount"] == 1000.0
+            # 1000 USDC * ($1 / $2000) = 0.5 WETH
+            assert data["output_amount"] == 0.5
+            assert data["chain"] == "ethereum"
+            assert data["block_timestamp"] == 1700000000
+            assert data["route"] == "divide"
+
+    @pytest.mark.asyncio
+    async def test_quote_missing_from_returns_400(self, mock_y_module: None) -> None:
+        """Missing from param returns 400."""
+        from fastapi.testclient import TestClient
+
+        from src.server import app
+
+        mock_chain = type("MockChain", (), {"height": 19000000})()
+
+        with patch("brownie.chain", mock_chain):
+            client = TestClient(app)
+            response = client.get(
+                "/quote",
+                params={"to": WETH, "amount": "1000"},
+            )
+
+            assert response.status_code == 400
+            assert "from" in response.json()["error"].lower()
+
+    @pytest.mark.asyncio
+    async def test_quote_missing_to_returns_400(self, mock_y_module: None) -> None:
+        """Missing to param returns 400."""
+        from fastapi.testclient import TestClient
+
+        from src.server import app
+
+        mock_chain = type("MockChain", (), {"height": 19000000})()
+
+        with patch("brownie.chain", mock_chain):
+            client = TestClient(app)
+            response = client.get(
+                "/quote",
+                params={"from": USDC, "amount": "1000"},
+            )
+
+            assert response.status_code == 400
+            assert "to" in response.json()["error"].lower()
+
+    @pytest.mark.asyncio
+    async def test_quote_missing_amount_returns_400(self, mock_y_module: None) -> None:
+        """Missing amount param returns 400."""
+        from fastapi.testclient import TestClient
+
+        from src.server import app
+
+        mock_chain = type("MockChain", (), {"height": 19000000})()
+
+        with patch("brownie.chain", mock_chain):
+            client = TestClient(app)
+            response = client.get(
+                "/quote",
+                params={"from": USDC, "to": WETH},
+            )
+
+            assert response.status_code == 400
+            assert "amount" in response.json()["error"].lower()
+
+    @pytest.mark.asyncio
+    async def test_quote_invalid_address_returns_400(self, mock_y_module: None) -> None:
+        """Invalid token address returns 400."""
+        from fastapi.testclient import TestClient
+
+        from src.server import app
+
+        mock_chain = type("MockChain", (), {"height": 19000000})()
+
+        with patch("brownie.chain", mock_chain):
+            client = TestClient(app)
+            response = client.get(
+                "/quote",
+                params={"from": "notanaddress", "to": WETH, "amount": "1000"},
+            )
+
+            assert response.status_code == 400
+            assert "from" in response.json()["error"].lower()
+
+    @pytest.mark.asyncio
+    async def test_quote_invalid_amount_returns_400(self, mock_y_module: None) -> None:
+        """Invalid amount returns 400."""
+        from fastapi.testclient import TestClient
+
+        from src.server import app
+
+        mock_chain = type("MockChain", (), {"height": 19000000})()
+
+        with patch("brownie.chain", mock_chain):
+            client = TestClient(app)
+            response = client.get(
+                "/quote",
+                params={"from": USDC, "to": WETH, "amount": "abc"},
+            )
+
+            assert response.status_code == 400
+            assert "amount" in response.json()["error"].lower()
+
+    @pytest.mark.asyncio
+    async def test_quote_negative_amount_returns_400(self, mock_y_module: None) -> None:
+        """Negative amount returns 400."""
+        from fastapi.testclient import TestClient
+
+        from src.server import app
+
+        mock_chain = type("MockChain", (), {"height": 19000000})()
+
+        with patch("brownie.chain", mock_chain):
+            client = TestClient(app)
+            response = client.get(
+                "/quote",
+                params={"from": USDC, "to": WETH, "amount": "-100"},
+            )
+
+            assert response.status_code == 400
+            assert "amount" in response.json()["error"].lower()
+
+    @pytest.mark.asyncio
+    async def test_quote_zero_amount_returns_400(self, mock_y_module: None) -> None:
+        """Zero amount returns 400."""
+        from fastapi.testclient import TestClient
+
+        from src.server import app
+
+        mock_chain = type("MockChain", (), {"height": 19000000})()
+
+        with patch("brownie.chain", mock_chain):
+            client = TestClient(app)
+            response = client.get(
+                "/quote",
+                params={"from": USDC, "to": WETH, "amount": "0"},
+            )
+
+            assert response.status_code == 400
+            assert "amount" in response.json()["error"].lower()
+
+    @pytest.mark.asyncio
+    async def test_quote_unpriceable_from_token_returns_404(self, mock_y_module: None) -> None:
+        """Unpriceable from_token returns 404."""
+        from fastapi.testclient import TestClient
+
+        from src.server import app
+
+        # from_token returns None (unpriceable)
+        mock_get_price = AsyncMock(return_value=None)
+        mock_chain = type("MockChain", (), {"height": 19000000})()
+
+        with (
+            patch("y.get_price", mock_get_price),
+            patch("brownie.chain", mock_chain),
+        ):
+            client = TestClient(app)
+            response = client.get(
+                "/quote",
+                params={
+                    "from": "0x0000000000000000000000000000000000000001",
+                    "to": WETH,
+                    "amount": "1000",
+                },
+            )
+
+            assert response.status_code == 404
+            assert "from token" in response.json()["error"].lower()
+
+    @pytest.mark.asyncio
+    async def test_quote_unpriceable_to_token_returns_404(self, mock_y_module: None) -> None:
+        """Unpriceable to_token returns 404."""
+        from fastapi.testclient import TestClient
+
+        from src.server import app
+
+        # from_token has price, to_token returns None
+        mock_get_price = AsyncMock(side_effect=[1.0, None])
+        mock_chain = type("MockChain", (), {"height": 19000000})()
+
+        with (
+            patch("y.get_price", mock_get_price),
+            patch("brownie.chain", mock_chain),
+        ):
+            client = TestClient(app)
+            response = client.get(
+                "/quote",
+                params={
+                    "from": USDC,
+                    "to": "0x0000000000000000000000000000000000000001",
+                    "amount": "1000",
+                },
+            )
+
+            assert response.status_code == 404
+            assert "to token" in response.json()["error"].lower()
+
+    @pytest.mark.asyncio
+    async def test_quote_same_token_returns_identity(self, mock_y_module: None) -> None:
+        """Same-token quote returns output_amount == amount with route='identity'."""
+        from fastapi.testclient import TestClient
+
+        from src.server import app
+
+        mock_get_block_timestamp = AsyncMock(return_value=1700000000)
+        mock_chain = type("MockChain", (), {"height": 19000000})()
+
+        with (
+            patch("y.get_block_timestamp_async", mock_get_block_timestamp),
+            patch("brownie.chain", mock_chain),
+        ):
+            client = TestClient(app)
+            response = client.get(
+                "/quote",
+                params={"from": USDC, "to": USDC, "amount": "1000"},
+            )
+
+            assert response.status_code == 200
+            data = response.json()
+            assert data["output_amount"] == 1000.0
+            assert data["route"] == "identity"
+
+    @pytest.mark.asyncio
+    async def test_quote_same_token_case_insensitive(self, mock_y_module: None) -> None:
+        """Same-token quote works with different address casing."""
+        from fastapi.testclient import TestClient
+
+        from src.server import app
+
+        mock_get_block_timestamp = AsyncMock(return_value=1700000000)
+        mock_chain = type("MockChain", (), {"height": 19000000})()
+
+        with (
+            patch("y.get_block_timestamp_async", mock_get_block_timestamp),
+            patch("brownie.chain", mock_chain),
+        ):
+            client = TestClient(app)
+            response = client.get(
+                "/quote",
+                params={"from": USDC, "to": USDC.lower(), "amount": "500"},
+            )
+
+            assert response.status_code == 200
+            data = response.json()
+            assert data["output_amount"] == 500.0
+            assert data["route"] == "identity"
+
+    @pytest.mark.asyncio
+    async def test_quote_with_block(self, mock_y_module: None) -> None:
+        """Quote with block param uses that block."""
+        from fastapi.testclient import TestClient
+
+        from src.server import app
+
+        mock_get_price = AsyncMock(side_effect=[1.0, 2000.0])
+        mock_get_block_timestamp = AsyncMock(return_value=1693400000)
+        mock_chain = type("MockChain", (), {"height": 19000000})()
+
+        with (
+            patch("y.get_price", mock_get_price),
+            patch("y.get_block_timestamp_async", mock_get_block_timestamp),
+            patch("brownie.chain", mock_chain),
+        ):
+            client = TestClient(app)
+            response = client.get(
+                "/quote",
+                params={"from": USDC, "to": WETH, "amount": "1000", "block": "18000000"},
+            )
+
+            assert response.status_code == 200
+            data = response.json()
+            assert data["block"] == 18000000
+            # Verify get_price was called with the specified block
+            assert mock_get_price.call_count == 2
+            # Check that the block was passed correctly
+            for call in mock_get_price.call_args_list:
+                assert call[0][1] == 18000000
+
+    @pytest.mark.asyncio
+    async def test_quote_with_timestamp(self, mock_y_module: None) -> None:
+        """Quote with timestamp resolves to block."""
+        from fastapi.testclient import TestClient
+
+        from src.server import app
+
+        mock_get_block_at_timestamp = AsyncMock(return_value=18000000)
+        mock_get_price = AsyncMock(side_effect=[1.0, 2000.0])
+        mock_get_block_timestamp = AsyncMock(return_value=1700000000)
+        mock_chain = type("MockChain", (), {"height": 19000000})()
+
+        with (
+            patch("y.get_block_at_timestamp", mock_get_block_at_timestamp),
+            patch("y.get_price", mock_get_price),
+            patch("y.get_block_timestamp_async", mock_get_block_timestamp),
+            patch("brownie.chain", mock_chain),
+        ):
+            client = TestClient(app)
+            response = client.get(
+                "/quote",
+                params={"from": USDC, "to": WETH, "amount": "1000", "timestamp": "1700000000"},
+            )
+
+            assert response.status_code == 200
+            data = response.json()
+            assert data["block"] == 18000000
+            assert mock_get_block_at_timestamp.called
+
+    @pytest.mark.asyncio
+    async def test_quote_divide_math_correct(self, mock_y_module: None) -> None:
+        """Divide fallback produces mathematically correct output within 1%."""
+        from fastapi.testclient import TestClient
+
+        from src.server import app
+
+        # DAI = $1, USDC = $1 (1:1 ratio)
+        mock_get_price = AsyncMock(side_effect=[1.0, 1.0])
+        mock_get_block_timestamp = AsyncMock(return_value=1700000000)
+        mock_chain = type("MockChain", (), {"height": 19000000})()
+
+        with (
+            patch("y.get_price", mock_get_price),
+            patch("y.get_block_timestamp_async", mock_get_block_timestamp),
+            patch("brownie.chain", mock_chain),
+        ):
+            client = TestClient(app)
+            response = client.get(
+                "/quote",
+                params={"from": DAI, "to": USDC, "amount": "1000"},
+            )
+
+            assert response.status_code == 200
+            data = response.json()
+            # 1000 DAI * ($1 / $1) = 1000 USDC
+            expected = 1000.0
+            assert abs(data["output_amount"] - expected) / expected < 0.01  # Within 1%
+
+    @pytest.mark.asyncio
+    async def test_quote_divide_inverse_correct(self, mock_y_module: None) -> None:
+        """Swapped from/to produces inverse output."""
+        from fastapi.testclient import TestClient
+
+        from src.server import app
+
+        # USDC = $1, WETH = $2000
+        mock_get_price_usdc_weth = AsyncMock(side_effect=[1.0, 2000.0])
+        mock_get_price_weth_usdc = AsyncMock(side_effect=[2000.0, 1.0])
+        mock_get_block_timestamp = AsyncMock(return_value=1700000000)
+        mock_chain = type("MockChain", (), {"height": 19000000})()
+
+        with (
+            patch("y.get_block_timestamp_async", mock_get_block_timestamp),
+            patch("brownie.chain", mock_chain),
+        ):
+            client = TestClient(app)
+
+            # USDC -> WETH: 1000 USDC = 0.5 WETH
+            with patch("y.get_price", mock_get_price_usdc_weth):
+                response1 = client.get(
+                    "/quote",
+                    params={"from": USDC, "to": WETH, "amount": "1000"},
+                )
+                assert response1.status_code == 200
+                output1 = response1.json()["output_amount"]
+
+            # WETH -> USDC: 0.5 WETH = 1000 USDC
+            with patch("y.get_price", mock_get_price_weth_usdc):
+                response2 = client.get(
+                    "/quote",
+                    params={"from": WETH, "to": USDC, "amount": str(output1)},
+                )
+                assert response2.status_code == 200
+                output2 = response2.json()["output_amount"]
+
+            # Should be approximately 1000 USDC (inverse)
+            assert abs(output2 - 1000.0) / 1000.0 < 0.01  # Within 1%
+
+    @pytest.mark.asyncio
+    async def test_quote_response_no_extra_fields(self, mock_y_module: None) -> None:
+        """Response has exactly the expected fields, no extras."""
+        from fastapi.testclient import TestClient
+
+        from src.server import app
+
+        mock_get_price = AsyncMock(side_effect=[1.0, 2000.0])
+        mock_get_block_timestamp = AsyncMock(return_value=1700000000)
+        mock_chain = type("MockChain", (), {"height": 19000000})()
+
+        with (
+            patch("y.get_price", mock_get_price),
+            patch("y.get_block_timestamp_async", mock_get_block_timestamp),
+            patch("brownie.chain", mock_chain),
+        ):
+            client = TestClient(app)
+            response = client.get(
+                "/quote",
+                params={"from": USDC, "to": WETH, "amount": "1000"},
+            )
+
+            assert response.status_code == 200
+            data = response.json()
+            expected_keys = {
+                "from",
+                "to",
+                "amount",
+                "output_amount",
+                "block",
+                "chain",
+                "block_timestamp",
+                "route",
+            }
+            assert set(data.keys()) == expected_keys
+
+    @pytest.mark.asyncio
+    async def test_quote_timestamp_and_block_mutually_exclusive(self, mock_y_module: None) -> None:
+        """Both timestamp and block returns 400."""
+        from fastapi.testclient import TestClient
+
+        from src.server import app
+
+        mock_chain = type("MockChain", (), {"height": 19000000})()
+
+        with patch("brownie.chain", mock_chain):
+            client = TestClient(app)
+            response = client.get(
+                "/quote",
+                params={
+                    "from": USDC,
+                    "to": WETH,
+                    "amount": "1000",
+                    "block": "18000000",
+                    "timestamp": "1700000000",
+                },
+            )
+
+            assert response.status_code == 400
+            assert "mutually exclusive" in response.json()["error"].lower()
+
+
+class TestQuoteEndpointConcurrent:
+    """Tests for concurrent quote requests."""
+
+    @pytest.mark.asyncio
+    async def test_concurrent_quotes_consistent(self, mock_y_module: None) -> None:
+        """Five concurrent quote requests all return 200 with consistent output_amount."""
+        import asyncio
+
+        from fastapi.testclient import TestClient
+
+        from src.server import app
+
+        mock_get_price = AsyncMock(side_effect=[1.0, 2000.0] * 10)  # Enough for multiple calls
+        mock_get_block_timestamp = AsyncMock(return_value=1700000000)
+        mock_chain = type("MockChain", (), {"height": 19000000})()
+
+        results = []
+
+        async def make_request(client: TestClient) -> None:
+            response = client.get(
+                "/quote",
+                params={"from": USDC, "to": WETH, "amount": "1000"},
+            )
+            results.append((response.status_code, response.json().get("output_amount")))
+
+        with (
+            patch("y.get_price", mock_get_price),
+            patch("y.get_block_timestamp_async", mock_get_block_timestamp),
+            patch("brownie.chain", mock_chain),
+        ):
+            client = TestClient(app)
+            # Run 5 concurrent requests
+            await asyncio.gather(*[make_request(client) for _ in range(5)])
+
+        # All should have status 200
+        assert all(status == 200 for status, _ in results)
+        # All output_amounts should be consistent (same value)
+        output_amounts = [amt for _, amt in results]
+        assert all(amt == output_amounts[0] for amt in output_amounts)
+        # Expected value: 1000 * (1 / 2000) = 0.5
+        assert output_amounts[0] == 0.5

@@ -23,7 +23,13 @@ from tenacity import (
 
 from src.cache import get_cached_price, set_cached_price
 from src.logger import configure_logging, get_logger
-from src.params import ParseError, is_valid_address, parse_batch_params, parse_price_params
+from src.params import (
+    ParseError,
+    is_valid_address,
+    parse_batch_params,
+    parse_price_params,
+    parse_quote_params,
+)
 
 if TYPE_CHECKING:
     from src.params import BatchParams
@@ -62,6 +68,16 @@ check_bucket_requests_total = Counter(
 check_bucket_request_duration_seconds = Histogram(
     "check_bucket_request_duration_seconds",
     "Check bucket request duration",
+    ["chain"],
+)
+quote_requests_total = Counter(
+    "quote_requests_total",
+    "Total quote requests",
+    ["chain", "status"],
+)
+quote_request_duration_seconds = Histogram(
+    "quote_request_duration_seconds",
+    "Quote request duration",
     ["chain"],
 )
 
@@ -675,6 +691,147 @@ async def check_bucket(
             500,
             f"Failed to classify token {token}: {e}",
         )
+
+
+@app.get("/quote")
+async def quote(
+    from_token: str | None = Query(None, alias="from"),
+    to_token: str | None = Query(None, alias="to"),
+    amount: str | None = Query(None),
+    block: str | None = Query(None),
+    timestamp: str | None = Query(None),
+) -> Any:
+    """From→to token quote endpoint.
+
+    Computes output_amount = amount * (price_from / price_to).
+
+    Response:
+    - from: source token address
+    - to: destination token address
+    - amount: input amount
+    - output_amount: computed output amount
+    - block: block number used
+    - chain: chain name
+    - block_timestamp: Unix epoch for the block
+    - route: "divide" for USD price division, "identity" for same-token quotes
+
+    Returns 400 for invalid params.
+    Returns 404 if either token cannot be priced.
+    """
+    result = parse_quote_params(from_token, to_token, amount, block, timestamp)
+    if isinstance(result, ParseError):
+        quote_requests_total.labels(chain=CHAIN_NAME, status="bad_request").inc()
+        return _make_error_response(400, result.error)
+
+    params = result.data
+
+    from brownie import chain as brownie_chain
+
+    # Determine the block to use
+    if params.timestamp is not None:
+        try:
+            actual_block = await _resolve_block_from_timestamp(params.timestamp)
+        except Exception as e:
+            logger.error(
+                "quote_timestamp_resolution_failed",
+                timestamp=params.timestamp,
+                error=str(e),
+            )
+            return _make_error_response(
+                502,
+                f"Failed to resolve timestamp {params.timestamp} to block: {e}",
+            )
+    else:
+        actual_block = params.block if params.block is not None else brownie_chain.height
+
+    start = time.monotonic()
+
+    # Same-token quote: output_amount == amount, route = "identity"
+    if params.from_token.lower() == params.to_token.lower():
+        block_timestamp = await _fetch_block_timestamp(actual_block)
+        duration_ms = int((time.monotonic() - start) * 1000)
+        quote_requests_total.labels(chain=CHAIN_NAME, status="ok").inc()
+        quote_request_duration_seconds.labels(chain=CHAIN_NAME).observe(duration_ms / 1000)
+        logger.info(
+            "quote_identity",
+            chain=CHAIN_NAME,
+            from_token=params.from_token[:10],
+            to_token=params.to_token[:10],
+            amount=params.amount,
+            block=actual_block,
+            duration_ms=duration_ms,
+        )
+        return {
+            "from": params.from_token,
+            "to": params.to_token,
+            "amount": params.amount,
+            "output_amount": params.amount,
+            "block": actual_block,
+            "chain": CHAIN_NAME,
+            "block_timestamp": block_timestamp,
+            "route": "identity",
+        }
+
+    # Fetch USD price for from_token
+    from_price = await _fetch_price(params.from_token, actual_block)
+    if from_price is None:
+        quote_requests_total.labels(chain=CHAIN_NAME, status="not_found").inc()
+        logger.warning(
+            "quote_from_token_not_found",
+            from_token=params.from_token[:10],
+            block=actual_block,
+        )
+        return _make_error_response(
+            404,
+            f"No price found for from token {params.from_token} at block {actual_block} on {CHAIN_NAME}",
+        )
+
+    # Fetch USD price for to_token
+    to_price = await _fetch_price(params.to_token, actual_block)
+    if to_price is None:
+        quote_requests_total.labels(chain=CHAIN_NAME, status="not_found").inc()
+        logger.warning(
+            "quote_to_token_not_found",
+            to_token=params.to_token[:10],
+            block=actual_block,
+        )
+        return _make_error_response(
+            404,
+            f"No price found for to token {params.to_token} at block {actual_block} on {CHAIN_NAME}",
+        )
+
+    # Compute output_amount using divide strategy
+    output_amount = params.amount * (from_price / to_price)
+
+    # Fetch block timestamp
+    block_timestamp = await _fetch_block_timestamp(actual_block)
+
+    duration_ms = int((time.monotonic() - start) * 1000)
+    quote_requests_total.labels(chain=CHAIN_NAME, status="ok").inc()
+    quote_request_duration_seconds.labels(chain=CHAIN_NAME).observe(duration_ms / 1000)
+    logger.info(
+        "quote_success",
+        chain=CHAIN_NAME,
+        from_token=params.from_token[:10],
+        to_token=params.to_token[:10],
+        amount=params.amount,
+        output_amount=output_amount,
+        from_price=from_price,
+        to_price=to_price,
+        block=actual_block,
+        duration_ms=duration_ms,
+    )
+
+    return {
+        "from": params.from_token,
+        "to": params.to_token,
+        "amount": params.amount,
+        "output_amount": output_amount,
+        "block": actual_block,
+        "chain": CHAIN_NAME,
+        "block_timestamp": block_timestamp,
+        "route": "divide",
+    }
 
 
 @app.get("/")
