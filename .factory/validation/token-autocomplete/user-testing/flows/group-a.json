@@ -1,0 +1,133 @@
+{
+  "groupId": "group-a",
+  "testedAt": "2026-03-02T22:30:00Z",
+  "credentials": {
+    "account": "ui-flow-a@example.test",
+    "namespace": "uta-flow-a"
+  },
+  "toolsUsed": ["agent-browser"],
+  "assertions": [
+    {
+      "id": "VAL-AUTO-001",
+      "title": "Typing triggers autocomplete dropdown",
+      "status": "pass",
+      "steps": [
+        { "action": "Navigate to http://localhost:8000", "expected": "Page loads with form", "observed": "Page loaded with Single Token Price form, chain selector, etc." },
+        { "action": "Clear token address field and type 'DAI'", "expected": "Dropdown with matching tokens appears", "observed": "Dropdown appeared showing 'DAI — Dai Stablecoin (0x6B17...1d0F)' with 'Uniswap Labs Default' source" },
+        { "action": "Clear the token input", "expected": "Dropdown disappears", "observed": "Dropdown disappeared, only empty input field visible" }
+      ],
+      "evidence": {
+        "screenshots": ["val-auto-001-dropdown-visible.png", "val-auto-001-dropdown-hidden.png"],
+        "consoleErrors": "none",
+        "network": "N/A (client-side filtering)"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-AUTO-002",
+      "title": "Search matches symbol, name, and address",
+      "status": "pass",
+      "steps": [
+        { "action": "Type 'DAI' in token address field", "expected": "Tokens matching by symbol appear", "observed": "Dropdown showed 'DAI — Dai Stablecoin (0x6B17...1d0F)'" },
+        { "action": "Clear and type 'Dai Stablecoin'", "expected": "Tokens matching by name appear", "observed": "Dropdown showed 'DAI — Dai Stablecoin (0x6B17...1d0F)' matching by name" },
+        { "action": "Clear and type '0xA0b8'", "expected": "Tokens matching by address prefix appear", "observed": "Dropdown showed 'USDC — USDCoin (0xA0b8...eB48)' matching by address prefix" }
+      ],
+      "evidence": {
+        "screenshots": ["val-auto-002-symbol-match.png", "val-auto-002-name-match.png", "val-auto-002-address-match.png"],
+        "consoleErrors": "none",
+        "network": "N/A (client-side filtering)"
+      },
+      "issues": "Note: The validation contract example uses 'USD Coin' (with space) for name search, but the actual tokenlist entry name is 'USDCoin' (no space). Name search works correctly with the actual name 'Dai Stablecoin'. This is a data discrepancy in the contract, not a code bug."
+    },
+    {
+      "id": "VAL-AUTO-003",
+      "title": "Results filtered by selected chain",
+      "status": "pass",
+      "steps": [
+        { "action": "With Ethereum selected, type 'WETH'", "expected": "Only chainId=1 tokens appear", "observed": "Dropdown showed 'WETH — Wrapped Ether (0xC02a...6Cc2)' — Ethereum WETH address" },
+        { "action": "Switch to Arbitrum and type 'WETH'", "expected": "Only chainId=42161 tokens appear", "observed": "Dropdown showed 'WETH — Wrapped Ether (0x82aF...Bab1)' — Arbitrum WETH address (different from Ethereum)" }
+      ],
+      "evidence": {
+        "screenshots": ["val-auto-003-ethereum-results.png", "val-auto-003-arbitrum-results.png"],
+        "consoleErrors": "none",
+        "network": "N/A (client-side filtering)"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-AUTO-004",
+      "title": "Dropdown shows correct format",
+      "status": "pass",
+      "steps": [
+        { "action": "Type 'WETH' with Arbitrum selected", "expected": "Suggestion shows 'SYMBOL — Name (0xaddr...)' with source tokenlist name in small/muted text", "observed": "Dropdown showed 'WETH — Wrapped Ether (0x82aF...Bab1)' on first line, 'Uniswap Labs Default' in smaller muted text below" }
+      ],
+      "evidence": {
+        "screenshots": ["val-auto-004-dropdown-format.png"],
+        "consoleErrors": "none",
+        "network": "N/A"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-AUTO-005",
+      "title": "Selecting a suggestion fills the address",
+      "status": "pass",
+      "steps": [
+        { "action": "Type 'WETH' to open dropdown, then click 'WETH — Wrapped Ether' suggestion", "expected": "Input filled with full token address and dropdown closes", "observed": "Input filled with '0x82aF49447D8a07e3bd95BD0d56f35241523fBab1' (full address), dropdown closed" }
+      ],
+      "evidence": {
+        "screenshots": ["val-auto-005-address-filled.png"],
+        "consoleErrors": "none",
+        "network": "N/A"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-AUTO-012",
+      "title": "Chain switch updates autocomplete immediately",
+      "status": "pass",
+      "steps": [
+        { "action": "With Ethereum selected, type 'USDC' — see Ethereum USDC (0xA0b8...eB48)", "expected": "Ethereum-filtered results", "observed": "Dropdown showed USDC — USDCoin (0xA0b8...eB48)" },
+        { "action": "Switch chain to Arbitrum while 'USDC' is in the field, trigger re-evaluation", "expected": "Dropdown updates to show Arbitrum tokens", "observed": "Dropdown showed Arbitrum-specific results: USDC — USDCoin (0xaf88...5831) and USDC.e — Bridged USDC (0xFF97...5CC8)" }
+      ],
+      "evidence": {
+        "screenshots": ["val-auto-012-chain-switch.png"],
+        "consoleErrors": "none",
+        "network": "N/A (client-side filtering)"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-CROSS-003",
+      "title": "Chain switch across all features",
+      "status": "pass",
+      "steps": [
+        { "action": "Select Arbitrum chain", "expected": "Chain selector shows Arbitrum", "observed": "Arbitrum selected" },
+        { "action": "Type 'WETH' in token field", "expected": "Autocomplete shows Arbitrum WETH", "observed": "Showed WETH — Wrapped Ether (0x82aF...Bab1) — Arbitrum address" },
+        { "action": "Select WETH from autocomplete and click Get Price", "expected": "Request goes to /arbitrum/price endpoint", "observed": "Price result returned: Chain=arbitrum, Token=0x82aF49447D8a07e3bd95BD0d56f35241523fBab1, Price=1991.36228661, Block=437804297" }
+      ],
+      "evidence": {
+        "screenshots": ["val-cross-003-arbitrum-autocomplete.png", "val-cross-003-arbitrum-price-result.png", "val-cross-003-price-result-scrolled.png"],
+        "consoleErrors": "none",
+        "network": "GET /arbitrum/price?token=0x82aF49447D8a07e3bd95BD0d56f35241523fBab1 -> 200 (confirmed by result showing chain=arbitrum)"
+      },
+      "issues": null
+    }
+  ],
+  "frictions": [
+    {
+      "description": "The token address input has a pre-filled DAI address on page load. Typing appends to it rather than replacing. Must explicitly clear the field before typing a new search term.",
+      "resolved": true,
+      "resolution": "Used fill(@ref, '') to clear the field before typing new search terms",
+      "affectedAssertions": ["VAL-AUTO-001", "VAL-AUTO-002"]
+    },
+    {
+      "description": "The accessibility snapshot sometimes returns '(no interactive elements)' after certain interactions, requiring a page reload to recover. Happened 3 times during testing.",
+      "resolved": true,
+      "resolution": "Reloaded the page via agent-browser open http://localhost:8000 to restore the DOM state",
+      "affectedAssertions": ["VAL-AUTO-003", "VAL-AUTO-012", "VAL-CROSS-003"]
+    }
+  ],
+  "blockers": [],
+  "summary": "Tested 7 assertions: all 7 passed. Autocomplete triggers on typing, matches by symbol/name/address, filters by selected chain, shows correct format (SYMBOL — Name (0xaddr...) with source label), fills address on selection, updates when chain is switched, and correctly routes price requests to the selected chain's endpoint. No console errors observed."
+}

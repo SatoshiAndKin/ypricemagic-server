@@ -1,0 +1,138 @@
+{
+  "groupId": "group-b",
+  "testedAt": "2026-03-03T05:45:00Z",
+  "credentials": {
+    "account": "ui-flow-b@example.test",
+    "namespace": "uta-flow-b"
+  },
+  "toolsUsed": ["playwright-mcp", "agent-browser"],
+  "assertions": [
+    {
+      "id": "VAL-AUTO-006",
+      "title": "Unknown address warning modal",
+      "status": "pass",
+      "steps": [
+        { "action": "Clear localStorage and reload page", "expected": "Fresh page state", "observed": "Fresh page loaded with default DAI prefilled" },
+        { "action": "Fill price-token input with unknown address 0x00000000000000000000000000000000000000b1", "expected": "Address entered in input", "observed": "Address entered" },
+        { "action": "Click 'Get Price' button", "expected": "Warning modal with Save/Continue/Reject", "observed": "Modal appeared with title 'Unknown Token', message about address not in any enabled tokenlist, and three buttons: 'Save to Local List', 'Continue', 'Reject'" }
+      ],
+      "evidence": {
+        "screenshots": ["val-auto-006-warning-modal.png"],
+        "consoleErrors": "none",
+        "network": "No network request made (modal intercepts before fetch)"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-AUTO-007",
+      "title": "Modal save adds to local tokenlist",
+      "status": "pass",
+      "steps": [
+        { "action": "Fill bucket-token input with unknown address 0x00000000000000000000000000000000000000b2", "expected": "Address entered", "observed": "Address entered" },
+        { "action": "Click 'Check Bucket' button", "expected": "Warning modal appears", "observed": "Unknown Token modal appeared with Save/Continue/Reject" },
+        { "action": "Click 'Save to Local List'", "expected": "Token saved to localStorage, request proceeds", "observed": "Modal dismissed, bucket form shows 'Checking...' (request proceeded)" },
+        { "action": "Check localStorage.localTokens", "expected": "Contains saved token", "observed": "localStorage.localTokens = [{\"chainId\":1,\"address\":\"0x00000000000000000000000000000000000000b2\",\"symbol\":\"Unknown\",\"name\":\"Unknown Token\",\"decimals\":18}]" }
+      ],
+      "evidence": {
+        "screenshots": ["val-auto-007-save-proceeds.png"],
+        "consoleErrors": "none",
+        "localStorage": "localTokens contains saved token with chainId=1, address=0x...00b2"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-AUTO-008",
+      "title": "Modal continue proceeds without saving",
+      "status": "pass",
+      "steps": [
+        { "action": "With unknown address 0x...00b1 in price-token, click 'Get Price'", "expected": "Warning modal appears", "observed": "Unknown Token modal appeared" },
+        { "action": "Click 'Continue'", "expected": "Request proceeds, localStorage unchanged", "observed": "Modal dismissed, button changed to 'Fetching...', 'Fetching price...' message shown" },
+        { "action": "Check localStorage", "expected": "localTokens and tokenlists are null", "observed": "localTokens=null, tokenlists=null (unchanged)" }
+      ],
+      "evidence": {
+        "screenshots": ["val-auto-008-continue-proceeds.png"],
+        "consoleErrors": "none",
+        "localStorage": "localTokens=null, tokenlists=null (no changes after Continue)"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-AUTO-009",
+      "title": "Modal reject cancels the request",
+      "status": "pass",
+      "steps": [
+        { "action": "With unknown address 0x...00b1 in price-token, click 'Get Price'", "expected": "Warning modal appears", "observed": "Unknown Token modal appeared" },
+        { "action": "Click 'Reject'", "expected": "Modal dismissed, form not submitted, focus returns to token input", "observed": "Modal dismissed, no price result shown, Token Address input has [active] state (focus confirmed via accessibility snapshot), no 'Fetching...' indicator" }
+      ],
+      "evidence": {
+        "screenshots": ["val-auto-009-reject-no-submit.png"],
+        "consoleErrors": "none",
+        "focusBehavior": "Focus returned to token input (confirmed via [active] attribute in accessibility snapshot)"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-CROSS-004",
+      "title": "Saved token appears in autocomplete",
+      "status": "pass",
+      "steps": [
+        { "action": "After saving token 0x...00b2 via Save modal (VAL-AUTO-007)", "expected": "Token saved in localStorage", "observed": "Token confirmed in localStorage" },
+        { "action": "Type '0x00000000000000000000000000000000000000b2' in price-token input", "expected": "Autocomplete shows saved token", "observed": "Dropdown shows 'Unknown — Unknown Token (0x0000...00b2)' with source 'Local Tokens'" }
+      ],
+      "evidence": {
+        "screenshots": ["val-cross-004-saved-in-autocomplete.png"],
+        "consoleErrors": "none",
+        "autocomplete": "Saved token appeared in dropdown labeled as 'Local Tokens'"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-CROSS-005",
+      "title": "Full flow - search, select, price",
+      "status": "pass",
+      "steps": [
+        { "action": "Clear price-token and type 'DAI'", "expected": "Autocomplete dropdown with DAI token", "observed": "Dropdown shows 'DAI — Dai Stablecoin (0x6B17...1d0F)' from 'Uniswap Labs Default'" },
+        { "action": "Click DAI suggestion in dropdown", "expected": "Input filled with DAI address", "observed": "Input filled with 0x6B175474E89094C44Da98b954EedeAC495271d0F" },
+        { "action": "Click 'Get Price'", "expected": "Price result displayed", "observed": "Price Result: Chain=ethereum, Token=0x6B17...1d0F, Block=24574945, Price=1 USD, Cached=no" }
+      ],
+      "evidence": {
+        "screenshots": ["val-cross-005-autocomplete-selection.png", "val-cross-005-price-result.png"],
+        "consoleErrors": "none",
+        "network": "GET /ethereum/price?token=0x6B175474E89094C44Da98b954EedeAC495271d0F -> 200 (price=1)"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-CROSS-007",
+      "title": "Focus management after modal dismissal",
+      "status": "pass",
+      "steps": [
+        { "action": "Reject: Click Reject on unknown token modal", "expected": "Focus returns to token input", "observed": "Token Address input received [active] state (confirmed via accessibility snapshot in VAL-AUTO-009)" },
+        { "action": "Continue: Click Continue on unknown token modal", "expected": "Form proceeds with request", "observed": "Form submitted (Fetching... shown), modal dismissed cleanly (VAL-AUTO-008)" },
+        { "action": "Save: Click Save on unknown token modal", "expected": "Form proceeds with request", "observed": "Form submitted, classification result displayed immediately (bucket=null for fake token), modal dismissed cleanly" }
+      ],
+      "evidence": {
+        "screenshots": ["val-auto-009-reject-no-submit.png", "val-auto-008-continue-proceeds.png", "val-cross-007-focus-after-save.png"],
+        "consoleErrors": "none",
+        "focusBehavior": "Reject: focus returns to token input. Save/Continue: form proceeds to completion. All three dismiss modal cleanly with no orphaned UI elements."
+      },
+      "issues": null
+    }
+  ],
+  "frictions": [
+    {
+      "description": "First price fetch for an unknown/non-contract address takes 30+ seconds due to RPC calls, making it slow to verify that Continue/Save actually trigger the fetch. The fetch for 0x...00b1 via Continue eventually returned 502 (Chain backend is unavailable) which is expected for fake addresses.",
+      "resolved": true,
+      "resolution": "Used screenshot evidence of 'Fetching...' state and localStorage checks to confirm behavior without waiting for full response",
+      "affectedAssertions": ["VAL-AUTO-008"]
+    },
+    {
+      "description": "Autocomplete 'No matches' dropdown can intercept clicks on buttons below it (e.g. Check Bucket button). Required pressing Escape to dismiss dropdown before clicking the button.",
+      "resolved": true,
+      "resolution": "Press Escape to close autocomplete dropdown before clicking submit buttons",
+      "affectedAssertions": ["VAL-AUTO-007"]
+    }
+  ],
+  "blockers": [],
+  "summary": "Tested 7 assertions: all 7 passed. VAL-AUTO-006 (modal trigger), VAL-AUTO-007 (save to local list), VAL-AUTO-008 (continue without saving), VAL-AUTO-009 (reject cancels), VAL-CROSS-004 (saved token in autocomplete), VAL-CROSS-005 (full E2E search-select-price flow with DAI returning $1), VAL-CROSS-007 (focus management after all three modal actions). All modal behaviors work correctly: Save adds to localStorage and proceeds, Continue proceeds without saving, Reject cancels and returns focus to input."
+}

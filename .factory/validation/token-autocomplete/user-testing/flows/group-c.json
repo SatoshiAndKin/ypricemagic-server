@@ -1,0 +1,140 @@
+{
+  "groupId": "group-c",
+  "testedAt": "2026-03-02T22:45:00Z",
+  "credentials": {
+    "account": "ui-flow-c@example.test",
+    "namespace": "uta-flow-c"
+  },
+  "toolsUsed": ["agent-browser"],
+  "assertions": [
+    {
+      "id": "VAL-AUTO-010",
+      "title": "Batch form rows each have autocomplete",
+      "status": "pass",
+      "steps": [
+        { "action": "Navigate to http://localhost:8000", "expected": "Page loads with batch form", "observed": "Page loaded with batch form containing one token row" },
+        { "action": "Type 'DAI' in first batch token input", "expected": "Autocomplete dropdown appears with DAI", "observed": "Dropdown showed 'DAI — Dai Stablecoin (0x6B17...1d0F)' from Uniswap Labs Default" },
+        { "action": "Click '+ Add Token' to add new row", "expected": "New row appears with autocomplete", "observed": "New row added with its own token input" },
+        { "action": "Type 'USDC' in second batch token input", "expected": "Second row shows independent autocomplete", "observed": "Dropdown showed 'USDC — USDCoin (0xA0b8...eB48)' from Uniswap Labs Default, independent from first row" }
+      ],
+      "evidence": {
+        "screenshots": ["val-auto-010-batch-row-autocomplete.png", "val-auto-010-new-row-autocomplete.png"],
+        "consoleErrors": "none",
+        "network": "N/A (autocomplete is client-side)"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-AUTO-011",
+      "title": "Bucket form has autocomplete",
+      "status": "pass",
+      "steps": [
+        { "action": "Navigate to http://localhost:8000 and scroll to Token Classification form", "expected": "Token Classification form visible", "observed": "Token Classification form visible with Token Address input" },
+        { "action": "Type 'WETH' in bucket token input", "expected": "Autocomplete dropdown appears", "observed": "Dropdown showed 'WETH — Wrapped Ether (0xC02a...5Cc2)' from Uniswap Labs Default" }
+      ],
+      "evidence": {
+        "screenshots": ["val-auto-011-bucket-autocomplete.png", "val-auto-011-bucket-autocomplete-scrolled.png"],
+        "consoleErrors": "none",
+        "network": "N/A (autocomplete is client-side)"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-AUTO-013",
+      "title": "Keyboard navigation of autocomplete",
+      "status": "pass",
+      "steps": [
+        { "action": "Type 'USD' in token input to get multiple results", "expected": "Dropdown shows multiple USD-related tokens", "observed": "15 tokens displayed including USD1, USDC, USDG, USDP, USDT, etc." },
+        { "action": "Press ArrowDown", "expected": "First item highlighted", "observed": "USD1 (index 0) highlighted with 'highlighted' CSS class" },
+        { "action": "Press ArrowDown again", "expected": "Second item highlighted", "observed": "USDC (index 1) highlighted" },
+        { "action": "Press ArrowUp", "expected": "First item highlighted again", "observed": "USD1 (index 0) highlighted again" },
+        { "action": "Press Escape", "expected": "Dropdown closes without selecting", "observed": "Dropdown closed, no autocomplete dropdowns visible" },
+        { "action": "Type 'USDC' and press ArrowDown then Enter", "expected": "USDC selected, address filled, dropdown closed", "observed": "Input filled with 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48, dropdown closed" },
+        { "action": "Type 'DAI' and press Tab", "expected": "Dropdown closes, focus moves to next field", "observed": "Dropdown closed, focus moved to price-block field" }
+      ],
+      "evidence": {
+        "screenshots": ["val-auto-013-dropdown-open.png", "val-auto-013-arrow-key-highlight.png"],
+        "consoleErrors": "none",
+        "network": "N/A (autocomplete is client-side)"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-AUTO-014",
+      "title": "No autocomplete trigger on pre-filled values",
+      "status": "pass",
+      "steps": [
+        { "action": "Navigate to http://localhost:8000 (has pre-filled DAI address)", "expected": "No autocomplete dropdown visible on load", "observed": "Page loaded with DAI address pre-filled, no autocomplete dropdown visible" },
+        { "action": "Check for autocomplete elements on page", "expected": "No visible autocomplete containers", "observed": "0 elements matching autocomplete-related selectors found on initial load" },
+        { "action": "Navigate to http://localhost:8000/?chain=ethereum&token=0x6B...&block=12345", "expected": "No autocomplete dropdown triggered by URL params", "observed": "3 autocomplete-dropdown elements exist but all have display:none and 0 children" }
+      ],
+      "evidence": {
+        "screenshots": ["val-auto-014-no-dropdown-on-load.png"],
+        "consoleErrors": "none",
+        "network": "N/A"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-AUTO-015",
+      "title": "Removing batch row with active autocomplete",
+      "status": "pass",
+      "steps": [
+        { "action": "Type 'WBTC' in batch token input to open autocomplete", "expected": "Autocomplete dropdown visible", "observed": "Dropdown showed 'WBTC — Wrapped BTC (0x2260...C599)' from Uniswap Labs Default" },
+        { "action": "Click × (remove) button while dropdown is open", "expected": "Row removed, no orphaned dropdown", "observed": "Row removed cleanly, 0 visible autocomplete dropdowns, 0 token rows remaining" }
+      ],
+      "evidence": {
+        "screenshots": ["val-auto-015-before-remove.png", "val-auto-015-no-orphaned-dropdown.png"],
+        "consoleErrors": "none",
+        "network": "N/A"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-AUTO-016",
+      "title": "No-match state in autocomplete",
+      "status": "pass",
+      "steps": [
+        { "action": "Type 'XYZNONEXISTENT' in token input", "expected": "Dropdown shows 'No matches' or doesn't appear", "observed": "Dropdown displayed with single child showing 'No matches' text" },
+        { "action": "Verify no empty container", "expected": "No empty autocomplete container visible", "observed": "Dropdown has 1 child (the 'No matches' message), not empty" }
+      ],
+      "evidence": {
+        "screenshots": ["val-auto-016-no-match-state.png"],
+        "consoleErrors": "none",
+        "network": "N/A"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-AUTO-017",
+      "title": "Adjacent fields preserved after autocomplete selection",
+      "status": "pass",
+      "steps": [
+        { "action": "Fill adjacent fields: block=18000000, amount=100, ignorePools=0x1234567890abcdef", "expected": "Fields populated", "observed": "All three fields populated with correct values" },
+        { "action": "Type 'USDT' in token input and select via ArrowDown+Enter", "expected": "Token address filled, adjacent fields preserved", "observed": "Token filled with 0xdAC17F958D2ee523a2206206994597C13D831ec7, block=18000000, amount=100, ignorePools=0x1234567890abcdef — all preserved" }
+      ],
+      "evidence": {
+        "screenshots": ["val-auto-017-fields-preserved.png"],
+        "consoleErrors": "none",
+        "network": "N/A"
+      },
+      "issues": null
+    }
+  ],
+  "frictions": [
+    {
+      "description": "Pressing Escape or Tab while focused on the page sometimes navigates the browser to about:blank in headless mode, requiring a page reload to continue testing",
+      "resolved": true,
+      "resolution": "Navigated back to http://localhost:8000 after each occurrence",
+      "affectedAssertions": ["VAL-AUTO-013"]
+    },
+    {
+      "description": "The agent-browser 'fill' command on the price-token input sometimes fails with CSS selector errors after certain interactions, requiring use of JavaScript eval to set values instead",
+      "resolved": true,
+      "resolution": "Used eval() to programmatically set input values and dispatch input events",
+      "affectedAssertions": ["VAL-AUTO-013", "VAL-AUTO-016", "VAL-AUTO-017"]
+    }
+  ],
+  "blockers": [],
+  "summary": "Tested 7 assertions: all 7 passed. Batch form rows have independent autocomplete (VAL-AUTO-010), bucket form has autocomplete (VAL-AUTO-011), keyboard navigation works correctly with ArrowUp/Down/Enter/Escape/Tab (VAL-AUTO-013), pre-filled values don't trigger autocomplete on load (VAL-AUTO-014), removing batch rows with active autocomplete leaves no orphaned dropdowns (VAL-AUTO-015), no-match state shows 'No matches' message (VAL-AUTO-016), and adjacent form fields are preserved after autocomplete selection (VAL-AUTO-017)."
+}

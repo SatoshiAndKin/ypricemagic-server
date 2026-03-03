@@ -1,0 +1,44 @@
+{
+  "milestone": "token-autocomplete",
+  "round": 1,
+  "status": "pass",
+  "assertionsSummary": {
+    "total": 21,
+    "passed": 21,
+    "failed": 0,
+    "blocked": 0
+  },
+  "passedAssertions": [
+    "VAL-AUTO-001",
+    "VAL-AUTO-002",
+    "VAL-AUTO-003",
+    "VAL-AUTO-004",
+    "VAL-AUTO-005",
+    "VAL-AUTO-006",
+    "VAL-AUTO-007",
+    "VAL-AUTO-008",
+    "VAL-AUTO-009",
+    "VAL-AUTO-010",
+    "VAL-AUTO-011",
+    "VAL-AUTO-012",
+    "VAL-AUTO-013",
+    "VAL-AUTO-014",
+    "VAL-AUTO-015",
+    "VAL-AUTO-016",
+    "VAL-AUTO-017",
+    "VAL-CROSS-003",
+    "VAL-CROSS-004",
+    "VAL-CROSS-005",
+    "VAL-CROSS-007"
+  ],
+  "failedAssertions": [],
+  "blockedAssertions": [],
+  "appliedUpdates": [
+    {
+      "target": "user-testing.md",
+      "description": "Added token-autocomplete UI testing quirks: clear prefilled token field, press Escape if no-match dropdown overlaps submit controls, and recover from occasional about:blank bounce during headless key tests.",
+      "source": "flow-report"
+    }
+  ],
+  "previousRound": null
+}

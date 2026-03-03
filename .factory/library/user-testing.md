@@ -23,6 +23,9 @@ Testing surface: tools, URLs, setup steps, isolation notes, known quirks.
 - Platform emulation warning (amd64 on arm64) is expected on Apple Silicon
 - Etherscan rate limit (3 req/sec) can cause retry messages in container logs — this is normal
 - The /favicon.ico returns 404 — not an issue
+- Token input is pre-filled with DAI on load; tests that type a new query should clear the field first
+- If the autocomplete "No matches" dropdown overlaps submit buttons, press `Escape` before clicking submit
+- In headless runs, `Escape`/`Tab` key tests can occasionally bounce to `about:blank`; reopen `http://localhost:8000` and continue
 
 ## Test Isolation
 
