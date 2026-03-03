@@ -734,17 +734,10 @@ INDEX_HTML = """<!DOCTYPE html>
       <label for="price-token">Token Address</label>
       <input type="text" id="price-token" placeholder="0x..." value="0x6B175474E89094C44Da98b954EedeAC495271d0F">
     </div>
-    <div class="form-row">
-      <div class="form-group">
-        <label for="price-block">Block Number (optional)</label>
-        <input type="text" id="price-block" placeholder="e.g. 18000000">
-        <div class="hint">Leave blank for latest block</div>
-      </div>
-      <div class="form-group">
-        <label for="price-timestamp">Timestamp (optional)</label>
-        <input type="text" id="price-timestamp" placeholder="Unix epoch or ISO 8601">
-        <div class="hint">e.g. 1700000000 or 2023-11-14T22:13:20Z</div>
-      </div>
+    <div class="form-group">
+      <label for="price-block">Block / Date (optional)</label>
+      <input type="text" id="price-block" placeholder="e.g. 18000000">
+      <div class="hint" id="price-block-hint">Type a number for block, or type "/" to pick a date</div>
     </div>
     <div class="form-group">
       <label for="price-amount">Amount (optional, token units for price impact)</label>
@@ -775,15 +768,10 @@ INDEX_HTML = """<!DOCTYPE html>
       <label for="batch-tokens">Token Addresses (comma-separated)</label>
       <textarea id="batch-tokens" placeholder="0x6B175474E89094C44Da98b954EedeAC495271d0F,0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"></textarea>
     </div>
-    <div class="form-row">
-      <div class="form-group">
-        <label for="batch-block">Block Number (optional)</label>
-        <input type="text" id="batch-block" placeholder="e.g. 18000000">
-      </div>
-      <div class="form-group">
-        <label for="batch-timestamp">Timestamp (optional)</label>
-        <input type="text" id="batch-timestamp" placeholder="Unix epoch or ISO 8601">
-      </div>
+    <div class="form-group">
+      <label for="batch-block">Block / Date (optional)</label>
+      <input type="text" id="batch-block" placeholder="e.g. 18000000">
+      <div class="hint" id="batch-block-hint">Type a number for block, or type "/" to pick a date</div>
     </div>
     <div class="form-group">
       <label for="batch-amounts">Amounts (optional, comma-separated, matches token order)</label>
@@ -837,30 +825,30 @@ INDEX_HTML = """<!DOCTYPE html>
       resultEl.innerHTML = '<div class="result-header">' + escapeHtml(msg) + '</div>';
     }
 
-    // Timestamp/Block mutual exclusivity
-    function setupMutualExclusivity(blockId, timestampId) {
-      const blockInput = document.getElementById(blockId);
-      const timestampInput = document.getElementById(timestampId);
+    // Switch block field to date picker when "/" is typed
+    function setupDatePickerSwitch(blockId, hintId) {
+      const input = document.getElementById(blockId);
+      const hint = document.getElementById(hintId);
 
-      blockInput.addEventListener('input', function() {
-        if (this.value.trim()) {
-          timestampInput.disabled = true;
-        } else {
-          timestampInput.disabled = false;
+      input.addEventListener('input', function() {
+        if (this.type === 'text' && this.value.includes('/')) {
+          this.type = 'datetime-local';
+          this.value = '';
+          hint.textContent = 'Pick a date/time. Clear to switch back to block number.';
         }
       });
 
-      timestampInput.addEventListener('input', function() {
-        if (this.value.trim()) {
-          blockInput.disabled = true;
-        } else {
-          blockInput.disabled = false;
+      input.addEventListener('change', function() {
+        if (this.type === 'datetime-local' && !this.value) {
+          this.type = 'text';
+          this.placeholder = 'e.g. 18000000';
+          hint.textContent = 'Type a number for block, or type "/" to pick a date';
         }
       });
     }
 
-    setupMutualExclusivity('price-block', 'price-timestamp');
-    setupMutualExclusivity('batch-block', 'batch-timestamp');
+    setupDatePickerSwitch('price-block', 'price-block-hint');
+    setupDatePickerSwitch('batch-block', 'batch-block-hint');
 
     // Single Price Form
     const priceForm = document.getElementById('price-form');
@@ -908,8 +896,9 @@ INDEX_HTML = """<!DOCTYPE html>
       e.preventDefault();
       const chain = getChain();
       const token = document.getElementById('price-token').value.trim();
-      const block = document.getElementById('price-block').value.trim();
-      const timestamp = document.getElementById('price-timestamp').value.trim();
+      const blockInput = document.getElementById('price-block');
+      const blockVal = blockInput.value.trim();
+      const isDate = blockInput.type === 'datetime-local';
       const amount = document.getElementById('price-amount').value.trim();
       const skipCache = document.getElementById('price-skip-cache').checked;
       const silent = document.getElementById('price-silent').checked;
@@ -921,8 +910,11 @@ INDEX_HTML = """<!DOCTYPE html>
 
       try {
         const params = new URLSearchParams({ token });
-        if (block) params.set('block', block);
-        if (timestamp) params.set('timestamp', timestamp);
+        if (blockVal && isDate) {
+          params.set('timestamp', new Date(blockVal).toISOString());
+        } else if (blockVal) {
+          params.set('block', blockVal);
+        }
         if (amount) params.set('amount', amount);
         if (skipCache) params.set('skip_cache', 'true');
         if (silent) params.set('silent', 'true');
@@ -991,8 +983,9 @@ INDEX_HTML = """<!DOCTYPE html>
       e.preventDefault();
       const chain = getChain();
       const tokens = document.getElementById('batch-tokens').value.trim();
-      const block = document.getElementById('batch-block').value.trim();
-      const timestamp = document.getElementById('batch-timestamp').value.trim();
+      const batchBlockInput = document.getElementById('batch-block');
+      const batchBlockVal = batchBlockInput.value.trim();
+      const batchIsDate = batchBlockInput.type === 'datetime-local';
       const amounts = document.getElementById('batch-amounts').value.trim();
       const skipCache = document.getElementById('batch-skip-cache').checked;
       const silent = document.getElementById('batch-silent').checked;
@@ -1008,8 +1001,11 @@ INDEX_HTML = """<!DOCTYPE html>
 
       try {
         const params = new URLSearchParams({ tokens });
-        if (block) params.set('block', block);
-        if (timestamp) params.set('timestamp', timestamp);
+        if (batchBlockVal && batchIsDate) {
+          params.set('timestamp', new Date(batchBlockVal).toISOString());
+        } else if (batchBlockVal) {
+          params.set('block', batchBlockVal);
+        }
         if (amounts) params.set('amounts', amounts);
         if (skipCache) params.set('skip_cache', 'true');
         if (silent) params.set('silent', 'true');
@@ -1091,7 +1087,13 @@ INDEX_HTML = """<!DOCTYPE html>
     if (params.get('chain')) document.getElementById('chain').value = params.get('chain');
     if (params.get('token')) document.getElementById('price-token').value = params.get('token');
     if (params.get('block')) document.getElementById('price-block').value = params.get('block');
-    if (params.get('timestamp')) document.getElementById('price-timestamp').value = params.get('timestamp');
+    if (params.get('timestamp')) {
+      const priceBlockEl = document.getElementById('price-block');
+      priceBlockEl.type = 'datetime-local';
+      const d = new Date(params.get('timestamp'));
+      if (!isNaN(d)) priceBlockEl.value = d.toISOString().slice(0, 16);
+      document.getElementById('price-block-hint').textContent = 'Pick a date/time. Clear to switch back to block number.';
+    }
     if (params.get('amount')) document.getElementById('price-amount').value = params.get('amount');
     if (params.get('skip_cache') === 'true') document.getElementById('price-skip-cache').checked = true;
     if (params.get('silent') === 'true') document.getElementById('price-silent').checked = true;
@@ -1100,11 +1102,7 @@ INDEX_HTML = """<!DOCTYPE html>
     if (params.get('amounts')) document.getElementById('batch-amounts').value = params.get('amounts');
     if (params.get('bucket_token')) document.getElementById('bucket-token').value = params.get('bucket_token');
 
-    // Dispatch input events to enforce block/timestamp mutual exclusivity after URL restoration
-    document.getElementById('price-block').dispatchEvent(new Event('input'));
-    document.getElementById('price-timestamp').dispatchEvent(new Event('input'));
-    document.getElementById('batch-block').dispatchEvent(new Event('input'));
-    document.getElementById('batch-timestamp').dispatchEvent(new Event('input'));
+    // No mutual exclusivity dispatch needed — block/date unified in one field
   </script>
 </body>
 </html>"""
