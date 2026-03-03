@@ -7,22 +7,14 @@ Environment variables, external dependencies, and setup notes.
 
 ---
 
-## Python Environment
+## Required Environment Variables
 
-- Python 3.12, managed by uv
-- Virtual env created by `uv sync --extra dev`
-- setuptools<82 required for brownie compatibility
+See env.example. Key vars: RPC_URL_ETHEREUM, RPC_URL_ARBITRUM, RPC_URL_OPTIMISM, RPC_URL_BASE, ETHERSCAN_TOKEN.
 
-## ypricemagic Dependency
+## Platform Note
 
-- Source: `git+https://github.com/SatoshiAndKin/ypricemagic.git@master`
-- Fork of BobTheBuidler/ypricemagic with `amount` parameter support
-- Build requires `cchecksum==0.3.7.dev0` (pre-release, specified in build-constraint-dependencies)
-- Docker build requires `git` installed for cloning
+Docker images are built for linux/amd64. On Apple Silicon (arm64), they run under QEMU emulation which adds overhead. This is expected.
 
-## Docker
+## Brownie Cache
 
-- OrbStack running on macOS
-- .env file at repo root with RPC_URL_ETHEREUM, RPC_URL_ARBITRUM, RPC_URL_OPTIMISM, RPC_URL_BASE, ETHERSCAN_TOKEN
-- Build is sensitive to dependency resolution — check [tool.uv] constraints if build fails
-- **nginx restart after container recreation**: When chain containers are recreated (e.g., after `docker compose build`), nginx may cache stale DNS entries for the container hostnames. Run `docker compose restart nginx` after recreating containers to ensure proper routing.
+Brownie stores contract ABIs and compilation artifacts at `/root/.brownie/` inside containers. This directory MUST be a persistent volume to avoid re-fetching ABIs on every deploy (Etherscan rate limit: 3 req/sec).

@@ -4,35 +4,31 @@ Architectural decisions, patterns discovered.
 
 ---
 
-## Container Architecture
+## Request Flow
 
-- One container per chain, all running the same FastAPI app on port 8001
-- nginx on port 8000 routes by `/{chain}/` path prefix, strips prefix before proxying
-- Each container has its own diskcache volume (`cache-{chain}:/data/cache`)
-- Chain identity comes from CHAIN_NAME env var
+```
+client -> nginx:8000 -> /<chain>/endpoint -> ypm-<chain>:8001/endpoint
+```
 
-## Server Patterns
+nginx routes by chain prefix. Each chain runs its own FastAPI container with brownie connected to that chain's RPC.
 
-- ypricemagic/brownie imports are LAZY (inside functions) — they require network at import time
-- All params come as `str | None` FastAPI Query params, parsed by params.py
-- ParseResult is a union type (ParseSuccess | ParseError) — not exceptions
-- Response dicts are built manually (not Pydantic models)
-- Error responses use `{"error": "<message>"}` format consistently
-- Cache key: `"{token_lower}:{block}"` — amount queries bypass cache entirely
-- Browser UI is an inline `INDEX_HTML` string in `src/server.py` and must be updated manually when API inputs/outputs change
+## UI Architecture (after extraction)
 
-## Testing Constraints
+```
+client -> nginx:8000 -> /static/* -> static files (index.html, js/app.js, css/style.css)
+                     -> /         -> serves index.html
+                     -> /<chain>/ -> proxied to chain container
+```
 
-- `src/tests/conftest.py` uses an `autouse=True` fixture to mock `y`, `y.time`, and `y.exceptions` in `sys.modules` to prevent real brownie/ypricemagic network initialization during tests
-- FastAPI lifespan startup connects brownie networks, so endpoint-level `TestClient` tests can fail outside the Docker runtime; prefer unit tests around helper functions with explicit mocking
-- `pytest` is configured with `asyncio_mode = "auto"` in `pyproject.toml`; async tests can run without explicit `@pytest.mark.asyncio` markers
+The UI is vanilla JS served as static files. No build step, no framework.
 
-## OpenAPI Artifact
+## Tokenlist Storage
 
-- `openapi.json` at repo root is a static export and can drift from live FastAPI routes/params; regenerate it after endpoint or query parameter changes
+All tokenlist state lives in browser localStorage:
+- `tokenlists`: Array of {url, name, tokens[], enabled, isDefault}
+- `localTokenlist`: User-saved tokens from the unknown-token modal
+- Default: Uniswap tokenlist loaded from /static/tokenlists/uniswap-default.json on first visit
 
-## Prometheus Metrics
+## Deploy Architecture
 
-- `price_requests_total` Counter with labels: chain, status
-- `price_request_duration_seconds` Histogram with label: chain
-- Status values: ok, cache_hit, bad_request, not_found, error
+Single VPS. Docker Compose with nginx as reverse proxy. Rolling deploy: one chain at a time, health check gating, graceful drain.
