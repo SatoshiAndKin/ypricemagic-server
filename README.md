@@ -146,6 +146,28 @@ Returns health of the ethereum backend (representative aggregate check). Include
 
 Returns health of a specific chain backend (same response shape as `/health`).
 
+## Browser UI
+
+The root path (`/`) serves an interactive browser UI for all API endpoints.
+
+### Token autocomplete
+
+All token address inputs support autocomplete. Type a symbol, name, or address to search across loaded tokenlists. Results are filtered by the currently selected chain. If you submit an address that isn't in any enabled tokenlist, a warning modal lets you proceed anyway or add the token to your local list.
+
+Autocomplete works in the single price, batch, and bucket forms.
+
+### Tokenlist management
+
+Click the gear icon (⚙) in the header to open the tokenlist manager. From there you can:
+
+- View loaded tokenlists and toggle them on/off
+- Add a new tokenlist by URL (HTTPS only)
+- Import a tokenlist from a JSON file
+- Export the locally-saved tokenlist
+- Delete custom tokenlists
+
+All tokenlist state is stored in `localStorage`. The [Uniswap Default tokenlist](https://tokens.uniswap.org) is bundled at Docker build time and always available.
+
 ## Supported Chains
 
 | Chain     | Chain ID |
@@ -164,4 +186,45 @@ Returns health of a specific chain backend (same response shape as `/health`).
 - **FastAPI** + **uvicorn** — HTTP server
 - **diskcache** — persistent price cache
 - **nginx** — reverse proxy / chain routing
-- **Docker** (`linux/amd64`) + Docker Compose
+- **Docker** (`linux/amd64`) + Docker Compose + **Swarm** (zero-downtime deploy)
+- **Uniswap tokenlist** — bundled token metadata for autocomplete
+
+## Deployment
+
+### Docker Compose (development)
+
+```bash
+docker compose up --build
+```
+
+### Docker Swarm (production)
+
+The `docker-compose.yml` includes Swarm-compatible deploy configuration for zero-downtime deploys:
+
+- **`update_config.order: start-first`** — new containers start before old ones stop (blue-green)
+- **`rollback_config`** — automatic rollback on update failure
+- **`stop_grace_period: 30s`** — allows in-flight requests to drain before shutdown
+- **Health checks** gate traffic switching; nginx only routes to healthy backends
+
+Brownie cache volumes (`brownie-<chain>`) persist across deploys so contract metadata doesn't need to be re-fetched.
+
+To deploy manually:
+
+```bash
+docker swarm init  # one-time setup
+docker compose config -o docker-stack.yml
+python3 scripts/strip_depends_on.py docker-stack.yml  # strip extended depends_on for Swarm
+docker stack deploy -c docker-stack.yml ypm --with-registry-auth
+```
+
+### CD pipeline
+
+A GitHub Actions workflow (`.github/workflows/cd.yml`) runs on every push to `main`:
+
+1. Builds and pushes the Docker image to `ghcr.io`
+2. Copies the compose file to the server via SCP
+3. Renders a Swarm-compatible compose file with `docker compose config`
+4. Deploys via `docker stack deploy`
+5. Polls `/health` to verify the deployment succeeded
+
+Required GitHub Actions variables: `SSH_HOST`, `SSH_USER`, `SSH_KEY`.
