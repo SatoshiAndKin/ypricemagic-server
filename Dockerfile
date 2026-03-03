@@ -22,8 +22,13 @@ RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --locked
 
 # Download Uniswap default tokenlist (not in repo due to Droid-Shield false positives on addresses)
+# Validate JSON structure: must have a 'tokens' array
 RUN mkdir -p /app/static/tokenlists && \
-    curl -sf https://tokens.uniswap.org -o /app/static/tokenlists/uniswap-default.json
+    curl -sf https://tokens.uniswap.org -o /app/static/tokenlists/uniswap-default.json && \
+    python3 -c "import json; d=json.load(open('/app/static/tokenlists/uniswap-default.json')); \
+    assert 'tokens' in d, 'Missing tokens array'; \
+    assert isinstance(d['tokens'], list), 'tokens must be an array'; \
+    print(f'Valid tokenlist: {len(d[\"tokens\"])} tokens')"
 
 RUN mkdir -p /data/cache
 
