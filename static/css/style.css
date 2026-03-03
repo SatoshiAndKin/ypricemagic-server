@@ -1,6 +1,12 @@
 * { box-sizing: border-box; }
 body { font-family: system-ui, sans-serif; max-width: 900px; margin: 0 auto; padding: 20px; background: #f5f5f5; }
-h1 { margin-bottom: 20px; color: #333; }
+.page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+h1 { margin: 0; color: #333; }
+.gear-btn { background: transparent; border: 1px solid #ddd; border-radius: 4px; padding: 8px 10px; cursor: pointer; font-size: 20px; min-width: auto; color: #666; position: relative; transition: all 0.2s; }
+.gear-btn:hover { background: #f0f0f0; border-color: #ccc; color: #333; }
+.gear-icon { display: inline-block; transition: transform 0.3s; }
+.gear-btn:hover .gear-icon { transform: rotate(45deg); }
+.gear-badge { position: absolute; top: -4px; right: -4px; background: #0066cc; color: white; font-size: 10px; font-weight: 600; min-width: 16px; height: 16px; border-radius: 8px; display: none; align-items: center; justify-content: center; padding: 0 4px; }
 h2 { margin: 30px 0 15px; color: #444; font-size: 20px; border-bottom: 2px solid #ddd; padding-bottom: 8px; }
 form { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 20px; }
 .form-group { margin-bottom: 16px; }
@@ -65,24 +71,25 @@ td.null { color: #666; font-style: italic; }
 .modal-btn-reject { background: #e74c3c; color: white; }
 .modal-btn-reject:hover { background: #c0392b; }
 
-/* Tokenlist Management Panel */
-.tokenlist-panel { background: white; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 20px; overflow: hidden; }
-.tokenlist-header { padding: 12px 16px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; background: #f8f9fa; border-bottom: 1px solid #e9ecef; }
-.tokenlist-header:hover { background: #e9ecef; }
-.tokenlist-summary { font-weight: 600; color: #333; }
-.tokenlist-expand-icon { color: #666; font-size: 12px; transition: transform 0.2s; }
-.tokenlist-panel:not(.collapsed) .tokenlist-expand-icon { transform: rotate(180deg); }
-.tokenlist-content { display: none; padding: 16px; }
-.tokenlist-panel:not(.collapsed) .tokenlist-content { display: block; }
+/* Tokenlist Management Modal */
+.tokenlist-modal { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 3000; }
+.tokenlist-modal.open { display: block; }
+.tokenlist-modal-backdrop { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7); cursor: pointer; }
+.tokenlist-modal-content { position: relative; background: #1e1e1e; color: #d4d4d4; max-width: 600px; width: 90%; max-height: 80vh; margin: 5vh auto; border-radius: 8px; box-shadow: 0 8px 32px rgba(0,0,0,0.5); display: flex; flex-direction: column; overflow: hidden; }
+.tokenlist-modal-header { display: flex; justify-content: space-between; align-items: center; padding: 16px 20px; border-bottom: 1px solid #333; flex-shrink: 0; }
+.tokenlist-modal-header h2 { margin: 0; color: #d4d4d4; font-size: 18px; border-bottom: none; padding-bottom: 0; }
+.modal-close-btn { background: transparent; border: none; color: #888; font-size: 24px; cursor: pointer; padding: 4px 8px; line-height: 1; min-width: auto; }
+.modal-close-btn:hover { color: #fff; background: rgba(255,255,255,0.1); border-radius: 4px; }
+.tokenlist-modal-body { padding: 20px; overflow-y: auto; flex: 1; }
 .tokenlist-lists { margin-bottom: 16px; }
-.tokenlist-item { display: flex; align-items: center; padding: 10px 12px; background: #f8f9fa; border-radius: 4px; margin-bottom: 8px; }
+.tokenlist-item { display: flex; align-items: center; padding: 10px 12px; background: #2d2d2d; border-radius: 4px; margin-bottom: 8px; }
 .tokenlist-item:last-child { margin-bottom: 0; }
-.tokenlist-item.disabled { opacity: 0.5; background: #eee; }
+.tokenlist-item.disabled { opacity: 0.5; background: #252525; }
 .tokenlist-item-info { flex: 1; min-width: 0; }
-.tokenlist-item-name { font-weight: 600; color: #333; font-size: 14px; word-break: break-word; }
-.tokenlist-item-count { color: #666; font-size: 12px; margin-top: 2px; }
+.tokenlist-item-name { font-weight: 600; color: #d4d4d4; font-size: 14px; word-break: break-word; }
+.tokenlist-item-count { color: #888; font-size: 12px; margin-top: 2px; }
 .tokenlist-item-actions { display: flex; gap: 8px; align-items: center; flex-shrink: 0; margin-left: 12px; }
-.tokenlist-toggle { position: relative; width: 44px; height: 24px; background: #ccc; border-radius: 12px; cursor: pointer; transition: background 0.2s; }
+.tokenlist-toggle { position: relative; width: 44px; height: 24px; background: #555; border-radius: 12px; cursor: pointer; transition: background 0.2s; }
 .tokenlist-toggle.enabled { background: #27ae60; }
 .tokenlist-toggle-knob { position: absolute; top: 2px; left: 2px; width: 20px; height: 20px; background: white; border-radius: 50%; transition: transform 0.2s; box-shadow: 0 1px 3px rgba(0,0,0,0.2); }
 .tokenlist-toggle.enabled .tokenlist-toggle-knob { transform: translateX(20px); }
@@ -91,7 +98,8 @@ td.null { color: #666; font-style: italic; }
 .tokenlist-delete:disabled { opacity: 0.4; cursor: not-allowed; }
 .tokenlist-action-row { display: flex; gap: 8px; margin-bottom: 8px; }
 .tokenlist-action-row:last-child { margin-bottom: 0; }
-.tokenlist-url-input { flex: 1; padding: 8px 12px; font-size: 13px; border: 1px solid #ddd; border-radius: 4px; }
+.tokenlist-url-input { flex: 1; padding: 8px 12px; font-size: 13px; border: 1px solid #444; border-radius: 4px; background: #2d2d2d; color: #d4d4d4; }
+.tokenlist-url-input::placeholder { color: #888; }
 .btn-small { padding: 8px 16px; font-size: 13px; background: #0066cc; color: white; border: none; border-radius: 4px; cursor: pointer; }
 .btn-small:hover { background: #0052a3; }
 .btn-small:disabled { opacity: 0.5; cursor: not-allowed; }

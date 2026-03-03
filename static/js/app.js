@@ -930,10 +930,6 @@ function initAutocompletes() {
 }
 
 // Tokenlist Management Panel
-let tokenlistPanelState = {
-  collapsed: true
-};
-
 function countTokensForChain(list, chainId) {
   if (!list.tokens) return 0;
   return list.tokens.filter(t => t.chainId === chainId).length;
@@ -951,13 +947,19 @@ function countAllEnabledTokens() {
 }
 
 function renderTokenlistSummary() {
-  const summaryEl = document.getElementById('tokenlist-summary');
-  if (!summaryEl) return;
+  // Update the gear badge
+  const badgeEl = document.getElementById('gear-badge');
+  if (!badgeEl) return;
 
   const enabledLists = tokenlists.filter(l => l.enabled).length;
   const totalTokens = countAllEnabledTokens();
 
-  summaryEl.textContent = enabledLists + ' list' + (enabledLists !== 1 ? 's' : '') + ', ' + totalTokens + ' tokens (current chain)';
+  if (enabledLists > 0) {
+    badgeEl.textContent = enabledLists;
+    badgeEl.style.display = 'flex';
+  } else {
+    badgeEl.style.display = 'none';
+  }
 }
 
 function renderTokenlistPanel() {
@@ -1239,21 +1241,55 @@ function exportLocalTokenlist() {
   URL.revokeObjectURL(url);
 }
 
-function setupTokenlistPanel() {
-  const panel = document.getElementById('tokenlist-panel');
-  const toggle = document.getElementById('tokenlist-toggle');
+// Tokenlist Management Modal
+function openTokenlistModal() {
+  const modal = document.getElementById('tokenlist-modal');
+  if (modal) {
+    modal.classList.add('open');
+    document.body.style.overflow = 'hidden'; // Prevent background scroll
+    renderTokenlistPanel();
+  }
+}
+
+function closeTokenlistModal() {
+  const modal = document.getElementById('tokenlist-modal');
+  if (modal) {
+    modal.classList.remove('open');
+    document.body.style.overflow = ''; // Restore scroll
+  }
+}
+
+function setupTokenlistModal() {
+  const gearBtn = document.getElementById('tokenlist-gear-btn');
+  const modal = document.getElementById('tokenlist-modal');
+  const backdrop = document.getElementById('tokenlist-modal-backdrop');
+  const closeBtn = document.getElementById('tokenlist-modal-close');
   const addBtn = document.getElementById('tokenlist-add-url');
   const urlInput = document.getElementById('tokenlist-url-input');
   const fileInput = document.getElementById('tokenlist-file-input');
   const importBtn = document.getElementById('tokenlist-import-btn');
   const exportBtn = document.getElementById('tokenlist-export-btn');
 
-  if (!panel || !toggle) return;
+  // Gear button opens modal
+  if (gearBtn) {
+    gearBtn.addEventListener('click', openTokenlistModal);
+  }
 
-  // Toggle collapse
-  toggle.addEventListener('click', function() {
-    panel.classList.toggle('collapsed');
-    tokenlistPanelState.collapsed = panel.classList.contains('collapsed');
+  // Close button closes modal
+  if (closeBtn) {
+    closeBtn.addEventListener('click', closeTokenlistModal);
+  }
+
+  // Backdrop click closes modal
+  if (backdrop) {
+    backdrop.addEventListener('click', closeTokenlistModal);
+  }
+
+  // Escape key closes modal
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape' && modal && modal.classList.contains('open')) {
+      closeTokenlistModal();
+    }
   });
 
   // Add by URL
@@ -1295,12 +1331,12 @@ function setupTokenlistPanel() {
     exportBtn.addEventListener('click', exportLocalTokenlist);
   }
 
-  // Initial render
-  renderTokenlistPanel();
+  // Initial render of summary
+  renderTokenlistSummary();
 }
 loadTokenlists().then(() => {
   initAutocompletes();
-  setupTokenlistPanel();
+  setupTokenlistModal();
 });
 
 // Load URL params to restore form state
