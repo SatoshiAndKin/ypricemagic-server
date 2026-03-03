@@ -1,0 +1,184 @@
+{
+  "groupId": "group-a",
+  "testedAt": "2026-03-03T07:50:00Z",
+  "credentials": {
+    "account": "tokenlist-validator-a",
+    "namespace": "tlm_group_a"
+  },
+  "toolsUsed": [
+    "agent-browser"
+  ],
+  "assertions": [
+    {
+      "id": "VAL-LIST-001",
+      "title": "Settings gear button opens modal",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "Load page and inspect header",
+          "expected": "Gear icon button is visible",
+          "observed": "gearExists=true with badge text '1'"
+        },
+        {
+          "action": "Click gear button and then close modal",
+          "expected": "Modal opens and closes without losing page state",
+          "observed": "modalOpen toggled true->false; chain stayed 'ethereum' and token input remained prefilled"
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          "group-a-gear-button-visible.png",
+          "group-a-modal-open.png",
+          "group-a-modal-closed.png"
+        ],
+        "consoleErrors": "none",
+        "network": "N/A"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-LIST-002",
+      "title": "Uniswap default list pre-loaded",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "Clear localStorage, reload, open tokenlist modal",
+          "expected": "Default Uniswap list is present and enabled",
+          "observed": "Only 'Uniswap Labs Default' shown with '357 tokens on ethereum', enabled toggle, delete disabled"
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          "group-a-modal-open.png"
+        ],
+        "consoleErrors": "none",
+        "network": "GET /static/tokenlists/uniswap-default.json -> 200"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-LIST-003",
+      "title": "Add tokenlist by URL",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "Add https://raw.githubusercontent.com/compound-finance/token-list/master/compound.tokenlist.json",
+          "expected": "List appears with name and token count",
+          "observed": "List 'Compound' added with '27 tokens on ethereum'; gear badge changed to '2'"
+        },
+        {
+          "action": "Inspect list controls",
+          "expected": "User-added list can be managed",
+          "observed": "Compound row has enabled toggle and active Delete button"
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          "group-a-new-list-added.png"
+        ],
+        "consoleErrors": "none",
+        "network": "fetch(URL) returned valid tokenlist JSON"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-LIST-009",
+      "title": "Add by URL handles errors",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "Try non-tokenlist JSON URL (https://api.github.com)",
+          "expected": "Validation error and no panel mutation",
+          "observed": "Error shown: 'Invalid tokenlist: must have name and tokens array'; list count stayed 1"
+        },
+        {
+          "action": "Try invalid URL (https://bad.invalid/tokenlist.json)",
+          "expected": "Fetch error and no panel mutation",
+          "observed": "Error shown: 'Failed to fetch: Failed to fetch'; list count remained unchanged"
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          "group-a-url-error-invalid-json.png",
+          "group-a-url-error-displayed.png"
+        ],
+        "consoleErrors": "none",
+        "network": "invalid URL fetch rejected"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-LIST-010",
+      "title": "Visual indicators for list state",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "Inspect tokenlist rows in modal",
+          "expected": "Each row shows name, token count, and enabled/disabled indicator",
+          "observed": "Rows render tokenlist-item-name, tokenlist-item-count, and toggle indicator state"
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          "group-a-modal-open.png",
+          "group-a-new-list-added.png"
+        ],
+        "consoleErrors": "none",
+        "network": "N/A"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-LIST-012",
+      "title": "URL scheme restricted to HTTPS",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "Attempt addTokenlistByUrl('javascript:alert(1)')",
+          "expected": "Rejected with scheme error",
+          "observed": "Error shown: 'Only https:// URLs are allowed'"
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          "group-a-scheme-rejected.png"
+        ],
+        "consoleErrors": "none",
+        "network": "No request dispatched for non-https scheme"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-CROSS-001",
+      "title": "Autocomplete uses managed tokenlists",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "After adding Compound list, search 'cUNI' in single-token input",
+          "expected": "Autocomplete includes token from new list with source label",
+          "observed": "Dropdown showed 'cUNI — Compound Uniswap (...)' with source 'Compound'"
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          "group-a-autocomplete-new-tokens.png"
+        ],
+        "consoleErrors": "none",
+        "network": "N/A"
+      },
+      "issues": null
+    }
+  ],
+  "frictions": [
+    {
+      "description": "Browser occasionally jumped to about:blank during long command chains.",
+      "resolved": true,
+      "resolution": "Used shorter command sequences and re-opened localhost before each isolated check.",
+      "affectedAssertions": [
+        "VAL-LIST-009"
+      ]
+    }
+  ],
+  "blockers": [],
+  "summary": "Tested 7 assertions in group-a: all passed. Gear modal behavior, URL add/error handling, HTTPS enforcement, visual indicators, and autocomplete integration with newly managed lists were confirmed with screenshots and DOM state checks."
+}

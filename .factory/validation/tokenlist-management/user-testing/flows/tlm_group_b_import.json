@@ -1,0 +1,21 @@
+{
+  "name": "tlm_group_b Import Test",
+  "version": { "major": 1, "minor": 0, "patch": 0 },
+  "timestamp": "2026-03-02T00:00:00Z",
+  "tokens": [
+    {
+      "chainId": 1,
+      "address": "0x1111111111111111111111111111111111111111",
+      "name": "TLM Group B Test Token",
+      "symbol": "TLMGB",
+      "decimals": 18
+    },
+    {
+      "chainId": 42161,
+      "address": "0x2222222222222222222222222222222222222222",
+      "name": "TLM Group B Arb Token",
+      "symbol": "TLMGBARB",
+      "decimals": 18
+    }
+  ]
+}

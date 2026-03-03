@@ -26,6 +26,7 @@ Testing surface: tools, URLs, setup steps, isolation notes, known quirks.
 - Token input is pre-filled with DAI on load; tests that type a new query should clear the field first
 - If the autocomplete "No matches" dropdown overlaps submit buttons, press `Escape` before clicking submit
 - In headless runs, `Escape`/`Tab` key tests can occasionally bounce to `about:blank`; reopen `http://localhost:8000` and continue
+- Tokenlist add-by-URL error banners auto-clear after ~5 seconds; capture screenshots/evidence immediately after triggering the error
 
 ## Test Isolation
 

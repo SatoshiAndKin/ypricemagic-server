@@ -1,0 +1,21 @@
+{
+  "name": "<img onerror=alert('xss-tlm-group-b')>Malicious List",
+  "version": { "major": 1, "minor": 0, "patch": 0 },
+  "timestamp": "2024-01-01T00:00:00Z",
+  "tokens": [
+    {
+      "chainId": 1,
+      "address": "0xAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+      "name": "<script>alert('xss-name')</script>Evil Token",
+      "symbol": "<img src=x onerror=alert('xss-sym')>XSS",
+      "decimals": 18
+    },
+    {
+      "chainId": 1,
+      "address": "0xBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB",
+      "name": "Normal Token<script>document.title='hacked'</script>",
+      "symbol": "NORM\"onclick=\"alert(1)",
+      "decimals": 18
+    }
+  ]
+}
