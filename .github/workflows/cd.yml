@@ -82,7 +82,7 @@ jobs:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_KEY }}
-          source: docker-compose.yml
+          source: "docker-compose.yml,scripts/strip_depends_on.py"
           target: ~/ypm
 
       - name: Deploy to server
@@ -109,9 +109,19 @@ jobs:
             source .env
             set +a
 
-            # Deploy the stack
+            # Render a Swarm-compatible compose file using docker compose config
+            # This strips unsupported directives like extended depends_on with condition:
+            # Swarm doesn't support depends_on with condition: service_healthy
+            docker compose config -o docker-stack.yml
+
+            # Strip extended depends_on conditions (Swarm doesn't support them)
+            # Use the Python script we copied to the server
+            docker run --rm -v "$(pwd):/work" -w /work python:3.12-alpine sh -c \
+              "pip install --quiet pyyaml && python3 scripts/strip_depends_on.py docker-stack.yml"
+
+            # Deploy the stack using the rendered Swarm-compatible file
             # Note: docker stack deploy ignores build: sections, so we pre-pull
-            docker stack deploy -c docker-compose.yml ypm --with-registry-auth
+            docker stack deploy -c docker-stack.yml ypm --with-registry-auth
 
             echo "Deploy initiated. Check 'docker service ls' and 'docker service logs ypm_ypm-ethereum' for status."
 
