@@ -312,7 +312,7 @@ def _handle_price_error(e: Exception, token: str, block: int, duration_ms: int) 
         )
     return _make_error_response(
         500,
-        f"Price lookup failed for {token} at block {block}. Check server logs.",
+        f"Price lookup failed for {token} at block {block}: {msg}",
     )
 
 
@@ -491,7 +491,7 @@ async def price(
         logger.warning("price_not_found", token=params.token[:10], block=actual_block)
         return _make_error_response(
             404,
-            f"No price found for {params.token} at block {actual_block}",
+            f"No price found for {params.token} at block {actual_block} on {CHAIN_NAME}",
         )
 
     duration_ms = int((time.monotonic() - start) * 1000)
@@ -834,19 +834,32 @@ INDEX_HTML = """<!DOCTYPE html>
       const input = document.getElementById(blockId);
       const hint = document.getElementById(hintId);
 
+      function switchToDatePicker() {
+        input.type = 'datetime-local';
+        input.value = '';
+        hint.innerHTML = 'Pick a date/time. <a href="#" style="color:#58a6ff;cursor:pointer;" id="' + blockId + '-clear">Clear</a> to switch back to block number.';
+        document.getElementById(blockId + '-clear').addEventListener('click', function(e) {
+          e.preventDefault();
+          switchToBlock();
+        });
+      }
+
+      function switchToBlock() {
+        input.type = 'text';
+        input.value = '';
+        input.placeholder = 'e.g. 18000000';
+        hint.textContent = 'Type a number for block, or type "/" to pick a date';
+      }
+
       input.addEventListener('input', function() {
         if (this.type === 'text' && this.value.includes('/')) {
-          this.type = 'datetime-local';
-          this.value = '';
-          hint.textContent = 'Pick a date/time. Clear to switch back to block number.';
+          switchToDatePicker();
         }
       });
 
       input.addEventListener('change', function() {
         if (this.type === 'datetime-local' && !this.value) {
-          this.type = 'text';
-          this.placeholder = 'e.g. 18000000';
-          hint.textContent = 'Type a number for block, or type "/" to pick a date';
+          switchToBlock();
         }
       });
     }
@@ -1143,7 +1156,15 @@ INDEX_HTML = """<!DOCTYPE html>
       priceBlockEl.type = 'datetime-local';
       const d = new Date(params.get('timestamp'));
       if (!isNaN(d)) priceBlockEl.value = d.toISOString().slice(0, 16);
-      document.getElementById('price-block-hint').textContent = 'Pick a date/time. Clear to switch back to block number.';
+      const priceHint = document.getElementById('price-block-hint');
+      priceHint.innerHTML = 'Pick a date/time. <a href="#" style="color:#58a6ff;cursor:pointer;" id="price-block-clear-restore">Clear</a> to switch back to block number.';
+      document.getElementById('price-block-clear-restore').addEventListener('click', function(e) {
+        e.preventDefault();
+        priceBlockEl.type = 'text';
+        priceBlockEl.value = '';
+        priceBlockEl.placeholder = 'e.g. 18000000';
+        priceHint.textContent = 'Type a number for block, or type "/" to pick a date';
+      });
     }
     if (params.get('amount')) document.getElementById('price-amount').value = params.get('amount');
     if (params.get('skip_cache') === 'true') document.getElementById('price-skip-cache').checked = true;
