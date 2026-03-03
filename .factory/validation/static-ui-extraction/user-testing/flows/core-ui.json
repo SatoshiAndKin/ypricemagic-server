@@ -1,0 +1,107 @@
+{
+  "groupId": "core-ui",
+  "milestone": "static-ui-extraction",
+  "testedAt": "2026-03-03T05:10:30Z",
+  "credentials": {
+    "account": "static-validator-a@example.test",
+    "namespace": "static_ui_flow_a"
+  },
+  "assertionsTested": [
+    "VAL-STATIC-001",
+    "VAL-STATIC-002",
+    "VAL-STATIC-003",
+    "VAL-STATIC-006",
+    "VAL-STATIC-007",
+    "VAL-STATIC-009"
+  ],
+  "passed": [
+    {
+      "id": "VAL-STATIC-001",
+      "title": "Static files served correctly",
+      "steps": [
+        { "action": "Navigate to http://localhost:8000/", "expected": "Page loads from separate static files", "observed": "Page loaded with title 'ypricemagic API', all UI elements rendered" },
+        { "action": "Check network requests for static assets", "expected": "GET /static/js/app.js -> 200 and GET /static/css/style.css -> 200", "observed": "GET /static/css/style.css => 200 OK, GET /static/js/app.js => 200 OK" },
+        { "action": "Verify page renders correctly", "expected": "Chain selector, Single Token Price, Batch Token Pricing, Token Classification sections visible", "observed": "All sections rendered correctly with form elements" }
+      ],
+      "evidence": {
+        "screenshots": ["val-static-001-page-loaded.png"],
+        "consoleErrors": "Only /favicon.ico 404 (known quirk per guidance)",
+        "network": "GET / -> 200, GET /static/css/style.css -> 200, GET /static/js/app.js -> 200"
+      }
+    },
+    {
+      "id": "VAL-STATIC-002",
+      "title": "Chain selector works",
+      "steps": [
+        { "action": "Select Ethereum from chain dropdown", "expected": "Ethereum selected", "observed": "Ethereum selected (default)" },
+        { "action": "Select Arbitrum from chain dropdown", "expected": "Arbitrum selected and retained", "observed": "Arbitrum selected and retained" },
+        { "action": "Select Optimism from chain dropdown", "expected": "Optimism selected and retained", "observed": "Optimism selected and retained" },
+        { "action": "Select Base from chain dropdown", "expected": "Base selected and retained", "observed": "Base selected and retained" }
+      ],
+      "evidence": {
+        "screenshots": ["val-static-001-page-loaded.png", "val-static-002-arbitrum.png", "val-static-002-optimism.png", "val-static-002-base.png"],
+        "consoleErrors": "none",
+        "network": "N/A (client-side only)"
+      }
+    },
+    {
+      "id": "VAL-STATIC-003",
+      "title": "Single price form works",
+      "steps": [
+        { "action": "Select Ethereum chain", "expected": "Ethereum selected", "observed": "Ethereum selected" },
+        { "action": "Verify pre-filled DAI address (<DAI_TOKEN_ADDRESS>)", "expected": "Token address field populated", "observed": "DAI address pre-filled" },
+        { "action": "Click Get Price button", "expected": "Price result displayed with chain, token, block, price, cached, block timestamp", "observed": "Price Result displayed: chain=ethereum, token=<DAI_TOKEN_ADDRESS>, block=24574738, block_timestamp=1772514467, price=1, cached=no" }
+      ],
+      "evidence": {
+        "screenshots": ["val-static-003-price-result.png"],
+        "consoleErrors": "none",
+        "network": "GET /ethereum/price?token=<DAI_TOKEN_ADDRESS> => 200 OK"
+      }
+    },
+    {
+      "id": "VAL-STATIC-006",
+      "title": "Date picker switching",
+      "steps": [
+        { "action": "Type '/' in block field", "expected": "Input switches to datetime-local picker", "observed": "Input type changed from 'text' to 'datetime-local', hint text changed to 'Pick a date/time. Clear to switch back to block number.'" },
+        { "action": "Click 'Clear' link", "expected": "Input switches back to text for block number", "observed": "Input type reverted to 'text', hint text restored to 'Block number, or type \"/\" for a date picker. Defaults to latest block.'" }
+      ],
+      "evidence": {
+        "screenshots": ["val-static-006-date-picker-active.png", "val-static-006-block-input-restored.png"],
+        "consoleErrors": "none",
+        "network": "N/A (client-side only)",
+        "jsEval": "document.getElementById('price-block').type returned 'datetime-local' after typing '/', then 'text' after clearing"
+      }
+    },
+    {
+      "id": "VAL-STATIC-007",
+      "title": "URL parameter restoration",
+      "steps": [
+        { "action": "Navigate to /?chain=arbitrum&token=<ARBITRUM_USDT_ADDRESS>&block=12345", "expected": "Form pre-filled with chain=Arbitrum, token=<ARBITRUM_USDT_ADDRESS>, block=12345", "observed": "Chain selector shows Arbitrum, token address field contains <ARBITRUM_USDT_ADDRESS>, block field contains 12345" }
+      ],
+      "evidence": {
+        "screenshots": ["val-static-007-prefilled-form.png"],
+        "consoleErrors": "none (only /favicon.ico 404 known quirk)",
+        "network": "N/A (pre-fill is client-side from URL params)"
+      }
+    },
+    {
+      "id": "VAL-STATIC-009",
+      "title": "Error responses display correctly",
+      "steps": [
+        { "action": "Set token address to '0xINVALID'", "expected": "Invalid address entered in form", "observed": "Token address field set to 0xINVALID" },
+        { "action": "Click Get Price", "expected": "Error message displayed in result area, not raw 400 page", "observed": "Error message 'Invalid token address: 0xINVALID' displayed in styled error container within the page" }
+      ],
+      "evidence": {
+        "screenshots": ["val-static-009-error-displayed.png"],
+        "consoleErrors": "Failed to load resource: 400 Bad Request (expected for invalid token)",
+        "network": "GET /ethereum/price?token=0xINVALID => 400 Bad Request"
+      }
+    }
+  ],
+  "failed": [],
+  "blocked": [],
+  "frictions": [],
+  "blockers": [],
+  "toolsUsed": ["playwright-mcp", "curl"],
+  "summary": "Tested 6 assertions: all 6 passed. VAL-STATIC-001 (static files served at /static/js/app.js and /static/css/style.css with 200), VAL-STATIC-002 (all 4 chains selectable and retained), VAL-STATIC-003 (single price form returns correct result from /ethereum/price), VAL-STATIC-006 (date picker toggle via '/' and 'Clear' works correctly), VAL-STATIC-007 (URL params pre-fill chain/token/block), VAL-STATIC-009 (invalid token shows styled error message, not raw error page)."
+}

@@ -27,3 +27,11 @@ Testing surface: tools, URLs, setup steps, isolation notes, known quirks.
 ## Test Isolation
 
 Each browser session gets fresh localStorage. Use incognito/private windows if needed to test clean-slate behavior.
+
+## Flow Validator Guidance: web-ui
+
+- Use a dedicated browser session per flow validator worker to avoid shared UI state.
+- Do not rely on prior localStorage/sessionStorage values from other validators.
+- Stay within `http://localhost:8000` and do not use off-limits ports.
+- For static-ui-extraction validation, avoid mutating tokenlist/localStorage settings unless required by the assigned assertion.
+- Capture clear evidence for each assertion: UI snapshot/screenshot plus matching network or terminal proof where specified.
