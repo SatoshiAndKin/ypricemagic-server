@@ -40,3 +40,27 @@ td.null { color: #666; font-style: italic; }
 .token-row .btn-remove:hover { background: #c0392b; }
 .btn-add { background: #27ae60; color: white; border: none; border-radius: 4px; padding: 12px 24px; cursor: pointer; font-size: 16px; margin-top: 4px; min-width: 160px; text-align: center; }
 .btn-add:hover { background: #219a52; }
+
+/* Autocomplete dropdown */
+.autocomplete-dropdown { position: absolute; top: 100%; left: 0; right: 0; background: #2d2d2d; border: 1px solid #444; border-radius: 4px; margin-top: 2px; max-height: 300px; overflow-y: auto; z-index: 1000; box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
+.autocomplete-item { padding: 10px 12px; cursor: pointer; border-bottom: 1px solid #333; }
+.autocomplete-item:last-child { border-bottom: none; }
+.autocomplete-item:hover, .autocomplete-item.highlighted { background: #3d3d3d; }
+.autocomplete-main { color: #d4d4d4; font-family: monospace; font-size: 13px; }
+.autocomplete-addr { color: #888; font-size: 11px; }
+.autocomplete-source { color: #666; font-size: 10px; margin-top: 2px; }
+.autocomplete-no-match { padding: 10px 12px; color: #888; font-size: 13px; text-align: center; }
+
+/* Modal overlay */
+.modal-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7); z-index: 2000; align-items: center; justify-content: center; }
+.modal { background: #2d2d2d; border-radius: 8px; padding: 24px; max-width: 500px; width: 90%; box-shadow: 0 8px 32px rgba(0,0,0,0.5); }
+.modal-title { color: #ffaa00; font-size: 20px; font-weight: 600; margin-bottom: 12px; }
+.modal-message { color: #d4d4d4; font-size: 14px; line-height: 1.5; margin-bottom: 20px; }
+.modal-buttons { display: flex; gap: 12px; flex-wrap: wrap; justify-content: flex-end; }
+.modal-btn { padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; min-width: 120px; }
+.modal-btn-save { background: #27ae60; color: white; }
+.modal-btn-save:hover { background: #219a52; }
+.modal-btn-continue { background: #0066cc; color: white; }
+.modal-btn-continue:hover { background: #0052a3; }
+.modal-btn-reject { background: #e74c3c; color: white; }
+.modal-btn-reject:hover { background: #c0392b; }

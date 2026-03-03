@@ -3,6 +3,18 @@ function getChain() {
   return document.getElementById('chain').value;
 }
 
+// Chain ID mapping
+const CHAIN_IDS = {
+  ethereum: 1,
+  arbitrum: 42161,
+  optimism: 10,
+  base: 8453
+};
+
+function getChainId() {
+  return CHAIN_IDS[getChain()] || 1;
+}
+
 function escapeHtml(str) {
   if (str == null) return '';
   return String(str).replace(/[&<>"']/g, function(c) {
@@ -18,6 +30,550 @@ function showError(resultEl, msg) {
 function showLoading(resultEl, msg) {
   resultEl.className = 'result show';
   resultEl.innerHTML = '<div class="result-header">' + escapeHtml(msg) + '</div>';
+}
+
+// Tokenlist management
+let tokenlists = [];
+let tokenIndex = new Map(); // Map<chainId, Map<lowercaseAddress, token>>
+
+async function loadTokenlists() {
+  tokenlists = [];
+  tokenIndex.clear();
+
+  // Load Uniswap default tokenlist
+  try {
+    const res = await fetch('/static/tokenlists/uniswap-default.json');
+    if (res.ok) {
+      const data = await res.json();
+      data.enabled = true; // Default list is always enabled
+      data.isDefault = true; // Cannot be deleted
+      tokenlists.push(data);
+    }
+  } catch (e) {
+    console.error('Failed to load Uniswap tokenlist:', e);
+  }
+
+  // Load user tokenlists from localStorage
+  try {
+    const savedLists = JSON.parse(localStorage.getItem('tokenlists') || '[]');
+    for (const list of savedLists) {
+      if (list.name && Array.isArray(list.tokens)) {
+        tokenlists.push(list);
+      }
+    }
+  } catch (e) {
+    console.error('Failed to load localStorage tokenlists:', e);
+  }
+
+  // Load local tokens (saved via unknown token modal)
+  try {
+    const localTokens = JSON.parse(localStorage.getItem('localTokens') || '[]');
+    if (localTokens.length > 0) {
+      tokenlists.push({
+        name: 'Local Tokens',
+        version: { major: 1, minor: 0, patch: 0 },
+        timestamp: new Date().toISOString(),
+        tokens: localTokens,
+        enabled: true,
+        isLocal: true
+      });
+    }
+  } catch (e) {
+    console.error('Failed to load local tokens:', e);
+  }
+
+  // Build index
+  rebuildTokenIndex();
+}
+
+function rebuildTokenIndex() {
+  tokenIndex.clear();
+
+  for (const list of tokenlists) {
+    if (!list.enabled) continue;
+
+    for (const token of (list.tokens || [])) {
+      const chainId = token.chainId;
+      const addrLower = (token.address || '').toLowerCase();
+
+      if (!chainId || !addrLower) continue;
+
+      if (!tokenIndex.has(chainId)) {
+        tokenIndex.set(chainId, new Map());
+      }
+
+      const chainMap = tokenIndex.get(chainId);
+
+      // Only add if not already present (first list wins for dedup)
+      if (!chainMap.has(addrLower)) {
+        chainMap.set(addrLower, {
+          ...token,
+          sourceList: list.name
+        });
+      }
+    }
+  }
+}
+
+function getEnabledTokenlists() {
+  return tokenlists.filter(l => l.enabled);
+}
+
+function saveLocalTokens() {
+  const localList = tokenlists.find(l => l.isLocal);
+  if (localList) {
+    localStorage.setItem('localTokens', JSON.stringify(localList.tokens || []));
+  } else {
+    localStorage.setItem('localTokens', '[]');
+  }
+}
+
+function addLocalToken(token) {
+  let localList = tokenlists.find(l => l.isLocal);
+  if (!localList) {
+    localList = {
+      name: 'Local Tokens',
+      version: { major: 1, minor: 0, patch: 0 },
+      timestamp: new Date().toISOString(),
+      tokens: [],
+      enabled: true,
+      isLocal: true
+    };
+    tokenlists.push(localList);
+  }
+
+  // Check if token already exists
+  const exists = localList.tokens.some(t =>
+    t.chainId === token.chainId &&
+    t.address.toLowerCase() === token.address.toLowerCase()
+  );
+
+  if (!exists) {
+    localList.tokens.push(token);
+    saveLocalTokens();
+    rebuildTokenIndex();
+  }
+}
+
+function isValidHexAddress(str) {
+  return /^0x[a-fA-F0-9]{40}$/.test(str);
+}
+
+function isTokenInLists(address, chainId) {
+  const chainMap = tokenIndex.get(chainId);
+  if (!chainMap) return false;
+  return chainMap.has(address.toLowerCase());
+}
+
+// Autocomplete component
+class TokenAutocomplete {
+  constructor(inputEl, options = {}) {
+    this.input = inputEl;
+    this.options = options;
+    this.dropdown = null;
+    this.matches = [];
+    this.highlightIndex = -1;
+    this.debounceTimer = null;
+    this.isOpen = false;
+    this.suppressModal = options.suppressModal || false; // For pre-filled values
+    this.wasUserEdited = false;
+
+    this.createDropdown();
+    this.attachEvents();
+  }
+
+  createDropdown() {
+    this.dropdown = document.createElement('div');
+    this.dropdown.className = 'autocomplete-dropdown';
+    this.dropdown.style.display = 'none';
+    this.input.parentNode.style.position = 'relative';
+    this.input.parentNode.appendChild(this.dropdown);
+  }
+
+  attachEvents() {
+    // Input handler with debounce
+    this.input.addEventListener('input', () => {
+      this.wasUserEdited = true;
+      this.scheduleSearch();
+    });
+
+    // Focus handler - show dropdown on focus if there's content
+    this.input.addEventListener('focus', () => {
+      if (this.input.value.length >= 1 && this.matches.length > 0) {
+        this.showDropdown();
+      }
+    });
+
+    // Blur handler - close dropdown when focus leaves
+    this.input.addEventListener('blur', (e) => {
+      // Delay to allow click on dropdown items
+      setTimeout(() => {
+        if (!this.dropdown.contains(document.activeElement)) {
+          this.hideDropdown();
+        }
+      }, 150);
+    });
+
+    // Keyboard navigation
+    this.input.addEventListener('keydown', (e) => {
+      if (!this.isOpen) {
+        if (e.key === 'ArrowDown' && this.input.value.length >= 1) {
+          this.search();
+          if (this.matches.length > 0) {
+            this.showDropdown();
+            this.highlightIndex = 0;
+            this.updateHighlight();
+          }
+        }
+        return;
+      }
+
+      switch (e.key) {
+        case 'ArrowDown':
+          e.preventDefault();
+          this.highlightIndex = Math.min(this.highlightIndex + 1, this.matches.length - 1);
+          this.updateHighlight();
+          break;
+        case 'ArrowUp':
+          e.preventDefault();
+          this.highlightIndex = Math.max(this.highlightIndex - 1, 0);
+          this.updateHighlight();
+          break;
+        case 'Enter':
+          e.preventDefault();
+          if (this.highlightIndex >= 0 && this.highlightIndex < this.matches.length) {
+            this.selectToken(this.matches[this.highlightIndex]);
+          } else if (this.matches.length > 0) {
+            this.selectToken(this.matches[0]);
+          }
+          break;
+        case 'Escape':
+          e.preventDefault();
+          this.hideDropdown();
+          break;
+        case 'Tab':
+          this.hideDropdown();
+          // Let default behavior move focus
+          break;
+      }
+    });
+  }
+
+  scheduleSearch() {
+    clearTimeout(this.debounceTimer);
+    this.debounceTimer = setTimeout(() => {
+      this.search();
+    }, 150);
+  }
+
+  search() {
+    const query = this.input.value.trim().toLowerCase();
+    const chainId = getChainId();
+
+    if (query.length < 1) {
+      this.matches = [];
+      this.hideDropdown();
+      return;
+    }
+
+    const chainMap = tokenIndex.get(chainId);
+    if (!chainMap) {
+      this.matches = [];
+      this.showNoMatches();
+      return;
+    }
+
+    // Search by symbol, name, or address prefix
+    this.matches = [];
+    for (const [addr, token] of chainMap) {
+      const symbol = (token.symbol || '').toLowerCase();
+      const name = (token.name || '').toLowerCase();
+      const address = (token.address || '').toLowerCase();
+
+      if (symbol.startsWith(query) ||
+          symbol.includes(query) ||
+          name.includes(query) ||
+          address.startsWith(query)) {
+        this.matches.push(token);
+      }
+
+      if (this.matches.length >= 20) break; // Limit results
+    }
+
+    // Sort: exact symbol match first, then symbol prefix, then name match, then address prefix
+    this.matches.sort((a, b) => {
+      const aSymbol = (a.symbol || '').toLowerCase();
+      const bSymbol = (b.symbol || '').toLowerCase();
+
+      // Exact symbol match
+      if (aSymbol === query && bSymbol !== query) return -1;
+      if (bSymbol === query && aSymbol !== query) return 1;
+
+      // Symbol prefix
+      if (aSymbol.startsWith(query) && !bSymbol.startsWith(query)) return -1;
+      if (bSymbol.startsWith(query) && !aSymbol.startsWith(query)) return 1;
+
+      // Alphabetical by symbol
+      return aSymbol.localeCompare(bSymbol);
+    });
+
+    this.highlightIndex = -1;
+
+    if (this.matches.length === 0) {
+      this.showNoMatches();
+    } else {
+      this.renderDropdown();
+      this.showDropdown();
+    }
+  }
+
+  renderDropdown() {
+    let html = '';
+    for (let i = 0; i < this.matches.length; i++) {
+      const token = this.matches[i];
+      const addrShort = token.address.slice(0, 6) + '...' + token.address.slice(-4);
+
+      html += '<div class="autocomplete-item" data-index="' + i + '">' +
+        '<div class="autocomplete-main">' + escapeHtml(token.symbol) + ' — ' + escapeHtml(token.name) + ' <span class="autocomplete-addr">(' + escapeHtml(addrShort) + ')</span></div>' +
+        '<div class="autocomplete-source">' + escapeHtml(token.sourceList) + '</div>' +
+      '</div>';
+    }
+
+    this.dropdown.innerHTML = html;
+
+    // Attach click handlers to items
+    const items = this.dropdown.querySelectorAll('.autocomplete-item');
+    items.forEach(item => {
+      item.addEventListener('mousedown', (e) => {
+        e.preventDefault(); // Prevent input blur
+        const index = parseInt(item.dataset.index, 10);
+        this.selectToken(this.matches[index]);
+      });
+
+      item.addEventListener('mouseenter', () => {
+        this.highlightIndex = parseInt(item.dataset.index, 10);
+        this.updateHighlight();
+      });
+    });
+  }
+
+  showNoMatches() {
+    this.dropdown.innerHTML = '<div class="autocomplete-no-match">No matches</div>';
+    this.showDropdown();
+  }
+
+  showDropdown() {
+    this.dropdown.style.display = 'block';
+    this.isOpen = true;
+  }
+
+  hideDropdown() {
+    this.dropdown.style.display = 'none';
+    this.isOpen = false;
+    this.highlightIndex = -1;
+  }
+
+  updateHighlight() {
+    const items = this.dropdown.querySelectorAll('.autocomplete-item');
+    items.forEach((item, i) => {
+      if (i === this.highlightIndex) {
+        item.classList.add('highlighted');
+      } else {
+        item.classList.remove('highlighted');
+      }
+    });
+
+    // Scroll highlighted item into view
+    if (this.highlightIndex >= 0 && items[this.highlightIndex]) {
+      items[this.highlightIndex].scrollIntoView({ block: 'nearest' });
+    }
+  }
+
+  selectToken(token) {
+    // Save current values of adjacent fields before updating
+    const form = this.input.closest('form');
+    const currentBlock = form ? form.querySelector('input[id$="-block"]') : null;
+    const currentAmount = form ? form.querySelector('input[id$="-amount"]') : null;
+    const currentIgnorePools = form ? form.querySelector('input[id$="-ignore-pools"]') : null;
+
+    const blockValue = currentBlock ? currentBlock.value : '';
+    const amountValue = currentAmount ? currentAmount.value : '';
+    const ignorePoolsValue = currentIgnorePools ? currentIgnorePools.value : '';
+
+    // Update token address
+    this.input.value = token.address;
+    this.hideDropdown();
+
+    // Restore adjacent field values (in case form framework resets them)
+    if (currentBlock) currentBlock.value = blockValue;
+    if (currentAmount) currentAmount.value = amountValue;
+    if (currentIgnorePools) currentIgnorePools.value = ignorePoolsValue;
+  }
+
+  destroy() {
+    this.hideDropdown();
+    if (this.dropdown && this.dropdown.parentNode) {
+      this.dropdown.parentNode.removeChild(this.dropdown);
+    }
+    clearTimeout(this.debounceTimer);
+  }
+}
+
+// Unknown token warning modal
+let modalOverlay = null;
+let modalCallback = null;
+
+function createModal() {
+  if (modalOverlay) return modalOverlay;
+
+  modalOverlay = document.createElement('div');
+  modalOverlay.className = 'modal-overlay';
+  modalOverlay.innerHTML =
+    '<div class="modal">' +
+      '<div class="modal-title">Unknown Token</div>' +
+      '<div class="modal-message">This token address is not in any enabled tokenlist for the selected chain. What would you like to do?</div>' +
+      '<div class="modal-buttons">' +
+        '<button type="button" class="modal-btn modal-btn-save">Save to Local List</button>' +
+        '<button type="button" class="modal-btn modal-btn-continue">Continue</button>' +
+        '<button type="button" class="modal-btn modal-btn-reject">Reject</button>' +
+      '</div>' +
+    '</div>';
+
+  document.body.appendChild(modalOverlay);
+
+  // Button handlers
+  modalOverlay.querySelector('.modal-btn-save').addEventListener('click', () => {
+    closeModal('save');
+  });
+
+  modalOverlay.querySelector('.modal-btn-continue').addEventListener('click', () => {
+    closeModal('continue');
+  });
+
+  modalOverlay.querySelector('.modal-btn-reject').addEventListener('click', () => {
+    closeModal('reject');
+  });
+
+  // Close on overlay click
+  modalOverlay.addEventListener('click', (e) => {
+    if (e.target === modalOverlay) {
+      closeModal('reject');
+    }
+  });
+
+  // Escape key
+  modalOverlay.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      closeModal('reject');
+    }
+  });
+
+  return modalOverlay;
+}
+
+function showModal(token, chain, chainId, callback) {
+  createModal();
+  modalCallback = { fn: callback, token, chain, chainId };
+  modalOverlay.style.display = 'flex';
+
+  // Focus the first button
+  modalOverlay.querySelector('.modal-btn-save').focus();
+}
+
+function closeModal(action) {
+  if (!modalOverlay) return;
+
+  modalOverlay.style.display = 'none';
+
+  if (modalCallback) {
+    const { fn, token, chain, chainId } = modalCallback;
+
+    if (action === 'save') {
+      // Add to local tokenlist
+      addLocalToken({
+        chainId: chainId,
+        address: token,
+        symbol: 'Unknown',
+        name: 'Unknown Token',
+        decimals: 18
+      });
+      fn(true, 'save'); // proceed
+    } else if (action === 'continue') {
+      fn(true, 'continue'); // proceed without saving
+    } else {
+      fn(false, 'reject'); // cancel
+    }
+
+    modalCallback = null;
+  }
+}
+
+// Autocomplete instances registry
+const autocompleteInstances = new Map();
+
+function createAutocomplete(inputEl, options = {}) {
+  if (autocompleteInstances.has(inputEl)) {
+    return autocompleteInstances.get(inputEl);
+  }
+
+  const ac = new TokenAutocomplete(inputEl, options);
+  autocompleteInstances.set(inputEl, ac);
+  return ac;
+}
+
+function destroyAutocomplete(inputEl) {
+  const ac = autocompleteInstances.get(inputEl);
+  if (ac) {
+    ac.destroy();
+    autocompleteInstances.delete(inputEl);
+  }
+}
+
+// Form submission with unknown token check
+function checkUnknownToken(input, proceedCallback) {
+  const value = input.value.trim();
+
+  // Skip check if value is empty
+  if (!value) {
+    proceedCallback(true);
+    return;
+  }
+
+  // Skip check if not a valid hex address
+  if (!isValidHexAddress(value)) {
+    proceedCallback(true);
+    return;
+  }
+
+  // Get autocomplete instance
+  const ac = autocompleteInstances.get(input);
+
+  // Skip modal if suppressModal is set (pre-filled values)
+  // But only skip if it wasn't user-edited
+  if (ac && ac.suppressModal && !ac.wasUserEdited) {
+    proceedCallback(true);
+    return;
+  }
+
+  const chainId = getChainId();
+
+  // Check if token is in lists
+  if (isTokenInLists(value, chainId)) {
+    proceedCallback(true);
+    return;
+  }
+
+  // Show modal
+  const chain = getChain();
+  showModal(value, chain, chainId, (shouldProceed, action) => {
+    if (shouldProceed) {
+      proceedCallback(true);
+    } else {
+      // Return focus to input
+      input.focus();
+      proceedCallback(false);
+    }
+  });
 }
 
 // Switch block field to date picker when "/" is typed
@@ -62,13 +618,14 @@ setupDatePickerSwitch('batch-block', 'batch-block-hint');
 const priceForm = document.getElementById('price-form');
 const priceResult = document.getElementById('price-result');
 const priceSubmit = document.getElementById('price-submit');
+const priceTokenInput = document.getElementById('price-token');
 
 function chainMismatchWarning(expected, actual) {
   if (actual && actual !== expected) {
-    return `<div class="field" style="background:#553300;padding:8px;border-radius:4px;margin-bottom:12px;">
-      <div class="field-label" style="color:#ffaa00;">&#9888; Chain Mismatch</div>
-      <div class="field-value" style="color:#ffcc44;">Expected <b>${escapeHtml(expected)}</b> but backend reported <b>${escapeHtml(actual)}</b>. Check your nginx routing.</div>
-    </div>`;
+    return '<div class="field" style="background:#553300;padding:8px;border-radius:4px;margin-bottom:12px;">' +
+      '<div class="field-label" style="color:#ffaa00;">&#9888; Chain Mismatch</div>' +
+      '<div class="field-value" style="color:#ffcc44;">Expected <b>' + escapeHtml(expected) + '</b> but backend reported <b>' + escapeHtml(actual) + '</b>. Check your nginx routing.</div>' +
+    '</div>';
   }
   return '';
 }
@@ -76,79 +633,63 @@ function chainMismatchWarning(expected, actual) {
 function showPriceResult(data, chain) {
   priceResult.className = 'result show';
   const mismatch = chainMismatchWarning(chain, data.chain);
-  const timestampField = data.block_timestamp != null ? `
-    <div class="field">
-      <div class="field-label">Block Timestamp</div>
-      <div class="field-value">${escapeHtml(data.block_timestamp)}</div>
-    </div>` : '';
-  const amountField = data.amount != null ? `
-    <div class="field">
-      <div class="field-label">Amount</div>
-      <div class="field-value">${escapeHtml(data.amount)}</div>
-    </div>` : '';
-  priceResult.innerHTML = `
-    <div class="result-header">Price Result</div>${mismatch}
-    <div class="field">
-      <div class="field-label">Chain</div>
-      <div class="field-value">${escapeHtml(data.chain)}</div>
-    </div>
-    <div class="field">
-      <div class="field-label">Token</div>
-      <div class="field-value"><span class="dim">${escapeHtml(data.token)}</span></div>
-    </div>
-    <div class="field">
-      <div class="field-label">Block</div>
-      <div class="field-value">${escapeHtml(data.block)}</div>
-    </div>${timestampField}${amountField}
-    <div class="field">
-      <div class="field-label">Price (USD per token)</div>
-      <div class="field-value number">${escapeHtml(data.price)}</div>
-    </div>
-    <div class="field">
-      <div class="field-label">Cached</div>
-      <div class="field-value">${data.cached ? 'yes' : 'no'}</div>
-    </div>
-  `;
+  const timestampField = data.block_timestamp != null ?
+    '<div class="field"><div class="field-label">Block Timestamp</div><div class="field-value">' + escapeHtml(data.block_timestamp) + '</div></div>' : '';
+  const amountField = data.amount != null ?
+    '<div class="field"><div class="field-label">Amount</div><div class="field-value">' + escapeHtml(data.amount) + '</div></div>' : '';
+  priceResult.innerHTML =
+    '<div class="result-header">Price Result</div>' + mismatch +
+    '<div class="field"><div class="field-label">Chain</div><div class="field-value">' + escapeHtml(data.chain) + '</div></div>' +
+    '<div class="field"><div class="field-label">Token</div><div class="field-value"><span class="dim">' + escapeHtml(data.token) + '</span></div></div>' +
+    '<div class="field"><div class="field-label">Block</div><div class="field-value">' + escapeHtml(data.block) + '</div></div>' + timestampField + amountField +
+    '<div class="field"><div class="field-label">Price (USD per token)</div><div class="field-value number">' + escapeHtml(data.price) + '</div></div>' +
+    '<div class="field"><div class="field-label">Cached</div><div class="field-value">' + (data.cached ? 'yes' : 'no') + '</div></div>';
 }
 
 priceForm.addEventListener('submit', async (e) => {
   e.preventDefault();
-  const chain = getChain();
-  const token = document.getElementById('price-token').value.trim();
-  const blockInput = document.getElementById('price-block');
-  const blockVal = blockInput.value.trim();
-  const isDate = blockInput.type === 'datetime-local';
-  const amount = document.getElementById('price-amount').value.trim();
-  const ignorePools = document.getElementById('price-ignore-pools').value.trim();
 
-  priceSubmit.disabled = true;
-  priceSubmit.textContent = 'Fetching...';
-  showLoading(priceResult, 'Fetching price...');
+  // Check for unknown token before proceeding
+  checkUnknownToken(priceTokenInput, async (proceed) => {
+    if (!proceed) return;
 
-  try {
-    const params = new URLSearchParams({ token });
-    if (blockVal && isDate) {
-      params.set('timestamp', new Date(blockVal).toISOString());
-    } else if (blockVal) {
-      params.set('block', blockVal);
+    const chain = getChain();
+    const token = document.getElementById('price-token').value.trim();
+    const blockInput = document.getElementById('price-block');
+    const blockVal = blockInput.value.trim();
+    const isDate = blockInput.type === 'datetime-local';
+    const amount = document.getElementById('price-amount').value.trim();
+    const ignorePools = document.getElementById('price-ignore-pools').value.trim();
+
+    priceSubmit.disabled = true;
+    priceSubmit.textContent = 'Fetching...';
+    showLoading(priceResult, 'Fetching price...');
+
+    try {
+      const params = new URLSearchParams({ token });
+      if (blockVal && isDate) {
+        params.set('timestamp', new Date(blockVal).toISOString());
+      } else if (blockVal) {
+        params.set('block', blockVal);
+      }
+      if (amount) params.set('amount', amount);
+      if (ignorePools) params.set('ignore_pools', ignorePools);
+
+      const res = await fetch('/' + chain + '/price?' + params.toString());
+      const data = await res.json();
+
+      if (data.error) {
+        showError(priceResult, data.error);
+      } else {
+        showPriceResult(data, chain);
+      }
+    } catch (err) {
+      showError(priceResult, 'Request failed: ' + err.message);
+    } finally {
+      priceSubmit.disabled = false;
+      priceSubmit.textContent = 'Get Price';
     }
-    if (amount) params.set('amount', amount);
-    if (ignorePools) params.set('ignore_pools', ignorePools);
-
-    const res = await fetch('/' + chain + '/price?' + params.toString());
-    const data = await res.json();
-
-    if (data.error) {
-      showError(priceResult, data.error);
-    } else {
-      showPriceResult(data, chain);
-    }
-  } catch (err) {
-    showError(priceResult, 'Request failed: ' + err.message);
-  } finally {
-    priceSubmit.disabled = false;
-    priceSubmit.textContent = 'Get Price';
-  }
+  });
 });
 
 // Batch Pricing Form — dynamic token rows
@@ -160,21 +701,28 @@ const batchTokenRows = document.getElementById('batch-token-rows');
 function addTokenRow(token, amount) {
   const row = document.createElement('div');
   row.className = 'token-row';
-  row.innerHTML = `<input type="text" class="token-addr" placeholder="0x..." value="${escapeHtml(token || '')}">` +
-    `<input type="text" class="token-amt" placeholder="Amount (opt)" value="${escapeHtml(amount || '')}">` +
-    `<button type="button" class="btn-remove" title="Remove">&times;</button>`;
-  row.querySelector('.btn-remove').addEventListener('click', function() {
+  row.innerHTML = '<input type="text" class="token-addr" placeholder="0x..." value="' + escapeHtml(token || '') + '">' +
+    '<input type="text" class="token-amt" placeholder="Amount (opt)" value="' + escapeHtml(amount || '') + '">' +
+    '<button type="button" class="btn-remove" title="Remove">&times;</button>';
+
+  const removeBtn = row.querySelector('.btn-remove');
+  const tokenInput = row.querySelector('.token-addr');
+
+  removeBtn.addEventListener('click', function() {
+    // Destroy autocomplete before removing row
+    destroyAutocomplete(tokenInput);
     row.remove();
   });
+
   batchTokenRows.appendChild(row);
+
+  // Create autocomplete for this row
+  createAutocomplete(tokenInput);
 }
 
 document.getElementById('batch-add-token').addEventListener('click', function() {
   addTokenRow('', '');
 });
-
-// Start with one empty row
-addTokenRow('', '');
 
 function showBatchResult(data) {
   batchResult.className = 'result show';
@@ -188,30 +736,21 @@ function showBatchResult(data) {
     const priceDisplay = item.price !== null ? escapeHtml(item.price) : '<span class="null">null</span>';
     const cachedDisplay = item.cached ? 'yes' : 'no';
     const tsDisplay = item.block_timestamp !== null ? escapeHtml(item.block_timestamp) : '-';
-    rows += `<tr>
-      <td>${escapeHtml(item.token)}</td>
-      <td>${escapeHtml(item.block)}</td>
-      <td>${priceDisplay}</td>
-      <td>${tsDisplay}</td>
-      <td>${cachedDisplay}</td>
-    </tr>`;
+    rows += '<tr>' +
+      '<td>' + escapeHtml(item.token) + '</td>' +
+      '<td>' + escapeHtml(item.block) + '</td>' +
+      '<td>' + priceDisplay + '</td>' +
+      '<td>' + tsDisplay + '</td>' +
+      '<td>' + cachedDisplay + '</td>' +
+    '</tr>';
   }
 
-  batchResult.innerHTML = `
-    <div class="result-header">Batch Results (${escapeHtml(data.length)} tokens)</div>
-    <table>
-      <thead>
-        <tr>
-          <th>Token</th>
-          <th>Block</th>
-          <th>Price</th>
-          <th>Timestamp</th>
-          <th>Cached</th>
-        </tr>
-      </thead>
-      <tbody>${rows}</tbody>
-    </table>
-  `;
+  batchResult.innerHTML =
+    '<div class="result-header">Batch Results (' + escapeHtml(data.length) + ' tokens)</div>' +
+    '<table>' +
+      '<thead><tr><th>Token</th><th>Block</th><th>Price</th><th>Timestamp</th><th>Cached</th></tr></thead>' +
+      '<tbody>' + rows + '</tbody>' +
+    '</table>';
 }
 
 batchForm.addEventListener('submit', async (e) => {
@@ -275,63 +814,95 @@ batchForm.addEventListener('submit', async (e) => {
 const bucketForm = document.getElementById('bucket-form');
 const bucketResult = document.getElementById('bucket-result');
 const bucketSubmit = document.getElementById('bucket-submit');
+const bucketTokenInput = document.getElementById('bucket-token');
 
 function showBucketResult(data, chain) {
   bucketResult.className = 'result show';
   const mismatch = chainMismatchWarning(chain, data.chain);
   const bucketDisplay = data.bucket !== null ? escapeHtml(data.bucket) : '<span class="null">null</span>';
-  bucketResult.innerHTML = `
-    <div class="result-header">Classification Result</div>${mismatch}
-    <div class="field">
-      <div class="field-label">Token</div>
-      <div class="field-value"><span class="dim">${escapeHtml(data.token)}</span></div>
-    </div>
-    <div class="field">
-      <div class="field-label">Chain</div>
-      <div class="field-value">${escapeHtml(data.chain)}</div>
-    </div>
-    <div class="field">
-      <div class="field-label">Bucket</div>
-      <div class="field-value">${bucketDisplay}</div>
-    </div>
-  `;
+  bucketResult.innerHTML =
+    '<div class="result-header">Classification Result</div>' + mismatch +
+    '<div class="field"><div class="field-label">Token</div><div class="field-value"><span class="dim">' + escapeHtml(data.token) + '</span></div></div>' +
+    '<div class="field"><div class="field-label">Chain</div><div class="field-value">' + escapeHtml(data.chain) + '</div></div>' +
+    '<div class="field"><div class="field-label">Bucket</div><div class="field-value">' + bucketDisplay + '</div></div>';
 }
 
 bucketForm.addEventListener('submit', async (e) => {
   e.preventDefault();
-  const chain = getChain();
-  const token = document.getElementById('bucket-token').value.trim();
 
-  if (!token) {
-    showError(bucketResult, 'Token address is required');
-    return;
-  }
+  // Check for unknown token before proceeding
+  checkUnknownToken(bucketTokenInput, async (proceed) => {
+    if (!proceed) return;
 
-  bucketSubmit.disabled = true;
-  bucketSubmit.textContent = 'Checking...';
-  showLoading(bucketResult, 'Classifying token (this may take 10-30s)...');
+    const chain = getChain();
+    const token = document.getElementById('bucket-token').value.trim();
 
-  try {
-    const res = await fetch('/' + chain + '/check_bucket?token=' + encodeURIComponent(token));
-    const data = await res.json();
-
-    if (data.error) {
-      showError(bucketResult, data.error);
-    } else {
-      showBucketResult(data, chain);
+    if (!token) {
+      showError(bucketResult, 'Token address is required');
+      return;
     }
-  } catch (err) {
-    showError(bucketResult, 'Request failed: ' + err.message);
-  } finally {
-    bucketSubmit.disabled = false;
-    bucketSubmit.textContent = 'Check Bucket';
+
+    bucketSubmit.disabled = true;
+    bucketSubmit.textContent = 'Checking...';
+    showLoading(bucketResult, 'Classifying token (this may take 10-30s)...');
+
+    try {
+      const res = await fetch('/' + chain + '/check_bucket?token=' + encodeURIComponent(token));
+      const data = await res.json();
+
+      if (data.error) {
+        showError(bucketResult, data.error);
+      } else {
+        showBucketResult(data, chain);
+      }
+    } catch (err) {
+      showError(bucketResult, 'Request failed: ' + err.message);
+    } finally {
+      bucketSubmit.disabled = false;
+      bucketSubmit.textContent = 'Check Bucket';
+    }
+  });
+});
+
+// Chain selector change handler - update autocomplete filtering
+document.getElementById('chain').addEventListener('change', () => {
+  // Re-search all open autocompletes
+  for (const [input, ac] of autocompleteInstances) {
+    if (ac.isOpen) {
+      ac.search();
+    }
   }
+});
+
+// Initialize autocomplete on token inputs
+function initAutocompletes() {
+  // Single price token input - suppress modal for pre-filled DAI
+  createAutocomplete(priceTokenInput, { suppressModal: true });
+
+  // Bucket token input
+  createAutocomplete(bucketTokenInput);
+
+  // Start with one empty batch row (will get autocomplete in addTokenRow)
+  addTokenRow('', '');
+}
+
+// Load tokenlists and initialize
+loadTokenlists().then(() => {
+  initAutocompletes();
 });
 
 // Load URL params to restore form state
 const params = new URLSearchParams(window.location.search);
 if (params.get('chain')) document.getElementById('chain').value = params.get('chain');
-if (params.get('token')) document.getElementById('price-token').value = params.get('token');
+if (params.get('token')) {
+  priceTokenInput.value = params.get('token');
+  // Mark as suppressModal but not edited - won't trigger modal on submit
+  const ac = autocompleteInstances.get(priceTokenInput);
+  if (ac) {
+    ac.suppressModal = true;
+    ac.wasUserEdited = false;
+  }
+}
 if (params.get('block')) document.getElementById('price-block').value = params.get('block');
 if (params.get('timestamp')) {
   const priceBlockEl = document.getElementById('price-block');
@@ -358,6 +929,14 @@ if (params.get('tokens')) {
     addTokenRow(t.trim(), savedAmounts[i] ? savedAmounts[i].trim() : '');
   });
 }
-if (params.get('bucket_token')) document.getElementById('bucket-token').value = params.get('bucket_token');
+if (params.get('bucket_token')) {
+  bucketTokenInput.value = params.get('bucket_token');
+  // Mark as suppressModal for URL param
+  const ac = autocompleteInstances.get(bucketTokenInput);
+  if (ac) {
+    ac.suppressModal = true;
+    ac.wasUserEdited = false;
+  }
+}
 
 // No mutual exclusivity dispatch needed — block/date unified in one field
