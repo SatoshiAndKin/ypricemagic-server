@@ -2499,6 +2499,99 @@ class TestQuoteEndpoint:
             assert response.status_code == 400
             assert "mutually exclusive" in response.json()["error"].lower()
 
+    @pytest.mark.asyncio
+    async def test_quote_from_token_fetch_error_returns_error_envelope(
+        self, mock_y_module: None
+    ) -> None:
+        """_fetch_price error for from_token returns consistent JSON error envelope, not 500."""
+        from fastapi.testclient import TestClient
+
+        from src.server import app
+
+        # Simulate ConnectionError from _fetch_price (which retries then raises RetryError)
+        mock_get_price = AsyncMock(side_effect=ConnectionError("RPC connection failed"))
+        mock_chain = type("MockChain", (), {"height": 19000000})()
+
+        with (
+            patch("y.get_price", mock_get_price),
+            patch("brownie.chain", mock_chain),
+        ):
+            client = TestClient(app)
+            response = client.get(
+                "/quote",
+                params={"from": USDC, "to": WETH, "amount": "1000"},
+            )
+
+            # Should return error envelope, not unformatted 500
+            assert response.status_code == 500
+            data = response.json()
+            assert "error" in data
+            assert "Price lookup failed" in data["error"]
+
+    @pytest.mark.asyncio
+    async def test_quote_to_token_fetch_error_returns_error_envelope(
+        self, mock_y_module: None
+    ) -> None:
+        """_fetch_price error for to_token returns consistent JSON error envelope, not 500."""
+        from fastapi.testclient import TestClient
+
+        from src.server import app
+
+        # from_token succeeds, to_token fails
+        mock_get_price = AsyncMock(
+            side_effect=[
+                1.0,  # from_token succeeds
+                ConnectionError("RPC connection failed"),  # to_token fails
+            ]
+        )
+        mock_chain = type("MockChain", (), {"height": 19000000})()
+
+        with (
+            patch("y.get_price", mock_get_price),
+            patch("brownie.chain", mock_chain),
+        ):
+            client = TestClient(app)
+            response = client.get(
+                "/quote",
+                params={"from": USDC, "to": WETH, "amount": "1000"},
+            )
+
+            # Should return error envelope, not unformatted 500
+            assert response.status_code == 500
+            data = response.json()
+            assert "error" in data
+            assert "Price lookup failed" in data["error"]
+
+    @pytest.mark.asyncio
+    async def test_quote_to_price_zero_returns_404(self, mock_y_module: None) -> None:
+        """to_price == 0.0 returns 404 with descriptive error, not ZeroDivisionError."""
+        from fastapi.testclient import TestClient
+
+        from src.server import app
+
+        # from_token has normal price, to_token has price 0 (unpriceable/divisible by zero)
+        mock_get_price = AsyncMock(side_effect=[1.0, 0.0])
+        mock_chain = type("MockChain", (), {"height": 19000000})()
+
+        with (
+            patch("y.get_price", mock_get_price),
+            patch("brownie.chain", mock_chain),
+        ):
+            client = TestClient(app)
+            response = client.get(
+                "/quote",
+                params={"from": USDC, "to": WETH, "amount": "1000"},
+            )
+
+            # Should return 404 with descriptive error, not 500 from ZeroDivisionError
+            assert response.status_code == 404
+            data = response.json()
+            assert "error" in data
+            assert (
+                "cannot price" in data["error"].lower()
+                or "destination token" in data["error"].lower()
+            )
+
 
 class TestQuoteEndpointConcurrent:
     """Tests for concurrent quote requests."""
