@@ -1,0 +1,39 @@
+{
+  "featureId": "fix-swarm-deploy-config",
+  "reviewedAt": "2026-03-03T08:45:00.000Z",
+  "commitId": "c58d522",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "pass",
+  "codeReview": {
+    "summary": "The fix correctly addresses both blocking issues from the prior docker-swarm-deploy review. (1) All 4 chain services now have `image: ghcr.io/satoshiandkin/ypricemagic-server:latest` alongside `build: .`, enabling `docker stack deploy` while keeping `docker compose up --build` for local dev. (2) The CD workflow now sources `.env` via `set -a && source .env && set +a` before `docker stack deploy`. Additionally, `cancel-in-progress` was changed to `false` and a robust post-deploy health verification step was added (30 retries × 10s = 5 min timeout). The worker also documented Swarm deploy gotchas in `.factory/library/environment.md`.",
+    "issues": [
+      {
+        "file": ".github/workflows/cd.yml",
+        "line": 62,
+        "severity": "non_blocking",
+        "description": "The deploy job still does not declare explicit `permissions:`. The prior review noted this as non-blocking. Default permissions likely suffice (`packages: read` for image pull), but explicit declaration would improve clarity. Not addressed in this fix, acceptable since it was non-blocking."
+      },
+      {
+        "file": "docker-compose.yml",
+        "line": 20,
+        "severity": "non_blocking",
+        "description": "Swarm ignores `restart: unless-stopped` and uses `deploy.restart_policy` instead. The deploy sections still don't specify explicit `restart_policy`, relying on Swarm default (`condition: any`). This is reasonable but implicit. Not addressed in this fix, acceptable since it was non-blocking in the prior review."
+      }
+    ]
+  },
+  "sharedStateObservations": [
+    {
+      "area": "knowledge",
+      "observation": "Worker documented Docker Swarm gotchas (image: requirement, .env sourcing) in .factory/library/environment.md. This directly addresses the knowledge gap flagged in the prior review. Good practice.",
+      "evidence": ".factory/library/environment.md now has 'Docker Swarm Deploy Gotchas' and 'CD Workflow Notes' sections added in commit c58d522."
+    },
+    {
+      "area": "conventions",
+      "observation": "The deploy job lacks explicit `permissions:` declaration. All other jobs in the project workflows (ci.yml build-and-push job in cd.yml) declare permissions explicitly. This pattern inconsistency is minor but could be documented as a convention.",
+      "evidence": "cd.yml deploy job (line 62) has no `permissions:` block, while build-and-push job (line 21) declares `permissions: { contents: read, packages: write }`."
+    }
+  ],
+  "addressesFailureFrom": ".factory/validation/zero-downtime-deploy/scrutiny/reviews/docker-swarm-deploy.json",
+  "summary": "The fix adequately resolves all blocking issues from the docker-swarm-deploy review. Both critical bugs are fixed: (1) `image:` keys added to all 4 chain services for Swarm compatibility, and (2) `.env` sourced before `docker stack deploy`. The fix also addresses two non-blocking items: `cancel-in-progress: false` prevents mid-deploy cancellation, and a health verification step polls /health for up to 5 minutes post-deploy. Two prior non-blocking issues remain unfixed (missing explicit permissions on deploy job, implicit restart_policy) — both are acceptable omissions. The worker followed the infra-worker skill procedure, ran all validators, and documented learnings in the knowledge library. PASS."
+}

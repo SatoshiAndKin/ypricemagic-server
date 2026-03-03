@@ -6,50 +6,49 @@ Testing surface: tools, URLs, setup steps, isolation notes, known quirks.
 
 ## Testing Surface
 
-### API (curl)
-- Base URL: http://localhost:8000
-- Chain-specific: http://localhost:8000/{chain}/price, /prices, /check_bucket, /health
-- Aggregate health: http://localhost:8000/health
-- Prometheus (chain-specific): http://localhost:8000/{chain}/metrics/
-- OpenAPI (chain-specific): http://localhost:8000/{chain}/openapi.json
-- Browser UI: http://localhost:8000/
-- `GET /health` response shape includes `{status, chain, block, synced}` where `synced` is `true`, `false`, or `null`
+- **URL**: http://localhost:8000 (nginx proxy)
+- **Tool**: agent-browser (Playwright MCP) for UI interaction
+- **Docker**: `docker compose up -d` must be running for full integration tests
 
-### Known good test tokens (Ethereum)
-- USDC: 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48
-- DAI: 0x6B175474E89094C44Da98b954EedeAC495271d0F
-- Known block: 18000000
+## Setup
 
-### Docker Stack
-- Must be running for integration tests: `docker compose up -d`
-- Containers take ~60s to become healthy after start
-- Build takes several minutes due to ypricemagic compilation
-
-### Tools Available
-- curl for API testing
-- agent-browser for HTML UI testing
-- Docker logs: `docker compose logs ypm-ethereum --tail=20`
+1. Ensure Docker is running: `docker compose ps`
+2. If not running: `docker compose up -d` (wait ~60s for startup)
+3. Verify: `curl -sf http://localhost:8000/ethereum/health` should return 200
 
 ## Known Quirks
-- Token addresses may appear redacted in responses (42-char asterisks) — this is existing behavior from logger.py
-- First price request after container start may be slow (cold cache, brownie warming up)
-- Chain containers are independent — a test on ethereum doesn't affect arbitrum
-- `/health` may take up to ~5 seconds when sync checks timeout (`check_node_async` is wrapped with a 5s timeout)
-- nginx may mask backend 5xx details with generic `{"error":"Chain backend is unavailable"}`
-- For unresolvable-price testing, `0x0000000000000000000000000000000000000000` fails fast; some other dead addresses may run until nginx `proxy_read_timeout` (120s)
-- After a long-running timed-out price request, the same chain backend may briefly return `502` via nginx until the in-flight request clears
-- No known live token currently triggers `/check_bucket` with `bucket:null`; this path is easiest to verify via unit tests/mocking
 
-## Flow Validator Guidance: API (curl)
-- Use only your assigned assertion IDs; do not validate unrelated assertions.
-- Use only your assigned data namespace token/block pairs so cache interactions remain isolated across parallel validators.
-- Do not restart containers, clear cache directories, or change service state during flow tests.
-- Keep tests user-surface only (HTTP calls via `curl`); do not modify app source code in flow validation.
-- If an assertion depends on logs, use `docker compose logs --tail` for observation only.
+- First price fetch after container start is slow (~20-75s) due to Etherscan ABI fetching
+- Subsequent fetches are fast (<1s)
+- Platform emulation warning (amd64 on arm64) is expected on Apple Silicon
+- Etherscan rate limit (3 req/sec) can cause retry messages in container logs — this is normal
+- The /favicon.ico returns 404 — not an issue
+- Token input is pre-filled with DAI on load; tests that type a new query should clear the field first
+- If the autocomplete "No matches" dropdown overlaps submit buttons, press `Escape` before clicking submit
+- In headless runs, `Escape`/`Tab` key tests can occasionally bounce to `about:blank`; reopen `http://localhost:8000` and continue
+- Tokenlist add-by-URL error banners auto-clear after ~5 seconds; capture screenshots/evidence immediately after triggering the error
+- During longer automation runs, agent-browser sessions can also bounce to `about:blank` between separate command invocations; prefer grouped command sequences and re-check page URL before interacting
+- The tokenlist import UI uses a dynamically-created hidden file input; direct file-upload automation may fail, but calling the app's `importTokenlistFile()` function with a synthesized `File` object is a reliable equivalent
+- If containers stop mid-run, recover with `docker compose up -d` and re-check `curl -sf http://localhost:8000/ethereum/health` before resuming
+- `docker stack config -c docker-compose.yml` can fail when `depends_on` uses extended `condition` syntax (`service_healthy`); Swarm ignores `depends_on` at deploy time, so validate this separately from deploy section checks.
 
-## Flow Validator Guidance: Browser UI
-- Use only your assigned assertion IDs and data namespace.
-- Use a dedicated browser session name for your run; do not reuse another validator's session.
-- Do not modify server state, restart services, or clear cache during UI validation.
-- Keep checks user-surface only via the rendered HTML UI and network responses triggered by UI actions.
-- If an assertion requires backend-only fault injection, mark it blocked and explain why it is not testable from UI alone.
+## Test Isolation
+
+Each browser session gets fresh localStorage. Use incognito/private windows if needed to test clean-slate behavior.
+
+## Flow Validator Guidance: web-ui
+
+- Use a dedicated browser session per flow validator worker to avoid shared UI state.
+- Do not rely on prior localStorage/sessionStorage values from other validators.
+- Stay within `http://localhost:8000` and do not use off-limits ports.
+- For static-ui-extraction validation, avoid mutating tokenlist/localStorage settings unless required by the assigned assertion.
+- Capture clear evidence for each assertion: UI snapshot/screenshot plus matching network or terminal proof where specified.
+- If session instability occurs, prefer fewer larger automation steps (instead of many small calls) and include explicit waits before snapshots.
+
+## Flow Validator Guidance: deploy-cli
+
+- Use terminal-based validation (docker compose, docker stack config, grep/curl, and docker logs) for deploy assertions.
+- Keep execution scoped to `/Users/bryan/code/ypricemagic-server` and localhost services only.
+- Use a unique temporary evidence namespace per validator run (for example, `/tmp/utv-zero-downtime-<group>`).
+- Do not modify deployment/business logic files during validation; only read, run, and verify expected behavior.
+- If Docker services are already running, reuse them instead of resetting shared volumes unless an assertion explicitly requires restart behavior.

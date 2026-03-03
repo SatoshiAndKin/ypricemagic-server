@@ -1,0 +1,39 @@
+{
+  "featureId": "static-file-infrastructure",
+  "reviewedAt": "2026-03-03T04:45:00.000Z",
+  "commitId": "93af9e5",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "pass",
+  "codeReview": {
+    "summary": "Solid implementation of static file infrastructure. FastAPI StaticFiles mount, nginx proxy block, Dockerfile tokenlist download, init.sh for local dev, .gitignore for the large tokenlist file, and 10 comprehensive tests. The worker cleverly solved the Droid-Shield false positive (from the first session) by gitignoring the tokenlist and downloading it at build/init time instead. All 6 expected behaviors are met. Two minor non-blocking issues noted.",
+    "issues": [
+      {
+        "file": "Dockerfile",
+        "line": 24,
+        "severity": "non_blocking",
+        "description": "The Dockerfile downloads the tokenlist with `curl -sf` but does not validate the downloaded file is valid JSON. If tokens.uniswap.org returns an error page or empty response, the build succeeds with an invalid tokenlist. A simple validation step (e.g., `python3 -c \"import json; json.load(open('/app/static/tokenlists/uniswap-default.json'))\"`) would catch this. Low risk since Uniswap's API is stable."
+      },
+      {
+        "file": "static/js/",
+        "line": null,
+        "severity": "non_blocking",
+        "description": "At commit 93af9e5, static/js/ and static/css/ are empty directories not tracked by git (git doesn't track empty dirs). Tests test_js_directory_exists and test_css_directory_exists pass only because the directories exist on the local filesystem. On a fresh clone at this commit, these tests would fail. This is a transient issue since the subsequent extract-inline-ui commit (a5c9880) adds files to both directories."
+      }
+    ]
+  },
+  "sharedStateObservations": [
+    {
+      "area": "conventions",
+      "observation": "Empty directories (static/js/, static/css/) are not persisted in git. The project lacks a convention for preserving empty directory structure (e.g., .gitkeep files). This caused a transient state where directory-existence tests only passed locally. The next feature immediately resolved this by adding files, but the pattern could recur.",
+      "evidence": "git ls-tree -r 93af9e5 -- static/ returns empty (no tracked files under static/ at this commit), yet tests in src/tests/test_static.py lines 78-87 assert these directories exist."
+    },
+    {
+      "area": "conventions",
+      "observation": "The Droid-Shield blocked the first worker session from committing the tokenlist file due to false positives on public blockchain addresses. The second session worked around this by gitignoring the file. This workaround is documented in the Dockerfile comment but not in AGENTS.md or the library. Future features involving tokenlist or address data may hit the same issue.",
+      "evidence": "First handoff (61482ab1) has discoveredIssues with severity=blocking about Droid-Shield. Second session (f0ea8306) solved it by adding the file to .gitignore and downloading at build time."
+    }
+  ],
+  "addressesFailureFrom": null,
+  "summary": "Feature passes review. The static file infrastructure is well-implemented with proper separation of concerns: FastAPI StaticFiles mount with existence guard, nginx proxy block with appropriate timeout, Dockerfile build-time download of the Uniswap tokenlist, and init.sh for local dev. The Droid-Shield workaround (gitignore + download at build time) is pragmatic and well-documented in code comments. 10 tests cover serving, 404 handling, directory structure, and tokenlist validation. Two non-blocking issues: no JSON validation of the downloaded tokenlist in the Dockerfile, and empty directories not tracked in git (resolved by the next commit)."
+}

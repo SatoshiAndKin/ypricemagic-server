@@ -1,0 +1,84 @@
+{
+  "flowId": "static-surface-a",
+  "milestone": "static-ui-extraction",
+  "assertionsTested": [
+    "VAL-STATIC-001",
+    "VAL-STATIC-002",
+    "VAL-STATIC-007",
+    "VAL-STATIC-008",
+    "VAL-STATIC-010",
+    "VAL-CROSS-006"
+  ],
+  "assertionResults": [
+    {
+      "id": "VAL-STATIC-001",
+      "status": "pass",
+      "reason": "Root page loads at http://localhost:8000/ from static assets. Network confirms GET /static/js/app.js -> 200 (text/javascript, 12926 bytes) and GET /static/css/style.css -> 200 (text/css, 2928 bytes), both served through nginx/1.29.5. Page renders with all three forms (Single Token Price, Batch Token Pricing, Token Classification). Only console error is expected favicon.ico 404.",
+      "evidence": [
+        "screenshot: val-static-001-page-loaded.png",
+        "network: GET http://localhost:8000/static/js/app.js => 200 OK (text/javascript; charset=utf-8, 12926 bytes, Server: nginx/1.29.5)",
+        "network: GET http://localhost:8000/static/css/style.css => 200 OK (text/css; charset=utf-8, 2928 bytes, Server: nginx/1.29.5)",
+        "network: GET http://localhost:8000/ => 200 OK",
+        "console: 1 error — favicon.ico 404 (expected/known quirk)"
+      ]
+    },
+    {
+      "id": "VAL-STATIC-002",
+      "status": "pass",
+      "reason": "Chain selector dropdown contains all four chains: Ethereum, Arbitrum, Optimism, Base. Each selection updates the dropdown value and retains the selected value. Verified by selecting each chain sequentially and confirming [selected] state in DOM snapshot.",
+      "evidence": [
+        "screenshot: val-static-002-arbitrum.png (Arbitrum selected)",
+        "screenshot: val-static-002-optimism.png (Optimism selected)",
+        "screenshot: val-static-002-base.png (Base selected)",
+        "snapshot: combobox shows option 'Ethereum', 'Arbitrum', 'Optimism', 'Base' with correct [selected] attribute after each change"
+      ]
+    },
+    {
+      "id": "VAL-STATIC-007",
+      "status": "pass",
+      "reason": "Loading http://localhost:8000/?chain=arbitrum&token=<ARBITRUM_USDC_ADDRESS>&block=12345 pre-fills all three fields: chain selector shows 'Arbitrum' [selected], token address input contains the full address, block field contains '12345'.",
+      "evidence": [
+        "screenshot: val-static-007-prefilled.png",
+        "snapshot: combobox shows 'Arbitrum' [selected], textbox 'Token Address' text='<ARBITRUM_USDC_ADDRESS>', textbox 'Block / Date (optional)' text='12345'"
+      ]
+    },
+    {
+      "id": "VAL-STATIC-008",
+      "status": "pass",
+      "reason": "GET /static/tokenlists/uniswap-default.json returns 200 with valid tokenlist JSON. Parsed response contains name='Uniswap Labs Default' and tokens array with 1367 entries.",
+      "evidence": [
+        "network: GET http://localhost:8000/static/tokenlists/uniswap-default.json => 200 OK",
+        "terminal: python3 JSON parse confirms name='Uniswap Labs Default', token_count=1367, has_tokens=True"
+      ]
+    },
+    {
+      "id": "VAL-STATIC-010",
+      "status": "pass",
+      "reason": "grep for 'INDEX_HTML' in src/server.py returns no matches. The root handler at line 680 is 'async def index() -> FileResponse' which serves static/index.html via FileResponse. StaticFiles mounted at /static (line 131).",
+      "evidence": [
+        "terminal: grep INDEX_HTML src/server.py -> no matches",
+        "terminal: server.py line 680-684 shows '@app.get(\"/\") async def index() -> FileResponse' serving FileResponse(index_path, media_type=\"text/html\")"
+      ]
+    },
+    {
+      "id": "VAL-CROSS-006",
+      "status": "pass",
+      "reason": "Docker compose is running with all containers healthy (nginx, ypm-ethereum, ypm-arbitrum, ypm-optimism, ypm-base). docker compose build --dry-run succeeds for all 4 chain services. Static UI is served correctly through nginx proxy at localhost:8000 (confirmed by Server: nginx/1.29.5 header on static asset responses). Full page screenshot confirms UI renders correctly through the dockerized nginx proxy.",
+      "evidence": [
+        "terminal: docker compose ps shows all 5 containers Up and healthy",
+        "terminal: docker compose build --dry-run succeeds for ypm-ethereum, ypm-arbitrum, ypm-optimism, ypm-base",
+        "terminal: docker compose images shows all images built (1.45GB each, built 39 minutes ago)",
+        "network: curl -I /static/js/app.js returns Server: nginx/1.29.5 confirming nginx proxy",
+        "screenshot: val-static-001-page-loaded.png (UI through nginx)"
+      ]
+    }
+  ],
+  "frictions": [],
+  "blockers": [],
+  "toolsUsed": [
+    "playwright-mcp (browser)",
+    "curl",
+    "grep (ripgrep)"
+  ],
+  "summary": "Tested 6 assertions: all 6 passed. Static files (app.js, style.css) served correctly through nginx with 200 status. Chain selector supports all 4 chains with value persistence. URL query parameters pre-fill form fields correctly. Tokenlist endpoint returns valid JSON with 1367 tokens. INDEX_HTML fully removed from server.py; root handler serves static/index.html via FileResponse. Docker build validated with running containers and dry-run; UI confirmed served through nginx proxy."
+}

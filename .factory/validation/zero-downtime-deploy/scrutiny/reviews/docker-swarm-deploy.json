@@ -1,0 +1,68 @@
+{
+  "featureId": "docker-swarm-deploy",
+  "reviewedAt": "2026-03-03T08:30:00.000Z",
+  "commitId": "2c8f695",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "fail",
+  "codeReview": {
+    "summary": "The docker-compose.yml changes (brownie volumes, service_healthy, deploy sections, stop_grace_period) and Dockerfile tokenlist JSON validation are well-implemented and match the feature spec. However, the CD workflow has two blocking issues that would cause `docker stack deploy` to fail: (1) chain services lack an `image:` key required by Swarm mode, and (2) the .env file is not sourced before `docker stack deploy`, which does not auto-read .env files like `docker compose` does.",
+    "issues": [
+      {
+        "file": "docker-compose.yml",
+        "line": 28,
+        "severity": "blocking",
+        "description": "Chain services (ypm-ethereum, ypm-arbitrum, ypm-optimism, ypm-base) have `build: .` but no `image:` key. `docker stack deploy` requires `image:` and ignores `build:` — the deploy will fail with 'image is required'. Fix: add `image: ghcr.io/<owner>/<repo>:latest` alongside the existing `build: .` in each chain service. Both keys can coexist — `docker compose up` uses `build:`, Swarm uses `image:`."
+      },
+      {
+        "file": ".github/workflows/cd.yml",
+        "line": 96,
+        "severity": "blocking",
+        "description": "`docker stack deploy` does NOT auto-read `.env` files the way `docker compose` does. The compose file references `${RPC_URL_ETHEREUM}`, `${RPC_URL_ARBITRUM}`, `${RPC_URL_OPTIMISM}`, `${RPC_URL_BASE}`, and `${ETHERSCAN_TOKEN}` but the deploy script does not source the .env file. These variables will resolve to empty strings, causing containers to start without RPC URLs. Fix: add `set -a && source .env && set +a` before `docker stack deploy`, or use `docker compose config` to resolve variables and pipe the resolved YAML to `docker stack deploy`."
+      },
+      {
+        "file": ".github/workflows/cd.yml",
+        "line": 12,
+        "severity": "non_blocking",
+        "description": "concurrency group uses `cancel-in-progress: true`. Cancelling a deploy mid-way could leave the server in a partially-updated state. Consider `cancel-in-progress: false` or splitting the concurrency so only build can be cancelled but deploy cannot."
+      },
+      {
+        "file": ".github/workflows/cd.yml",
+        "line": 62,
+        "severity": "non_blocking",
+        "description": "The deploy job does not declare `permissions:`. While default permissions likely include `packages: read` (needed for `GITHUB_TOKEN` to pull images on the remote server), explicitly declaring `permissions: { contents: read, packages: read }` would make the required scopes clear."
+      },
+      {
+        "file": ".github/workflows/cd.yml",
+        "line": 106,
+        "severity": "non_blocking",
+        "description": "No post-deploy health verification. The workflow deploys and exits without confirming services are healthy. Adding a polling step (e.g., `docker service ls --format '{{.Name}} {{.Replicas}}'` or curling the health endpoint) would catch deployment failures in CI."
+      },
+      {
+        "file": "docker-compose.yml",
+        "line": 20,
+        "severity": "non_blocking",
+        "description": "Swarm mode ignores `restart: unless-stopped` and uses `deploy.restart_policy` instead. The deploy sections don't specify `restart_policy`, so Swarm defaults to `condition: any` which is reasonable but implicit. Consider adding explicit `restart_policy: { condition: on-failure, max_attempts: 3 }` for clarity."
+      }
+    ]
+  },
+  "sharedStateObservations": [
+    {
+      "area": "conventions",
+      "observation": "The docker-compose.yml needs `image:` keys alongside `build:` for Docker Swarm compatibility. This pattern (dual image+build for dev/prod parity) is not documented in AGENTS.md or the mission's AGENTS.md. The deploy architecture section mentions `docker stack deploy` but doesn't note the `image:` requirement.",
+      "evidence": "docker-compose.yml lines 28, 55, 82, 109 — all chain services have `build: .` but no `image:`. Docker Swarm requires `image:` and ignores `build:`."
+    },
+    {
+      "area": "knowledge",
+      "observation": "`docker stack deploy` does not auto-read .env files like `docker compose` does. This is a common gotcha when transitioning from Compose to Swarm. Should be documented in .factory/library/ for future infra work.",
+      "evidence": "cd.yml deploy step runs `docker stack deploy -c docker-compose.yml ypm` without sourcing .env. Docker Compose reads .env automatically; Docker Swarm does not."
+    },
+    {
+      "area": "knowledge",
+      "observation": "The deploy architecture requires specific server prerequisites (Docker Swarm init, ~/ypm checkout, .env file, SSH keys). These are documented only in cd.yml comments. A deployment runbook in .factory/library/ or runbooks/ would be more discoverable.",
+      "evidence": "cd.yml lines 68-80 contain setup comments. runbooks/ directory exists but was not used for deploy documentation."
+    }
+  ],
+  "addressesFailureFrom": null,
+  "summary": "The docker-compose.yml infrastructure changes are correct — brownie volumes, service_healthy, deploy configs, and stop_grace_period all match the spec. The Dockerfile tokenlist JSON validation is a good addition. However, the CD workflow has two blocking bugs: (1) chain services lack `image:` keys required by Docker Swarm, and (2) `.env` variables won't be resolved because `docker stack deploy` doesn't read .env files. Both issues mean the deploy will fail at runtime. Non-blocking: no post-deploy health check, implicit restart_policy, cancel-in-progress risk on deploys."
+}

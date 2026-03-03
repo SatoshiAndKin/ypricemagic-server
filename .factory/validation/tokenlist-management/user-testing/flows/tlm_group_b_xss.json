@@ -1,0 +1,14 @@
+{
+  "name": "<img onerror=alert('xss')>tlm_group_b XSS List",
+  "version": { "major": 1, "minor": 0, "patch": 0 },
+  "timestamp": "2026-03-02T00:00:00Z",
+  "tokens": [
+    {
+      "chainId": 1,
+      "address": "0x3333333333333333333333333333333333333333",
+      "name": "<script>document.title='hacked'</script>Evil Token",
+      "symbol": "<img src=x onerror=alert(1)>XSS",
+      "decimals": 18
+    }
+  ]
+}

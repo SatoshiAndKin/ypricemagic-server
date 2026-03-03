@@ -1,0 +1,58 @@
+{
+  "groupId": "group-r2-deploy003",
+  "testedAt": "2026-03-03T00:00:00Z",
+  "credentials": {
+    "account": "deploy-validator-r2",
+    "namespace": "utv_zero_downtime_r2_deploy003"
+  },
+  "toolsUsed": ["terminal CLI (grep, docker compose config)"],
+  "assertions": [
+    {
+      "id": "VAL-DEPLOY-003",
+      "title": "Swarm deploy config with start-first",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "Read docker-compose.yml and inspect deploy sections for all chain services",
+          "expected": "Each chain service (ypm-ethereum, ypm-arbitrum, ypm-optimism, ypm-base) has deploy.update_config.order: start-first, deploy.rollback_config, and stop_grace_period",
+          "observed": "All 4 chain services plus nginx have deploy.update_config.order: start-first, deploy.rollback_config (parallelism: 0, order: stop-first), and stop_grace_period: 30s. update_config also includes failure_action: rollback."
+        },
+        {
+          "action": "grep update_config docker-compose.yml",
+          "expected": "5 matches (nginx + 4 chain services) showing order: start-first",
+          "observed": "5 matches found, all with order: start-first and failure_action: rollback"
+        },
+        {
+          "action": "grep rollback_config docker-compose.yml",
+          "expected": "5 matches showing rollback_config sections",
+          "observed": "5 matches found, all with parallelism: 0 and order: stop-first"
+        },
+        {
+          "action": "grep stop_grace_period docker-compose.yml",
+          "expected": "5 matches showing stop_grace_period for each service",
+          "observed": "5 matches found, all set to 30s"
+        },
+        {
+          "action": "Run docker compose config",
+          "expected": "Command exits 0 and renders valid YAML output with deploy sections preserved",
+          "observed": "Command exited with code 0. Full rendered output shows all services with deploy.update_config.order: start-first, deploy.rollback_config, stop_grace_period: 30s, healthcheck configs, volumes, and networks. Output is valid stack-compatible YAML."
+        }
+      ],
+      "evidence": {
+        "screenshots": [],
+        "consoleErrors": "n/a (terminal validation)",
+        "terminal": [
+          "grep update_config docker-compose.yml: 5 matches, all with order: start-first, failure_action: rollback",
+          "grep rollback_config docker-compose.yml: 5 matches, all with parallelism: 0, order: stop-first",
+          "grep stop_grace_period docker-compose.yml: 5 matches, all 30s",
+          "docker compose config: exit code 0, valid YAML output with all deploy sections rendered correctly"
+        ],
+        "network": "n/a"
+      },
+      "issues": null
+    }
+  ],
+  "frictions": [],
+  "blockers": [],
+  "summary": "Tested 1 assertion: 1 passed. VAL-DEPLOY-003 confirmed — all chain services have deploy.update_config.order: start-first, rollback_config, and stop_grace_period: 30s. docker compose config renders successfully (exit 0) with valid stack-compatible output."
+}

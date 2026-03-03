@@ -1,0 +1,52 @@
+{
+  "milestone": "static-ui-extraction",
+  "round": 1,
+  "status": "pass",
+  "assertionsSummary": {
+    "total": 11,
+    "passed": 11,
+    "failed": 0,
+    "blocked": 0
+  },
+  "passedAssertions": [
+    "VAL-CROSS-006",
+    "VAL-STATIC-001",
+    "VAL-STATIC-002",
+    "VAL-STATIC-003",
+    "VAL-STATIC-004",
+    "VAL-STATIC-005",
+    "VAL-STATIC-006",
+    "VAL-STATIC-007",
+    "VAL-STATIC-008",
+    "VAL-STATIC-009",
+    "VAL-STATIC-010"
+  ],
+  "failedAssertions": [],
+  "blockedAssertions": [],
+  "appliedUpdates": [
+    {
+      "target": "user-testing.md",
+      "description": "Added \"Flow Validator Guidance: web-ui\" with isolation and evidence requirements for parallel flow validators.",
+      "source": "setup"
+    }
+  ],
+  "flowReports": [
+    ".factory/validation/static-ui-extraction/user-testing/flows/core-ui.json",
+    ".factory/validation/static-ui-extraction/user-testing/flows/forms-infra.json",
+    ".factory/validation/static-ui-extraction/user-testing/flows/static-surface-a.json"
+  ],
+  "frictions": [
+    "Initial post-recreate health checks required extra wait before nginx routing returned 200 for app endpoints."
+  ],
+  "blockers": [],
+  "toolsUsed": [
+    "curl",
+    "docker compose",
+    "grep",
+    "grep (ripgrep)",
+    "playwright-mcp",
+    "playwright-mcp (browser)",
+    "python3"
+  ],
+  "previousRound": null
+}

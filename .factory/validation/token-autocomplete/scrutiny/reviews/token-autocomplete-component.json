@@ -1,0 +1,39 @@
+{
+  "featureId": "token-autocomplete-component",
+  "reviewedAt": "2026-03-03T05:45:00.000Z",
+  "commitId": "e304c7a",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "pass",
+  "codeReview": {
+    "summary": "Solid implementation of the token autocomplete component. The TokenAutocomplete class is well-structured with proper debouncing, keyboard navigation, XSS-safe rendering via escapeHtml(), chain-filtered search, deduplication (first-list-wins), and cleanup on destroy. The unknown token modal correctly implements Save/Continue/Reject flows with localStorage persistence. Two non-blocking issues found: a race condition in URL param restoration for bucket_token suppressModal, and the batch form omitting the unknown-token modal check on submit.",
+    "issues": [
+      {
+        "file": "static/js/app.js",
+        "line": 920,
+        "severity": "non_blocking",
+        "description": "Race condition: URL param restoration for bucket_token runs synchronously but autocomplete instances are created asynchronously inside loadTokenlists().then(). The `autocompleteInstances.get(bucketTokenInput)` is always null at this point, so `suppressModal` is never set for bucket tokens loaded from URL params. If a user navigates with ?bucket_token=0x<unknown_addr>, submitting the bucket form will show the unknown-token modal despite the requirement that URL-param pre-filled values should not trigger it. The priceTokenInput is partially mitigated because initAutocompletes() passes { suppressModal: true } to its constructor, but the explicit wasUserEdited=false assignment in the URL param block is also dead code for the same reason."
+      },
+      {
+        "file": "static/js/app.js",
+        "line": 814,
+        "severity": "non_blocking",
+        "description": "Batch form submit handler does not call checkUnknownToken() for any of its token row inputs. The single price form and bucket form both wrap their submit logic in checkUnknownToken(), but the batch form directly collects tokens and submits. While checking N tokens serially before batch submission would be poor UX, this inconsistency is undocumented. The feature description says 'On form submit, if the address is a valid hex address NOT in any enabled tokenlist, shows a warning modal' without scoping it to specific forms."
+      }
+    ]
+  },
+  "sharedStateObservations": [
+    {
+      "area": "conventions",
+      "observation": "The worker converted all existing template literals (backtick strings) in app.js to string concatenation. The original code used template literals for chainMismatchWarning, showPriceResult, showBatchResult, showBucketResult, and setupDatePickerSwitch. While the file is now internally consistent, this was a style change beyond the feature scope. AGENTS.md and the skill don't specify a JS string style preference.",
+      "evidence": "git show e304c7a shows -140/+743 lines, with many changes being template-literal-to-concatenation conversions (e.g., chainMismatchWarning, showPriceResult, showBucketResult functions)."
+    },
+    {
+      "area": "conventions",
+      "observation": "architecture.md documents the localStorage key for user-saved tokens as 'localTokenlist', but the actual implementation uses 'localTokens'. This documentation drift could confuse future workers.",
+      "evidence": "architecture.md: '`localTokenlist`: User-saved tokens from the unknown-token modal'. static/js/app.js line ~73: `localStorage.getItem('localTokens')` and saveLocalTokens() uses `localStorage.setItem('localTokens', ...)`."
+    }
+  ],
+  "addressesFailureFrom": null,
+  "summary": "The token autocomplete feature passes review. The implementation covers all major requirements: debounced search by symbol/name/address, chain-filtered results, keyboard navigation (arrows/Enter/Escape/Tab), XSS-escaped rendering, deduplication, unknown-token modal with Save/Continue/Reject, pre-filled value suppression (mostly working), and autocomplete on all three forms including dynamically added batch rows. Two non-blocking issues found: (1) race condition where bucket_token URL param suppressModal is never set due to async autocomplete initialization, and (2) batch form omits the unknown-token modal check. All validators (pytest 244 passed, ruff, mypy) passed. Worker followed the frontend-worker skill procedure."
+}

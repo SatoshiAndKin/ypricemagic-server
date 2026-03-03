@@ -1,0 +1,45 @@
+{
+  "milestone": "zero-downtime-deploy",
+  "round": 2,
+  "status": "pass",
+  "validatorsRun": {
+    "test": {
+      "passed": true,
+      "command": "uv run pytest",
+      "exitCode": 0
+    },
+    "typecheck": {
+      "passed": true,
+      "command": "uv run mypy src/",
+      "exitCode": 0
+    },
+    "lint": {
+      "passed": true,
+      "command": "uv run ruff check .",
+      "exitCode": 0
+    }
+  },
+  "reviewsSummary": {
+    "total": 1,
+    "passed": 1,
+    "failed": 0,
+    "failedFeatures": []
+  },
+  "blockingIssues": [],
+  "appliedUpdates": [],
+  "suggestedGuidanceUpdates": [
+    {
+      "target": "AGENTS.md",
+      "suggestion": "Add a workflow convention to explicitly declare least-privilege `permissions:` blocks on every GitHub Actions job, including deploy jobs.",
+      "evidence": "In .github/workflows/cd.yml, build-and-push declares permissions but deploy omits them; reviewer flagged this as a non-blocking convention inconsistency.",
+      "isSystemic": false
+    }
+  ],
+  "rejectedObservations": [
+    {
+      "observation": "Worker documented Docker Swarm deploy gotchas in .factory/library/environment.md.",
+      "reason": "already-documented"
+    }
+  ],
+  "previousRound": ".factory/validation/zero-downtime-deploy/scrutiny/synthesis.round1.json"
+}

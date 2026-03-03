@@ -1,0 +1,138 @@
+{
+  "groupId": "group-a",
+  "testedAt": "2026-03-03T08:15:00Z",
+  "credentials": {
+    "account": "tokenlist-validator-a",
+    "namespace": "tlm_group_a"
+  },
+  "toolsUsed": ["agent-browser"],
+  "assertions": [
+    {
+      "id": "VAL-LIST-001",
+      "title": "Settings gear button opens modal",
+      "status": "pass",
+      "steps": [
+        { "action": "Navigate to http://localhost:8000 and observe page header", "expected": "Gear icon button visible in header", "observed": "Gear button with '⚙ 1' badge visible in top-right corner of header" },
+        { "action": "Click gear button", "expected": "Modal dialog opens with tokenlist management panel", "observed": "Modal opened showing 'Token Lists' header, Uniswap Labs Default list, URL input, Import File button, Export Local button" },
+        { "action": "Click × close button on modal", "expected": "Modal closes, main page state preserved", "observed": "Modal closed, main page visible with pre-filled DAI address intact, all form fields preserved" }
+      ],
+      "evidence": {
+        "screenshots": ["group-a-001-gear-visible.png", "group-a-001-modal-open.png", "group-a-001-modal-closed.png"],
+        "consoleErrors": "none",
+        "network": "GET /static/tokenlists/uniswap-default.json -> 200"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-LIST-002",
+      "title": "Uniswap default list pre-loaded",
+      "status": "pass",
+      "steps": [
+        { "action": "Clear localStorage and reload page", "expected": "Clean slate with default tokenlist loaded", "observed": "Page loaded with gear badge showing '1' (one enabled list)" },
+        { "action": "Open modal and inspect tokenlist panel", "expected": "Uniswap default list shown with name and token count", "observed": "Uniswap Labs Default listed with '357 tokens on ethereum', green toggle (enabled), disabled Delete button" }
+      ],
+      "evidence": {
+        "screenshots": ["group-a-002-uniswap-default.png"],
+        "consoleErrors": "none",
+        "network": "GET /static/tokenlists/uniswap-default.json -> 200"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-LIST-003",
+      "title": "Add tokenlist by URL",
+      "status": "pass",
+      "steps": [
+        { "action": "Open modal and enter https://tokens.coingecko.com/uniswap/all.json in URL input", "expected": "URL accepted in input field", "observed": "URL filled in input field" },
+        { "action": "Click Add button", "expected": "List fetched and added to panel", "observed": "CoinGecko list added with '5096 tokens on ethereum', green toggle, enabled Delete button, gear badge changed to '2'" },
+        { "action": "Close modal and search 'SUSHI' in autocomplete", "expected": "Tokens from new list appear in autocomplete", "observed": "Autocomplete shows SUSHI from Uniswap Labs Default AND AXSUSHI, CSUSHI, XSUSHI, YVSUSHI from CoinGecko with correct source labels" }
+      ],
+      "evidence": {
+        "screenshots": ["group-a-003-new-list-added.png", "group-a-003-autocomplete-new-tokens.png"],
+        "consoleErrors": "none",
+        "network": "GET https://tokens.coingecko.com/uniswap/all.json -> 200"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-LIST-009",
+      "title": "Add by URL handles errors",
+      "status": "pass",
+      "steps": [
+        { "action": "Open modal and enter https://example.com/not-a-tokenlist in URL input", "expected": "Error shown when URL doesn't return valid tokenlist", "observed": "Error message 'Failed to fetch: Failed to fetch' displayed in red below the buttons" },
+        { "action": "Verify panel state unchanged", "expected": "Existing lists unaffected", "observed": "Both Uniswap Labs Default (357 tokens) and CoinGecko (5096 tokens) still listed, both enabled" }
+      ],
+      "evidence": {
+        "screenshots": ["group-a-009-url-error.png"],
+        "consoleErrors": "none",
+        "network": "GET https://example.com/not-a-tokenlist -> failed"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-LIST-010",
+      "title": "Visual indicators for list state",
+      "status": "pass",
+      "steps": [
+        { "action": "Open modal with two lists (Uniswap + CoinGecko)", "expected": "Each list shows name, token count, enabled/disabled indicator", "observed": "Uniswap Labs Default: name visible, '357 tokens on ethereum', green toggle (class='tokenlist-toggle enabled'), disabled Delete button. CoinGecko: name visible, '5098 tokens on ethereum', green toggle (enabled), active Delete button." },
+        { "action": "Verify gear badge reflects enabled list count", "expected": "Badge shows number of enabled lists", "observed": "Gear badge shows '2' with both lists enabled, '1' when only default is active" }
+      ],
+      "evidence": {
+        "screenshots": ["group-a-010-list-indicators.png", "group-a-003-new-list-added.png"],
+        "consoleErrors": "none",
+        "network": "N/A (client-side only)"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-LIST-012",
+      "title": "URL scheme restricted to HTTPS",
+      "status": "pass",
+      "steps": [
+        { "action": "Open modal and enter javascript:alert(1) in URL input, click Add", "expected": "Rejected with error message", "observed": "Error 'Only https:// URLs are allowed' displayed in red" },
+        { "action": "Enter data:text/html,test in URL input, click Add", "expected": "Rejected with error message", "observed": "Error 'Only https:// URLs are allowed' displayed in red" },
+        { "action": "Enter file:///etc/passwd in URL input, click Add", "expected": "Rejected with error message", "observed": "Error 'Only https:// URLs are allowed' displayed in red" },
+        { "action": "Verify panel state unchanged after all rejections", "expected": "No lists added", "observed": "Only Uniswap Labs Default remains, no new lists from rejected URLs" }
+      ],
+      "evidence": {
+        "screenshots": ["group-a-012-scheme-rejected-js.png", "group-a-012-scheme-rejected-file.png"],
+        "consoleErrors": "none",
+        "network": "N/A (client-side validation, no network requests made)"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-CROSS-001",
+      "title": "Autocomplete uses managed tokenlists",
+      "status": "pass",
+      "steps": [
+        { "action": "Clear localStorage and reload page (clean state with only Uniswap default)", "expected": "Only default list active", "observed": "Gear badge shows '1', only Uniswap Labs Default loaded" },
+        { "action": "Add CoinGecko tokenlist via URL in modal", "expected": "New list added", "observed": "CoinGecko list added, gear badge changed to '2'" },
+        { "action": "Close modal and search 'COMP' in autocomplete", "expected": "Tokens from newly added CoinGecko list appear with correct source label", "observed": "Autocomplete shows: COMP (Compound) from 'Uniswap Labs Default', CCOMP (cCOMP) from 'CoinGecko', CMPT (Spatial Computing) from 'CoinGecko', CMGN (Compliant Naira) from 'CoinGecko', CUSDC (Compound USDC) from 'CoinGecko', CUSDO (Compounding OpenDollar) from 'CoinGecko'" },
+        { "action": "Verify source labels on dropdown items", "expected": "Each suggestion shows source tokenlist name in small/muted text", "observed": "Source labels 'Uniswap Labs Default' and 'CoinGecko' shown below each suggestion in muted text" }
+      ],
+      "evidence": {
+        "screenshots": ["group-a-cross-001-autocomplete-new-list.png", "group-a-003-autocomplete-new-tokens.png"],
+        "consoleErrors": "none",
+        "network": "GET https://tokens.coingecko.com/uniswap/all.json -> 200"
+      },
+      "issues": null
+    }
+  ],
+  "frictions": [
+    {
+      "description": "Browser sessions (agent-browser) were extremely unstable — between separate Execute calls, the browser would frequently navigate to about:blank, losing all DOM state and making ref-based interactions impossible.",
+      "resolved": true,
+      "resolution": "Chained all browser commands with && in single Execute calls. Used JavaScript eval for DOM interactions instead of ref-based commands. Used 'agent-browser wait --text' before snapshots to ensure page was loaded.",
+      "affectedAssertions": ["VAL-LIST-001", "VAL-LIST-002", "VAL-LIST-003", "VAL-LIST-009", "VAL-LIST-010", "VAL-LIST-012", "VAL-CROSS-001"]
+    },
+    {
+      "description": "Docker containers stopped during testing, requiring restart. The server at localhost:8000 returned connection refused mid-session.",
+      "resolved": true,
+      "resolution": "Ran 'docker compose up -d' to restart containers and waited 30s for startup before continuing tests.",
+      "affectedAssertions": ["VAL-LIST-012"]
+    }
+  ],
+  "blockers": [],
+  "summary": "Tested 7 assertions: 7 passed, 0 failed, 0 blocked. All tokenlist management features (gear modal open/close, default list pre-loading, URL import, error handling, visual indicators, HTTPS scheme restriction) and cross-area autocomplete integration with managed tokenlists work correctly."
+}

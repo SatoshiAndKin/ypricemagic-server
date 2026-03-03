@@ -1,0 +1,74 @@
+{
+  "groupId": "forms-infra",
+  "milestone": "static-ui-extraction",
+  "testedAt": "2026-03-03T05:18:00Z",
+  "credentials": {
+    "account": "static-validator-b@example.test",
+    "namespace": "static_ui_flow_b"
+  },
+  "assertionsTested": [
+    "VAL-STATIC-004",
+    "VAL-STATIC-005",
+    "VAL-STATIC-008",
+    "VAL-STATIC-010",
+    "VAL-CROSS-006"
+  ],
+  "passed": [
+    {
+      "id": "VAL-STATIC-004",
+      "title": "Batch pricing form works",
+      "evidence": [
+        "Playwright interaction added two batch token rows (DAI + USDC), submitted Get Prices, and UI rendered 'Batch Results (2 tokens)' table with two result rows.",
+        "Playwright network capture: GET /ethereum/prices?tokens=<DAI>,<USDC> => 200 OK."
+      ]
+    },
+    {
+      "id": "VAL-STATIC-005",
+      "title": "Token classification form works",
+      "evidence": [
+        "Playwright filled bucket token input with DAI and clicked Check Bucket; UI rendered Classification Result with Token, Chain=ethereum, Bucket='stable usd'.",
+        "Playwright network capture: GET /ethereum/check_bucket?token=<DAI> => 200 OK."
+      ]
+    },
+    {
+      "id": "VAL-STATIC-008",
+      "title": "Uniswap tokenlist served from static",
+      "evidence": [
+        "curl -sf http://localhost:8000/static/tokenlists/uniswap-default.json | python3 -c ... succeeded.",
+        "Validation output: status ok, tokens 1367."
+      ]
+    },
+    {
+      "id": "VAL-STATIC-010",
+      "title": "Server.py no longer contains INDEX_HTML",
+      "evidence": [
+        "Grep for 'INDEX_HTML' in src/server.py returned no matches.",
+        "Route evidence from src/server.py: @app.get('/') returns FileResponse(index.html) from STATIC_DIR."
+      ]
+    },
+    {
+      "id": "VAL-CROSS-006",
+      "title": "Static extraction preserves deploy compatibility",
+      "evidence": [
+        "docker compose build completed successfully for all chain images (exit 0).",
+        "docker compose up -d recreated chain containers successfully.",
+        "curl -sfI http://localhost:8000/static/js/app.js returned HTTP/1.1 200 OK.",
+        "curl -sf http://localhost:8000/ includes <script src='/static/js/app.js'></script>, confirming UI is served through nginx with static assets."
+      ]
+    }
+  ],
+  "failed": [],
+  "blocked": [],
+  "frictions": [
+    "Initial post-recreate health checks required extra wait before nginx routing returned 200 for app endpoints."
+  ],
+  "blockers": [],
+  "toolsUsed": [
+    "playwright-mcp",
+    "curl",
+    "python3",
+    "grep",
+    "docker compose"
+  ],
+  "summary": "Tested 5 assertions and all 5 passed. Batch and bucket UI flows worked via browser interactions, static Uniswap tokenlist endpoint returned valid tokenlist JSON, server.py no longer contains inline INDEX_HTML, and docker build/deploy-local cycle still serves the extracted static UI through nginx."
+}

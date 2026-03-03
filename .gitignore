@@ -25,3 +25,4 @@ htmlcov/
 # OS files
 .DS_Store
 Thumbs.db
+static/tokenlists/uniswap-default.json

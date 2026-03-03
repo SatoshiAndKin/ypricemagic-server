@@ -1,0 +1,37 @@
+{
+  "milestone": "tokenlist-management",
+  "round": 1,
+  "status": "pass",
+  "assertionsSummary": {
+    "total": 14,
+    "passed": 14,
+    "failed": 0,
+    "blocked": 0
+  },
+  "passedAssertions": [
+    "VAL-CROSS-001",
+    "VAL-CROSS-002",
+    "VAL-LIST-001",
+    "VAL-LIST-002",
+    "VAL-LIST-003",
+    "VAL-LIST-004",
+    "VAL-LIST-005",
+    "VAL-LIST-006",
+    "VAL-LIST-007",
+    "VAL-LIST-008",
+    "VAL-LIST-009",
+    "VAL-LIST-010",
+    "VAL-LIST-011",
+    "VAL-LIST-012"
+  ],
+  "failedAssertions": [],
+  "blockedAssertions": [],
+  "appliedUpdates": [
+    {
+      "target": "user-testing.md",
+      "description": "Added tokenlist-management flow learnings on agent-browser session instability, dynamic file-import behavior, and container restart recovery steps.",
+      "source": "flow-report"
+    }
+  ],
+  "previousRound": null
+}
