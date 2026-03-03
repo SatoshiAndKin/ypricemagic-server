@@ -39,6 +39,11 @@ The quote endpoint computes from→to pricing by:
 
 There is no direct pair pricing in ypricemagic — all quotes use the divide strategy. The `route` field: "divide" for normal pairs, "identity" for same-token.
 
+### Metric Handling Gotcha
+
+- `src/server.py::_handle_price_error()` is currently coupled to `price_requests_total` (hardcoded increment).
+- Reusing this helper from non-`/price` endpoints (e.g., `/quote`) can silently misattribute error metrics unless the helper is made metric-agnostic or endpoint-specific handling is used.
+
 ## Historical Price Data
 
 - **History endpoint**: Reads from diskcache. Scans cached entries for a token within the requested time range, returning them at the appropriate granularity (hourly for ≤7d, daily for >7d).
