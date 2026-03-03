@@ -25,6 +25,7 @@ services:
     stop_grace_period: 30s
 
   ypm-ethereum:
+    image: ghcr.io/satoshiandkin/ypricemagic-server:latest
     build: .
     init: true
     environment:
@@ -52,6 +53,7 @@ services:
     stop_grace_period: 30s
 
   ypm-arbitrum:
+    image: ghcr.io/satoshiandkin/ypricemagic-server:latest
     build: .
     init: true
     environment:
@@ -79,6 +81,7 @@ services:
     stop_grace_period: 30s
 
   ypm-optimism:
+    image: ghcr.io/satoshiandkin/ypricemagic-server:latest
     build: .
     init: true
     environment:
@@ -106,6 +109,7 @@ services:
     stop_grace_period: 30s
 
   ypm-base:
+    image: ghcr.io/satoshiandkin/ypricemagic-server:latest
     build: .
     init: true
     environment:

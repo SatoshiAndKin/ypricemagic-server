@@ -9,7 +9,7 @@ on:
 # Branch protection should require CI to pass before merge
 concurrency:
   group: cd-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 env:
   REGISTRY: ghcr.io
@@ -103,8 +103,44 @@ jobs:
             # Pull the latest image
             docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
 
+            # Source environment variables for docker stack deploy
+            # Note: docker stack deploy does not auto-load .env like docker compose does
+            set -a
+            source .env
+            set +a
+
             # Deploy the stack
             # Note: docker stack deploy ignores build: sections, so we pre-pull
             docker stack deploy -c docker-compose.yml ypm --with-registry-auth
 
             echo "Deploy initiated. Check 'docker service ls' and 'docker service logs ypm_ypm-ethereum' for status."
+
+      - name: Verify deployment health
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_KEY }}
+          script_stop: true
+          script: |
+            set -eux -o pipefail
+
+            # Wait for services to become healthy (poll health endpoint)
+            # The nginx service routes to chain backends, so /health aggregates all chains
+            MAX_RETRIES=30
+            RETRY_INTERVAL=10
+
+            for i in $(seq 1 $MAX_RETRIES); do
+              if curl -sf http://localhost:8000/health > /dev/null 2>&1; then
+                echo "Health check passed on attempt $i"
+                exit 0
+              fi
+              echo "Health check attempt $i/$MAX_RETRIES failed, retrying in ${RETRY_INTERVAL}s..."
+              sleep $RETRY_INTERVAL
+            done
+
+            echo "Health check failed after $MAX_RETRIES attempts"
+            # Print service status for debugging
+            docker service ls
+            docker service logs ypm_nginx --tail 20
+            exit 1
