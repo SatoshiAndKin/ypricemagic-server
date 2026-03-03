@@ -27,6 +27,9 @@ Testing surface: tools, URLs, setup steps, isolation notes, known quirks.
 - If the autocomplete "No matches" dropdown overlaps submit buttons, press `Escape` before clicking submit
 - In headless runs, `Escape`/`Tab` key tests can occasionally bounce to `about:blank`; reopen `http://localhost:8000` and continue
 - Tokenlist add-by-URL error banners auto-clear after ~5 seconds; capture screenshots/evidence immediately after triggering the error
+- During longer automation runs, agent-browser sessions can also bounce to `about:blank` between separate command invocations; prefer grouped command sequences and re-check page URL before interacting
+- The tokenlist import UI uses a dynamically-created hidden file input; direct file-upload automation may fail, but calling the app's `importTokenlistFile()` function with a synthesized `File` object is a reliable equivalent
+- If containers stop mid-run, recover with `docker compose up -d` and re-check `curl -sf http://localhost:8000/ethereum/health` before resuming
 
 ## Test Isolation
 
@@ -39,3 +42,4 @@ Each browser session gets fresh localStorage. Use incognito/private windows if n
 - Stay within `http://localhost:8000` and do not use off-limits ports.
 - For static-ui-extraction validation, avoid mutating tokenlist/localStorage settings unless required by the assigned assertion.
 - Capture clear evidence for each assertion: UI snapshot/screenshot plus matching network or terminal proof where specified.
+- If session instability occurs, prefer fewer larger automation steps (instead of many small calls) and include explicit waits before snapshots.
