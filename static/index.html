@@ -9,6 +9,29 @@
 <body>
   <h1>ypricemagic Price Lookup</h1>
 
+  <!-- Token Lists Management Panel -->
+  <div id="tokenlist-panel" class="tokenlist-panel collapsed">
+    <div class="tokenlist-header" id="tokenlist-toggle">
+      <span class="tokenlist-summary" id="tokenlist-summary">Loading...</span>
+      <span class="tokenlist-expand-icon">▼</span>
+    </div>
+    <div class="tokenlist-content" id="tokenlist-content">
+      <div class="tokenlist-lists" id="tokenlist-lists"></div>
+      <div class="tokenlist-actions">
+        <div class="tokenlist-action-row">
+          <input type="text" id="tokenlist-url-input" placeholder="Add list by URL (https://...)" class="tokenlist-url-input">
+          <button type="button" id="tokenlist-add-url" class="btn-small">Add</button>
+        </div>
+        <div class="tokenlist-action-row">
+          <input type="file" id="tokenlist-file-input" accept=".json" style="display:none">
+          <button type="button" id="tokenlist-import-btn" class="btn-small">Import File</button>
+          <button type="button" id="tokenlist-export-btn" class="btn-small btn-secondary">Export Local</button>
+        </div>
+        <div class="tokenlist-error" id="tokenlist-error"></div>
+      </div>
+    </div>
+  </div>
+
   <!-- Global Chain Selector -->
   <div class="form-group">
     <label for="chain">Chain (applies to all forms)</label>

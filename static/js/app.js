@@ -84,6 +84,12 @@ async function loadTokenlists() {
 
   // Build index
   rebuildTokenIndex();
+
+  // Load enabled/disabled states
+  loadTokenlistStates();
+
+  // Rebuild index after loading states
+  rebuildTokenIndex();
 }
 
 function rebuildTokenIndex() {
@@ -126,6 +132,40 @@ function saveLocalTokens() {
   } else {
     localStorage.setItem('localTokens', '[]');
   }
+}
+
+// Save user-added tokenlists to localStorage
+function saveUserTokenlists() {
+  const userLists = tokenlists.filter(l => !l.isDefault && !l.isLocal).map(l => ({
+    ...l,
+    enabled: l.enabled !== false // default to true
+  }));
+  localStorage.setItem('tokenlists', JSON.stringify(userLists));
+}
+
+// Load tokenlists state from localStorage
+function loadTokenlistStates() {
+  try {
+    const states = JSON.parse(localStorage.getItem('tokenlistStates') || '{}');
+    for (const list of tokenlists) {
+      const key = list.isDefault ? 'default' : (list.url || list.name);
+      if (states[key] !== undefined) {
+        list.enabled = states[key];
+      }
+    }
+  } catch (e) {
+    console.error('Failed to load tokenlist states:', e);
+  }
+}
+
+// Save tokenlist enabled states to localStorage
+function saveTokenlistStates() {
+  const states = {};
+  for (const list of tokenlists) {
+    const key = list.isDefault ? 'default' : (list.url || list.name);
+    states[key] = list.enabled;
+  }
+  localStorage.setItem('tokenlistStates', JSON.stringify(states));
 }
 
 function addLocalToken(token) {
@@ -872,6 +912,9 @@ document.getElementById('chain').addEventListener('change', () => {
       ac.search();
     }
   }
+
+  // Re-render tokenlist panel to update token counts
+  renderTokenlistPanel();
 });
 
 // Initialize autocomplete on token inputs
@@ -886,9 +929,378 @@ function initAutocompletes() {
   addTokenRow('', '');
 }
 
-// Load tokenlists and initialize
+// Tokenlist Management Panel
+let tokenlistPanelState = {
+  collapsed: true
+};
+
+function countTokensForChain(list, chainId) {
+  if (!list.tokens) return 0;
+  return list.tokens.filter(t => t.chainId === chainId).length;
+}
+
+function countAllEnabledTokens() {
+  let total = 0;
+  const chainId = getChainId();
+  for (const list of tokenlists) {
+    if (list.enabled) {
+      total += countTokensForChain(list, chainId);
+    }
+  }
+  return total;
+}
+
+function renderTokenlistSummary() {
+  const summaryEl = document.getElementById('tokenlist-summary');
+  if (!summaryEl) return;
+
+  const enabledLists = tokenlists.filter(l => l.enabled).length;
+  const totalTokens = countAllEnabledTokens();
+
+  summaryEl.textContent = enabledLists + ' list' + (enabledLists !== 1 ? 's' : '') + ', ' + totalTokens + ' tokens (current chain)';
+}
+
+function renderTokenlistPanel() {
+  const listsEl = document.getElementById('tokenlist-lists');
+  if (!listsEl) return;
+
+  listsEl.innerHTML = '';
+
+  for (let i = 0; i < tokenlists.length; i++) {
+    const list = tokenlists[i];
+    const chainId = getChainId();
+    const tokenCount = countTokensForChain(list, chainId);
+
+    const itemEl = document.createElement('div');
+    itemEl.className = 'tokenlist-item' + (list.enabled ? '' : ' disabled');
+
+    // Toggle switch
+    const toggleHtml =
+      '<div class="tokenlist-toggle ' + (list.enabled ? 'enabled' : '') + '" data-index="' + i + '">' +
+        '<div class="tokenlist-toggle-knob"></div>' +
+      '</div>';
+
+    // Delete button (disabled for default list)
+    const deleteDisabled = list.isDefault ? ' disabled title="Cannot delete default list"' : '';
+    const deleteHtml = '<button type="button" class="tokenlist-delete" data-index="' + i + '"' + deleteDisabled + '>Delete</button>';
+
+    itemEl.innerHTML =
+      '<div class="tokenlist-item-info">' +
+        '<div class="tokenlist-item-name">' + escapeHtml(list.name) + '</div>' +
+        '<div class="tokenlist-item-count">' + tokenCount + ' tokens on ' + getChain() + '</div>' +
+      '</div>' +
+      '<div class="tokenlist-item-actions">' +
+        toggleHtml +
+        deleteHtml +
+      '</div>';
+
+    listsEl.appendChild(itemEl);
+  }
+
+  // Attach event listeners
+  listsEl.querySelectorAll('.tokenlist-toggle').forEach(toggle => {
+    toggle.addEventListener('click', function() {
+      const index = parseInt(this.dataset.index, 10);
+      toggleTokenlist(index);
+    });
+  });
+
+  listsEl.querySelectorAll('.tokenlist-delete').forEach(btn => {
+    btn.addEventListener('click', function() {
+      const index = parseInt(this.dataset.index, 10);
+      deleteTokenlist(index);
+    });
+  });
+
+  renderTokenlistSummary();
+}
+
+function toggleTokenlist(index) {
+  if (index < 0 || index >= tokenlists.length) return;
+
+  const list = tokenlists[index];
+  list.enabled = !list.enabled;
+
+  // Save state
+  if (list.isLocal) {
+    saveLocalTokens();
+  } else if (!list.isDefault) {
+    saveUserTokenlists();
+  }
+  saveTokenlistStates();
+
+  // Rebuild token index
+  rebuildTokenIndex();
+
+  // Re-render panel
+  renderTokenlistPanel();
+}
+
+function deleteTokenlist(index) {
+  if (index < 0 || index >= tokenlists.length) return;
+
+  const list = tokenlists[index];
+  if (list.isDefault) return; // Cannot delete default
+
+  // Remove from array
+  tokenlists.splice(index, 1);
+
+  // Save to localStorage
+  saveUserTokenlists();
+  saveTokenlistStates();
+
+  // Rebuild token index
+  rebuildTokenIndex();
+
+  // Re-render panel
+  renderTokenlistPanel();
+}
+
+function showTokenlistError(msg) {
+  const errorEl = document.getElementById('tokenlist-error');
+  if (errorEl) {
+    errorEl.textContent = msg;
+    // Clear after 5 seconds
+    setTimeout(() => {
+      if (errorEl.textContent === msg) {
+        errorEl.textContent = '';
+      }
+    }, 5000);
+  }
+}
+
+function clearTokenlistError() {
+  const errorEl = document.getElementById('tokenlist-error');
+  if (errorEl) {
+    errorEl.textContent = '';
+  }
+}
+
+async function addTokenlistByUrl(url) {
+  clearTokenlistError();
+
+  // Validate URL scheme
+  if (!url.startsWith('https://')) {
+    showTokenlistError('Only https:// URLs are allowed');
+    return false;
+  }
+
+  // Reject dangerous schemes
+  try {
+    const parsed = new URL(url);
+    if (parsed.protocol !== 'https:') {
+      showTokenlistError('Only https:// URLs are allowed');
+      return false;
+    }
+  } catch (e) {
+    showTokenlistError('Invalid URL format');
+    return false;
+  }
+
+  const addBtn = document.getElementById('tokenlist-add-url');
+  const urlInput = document.getElementById('tokenlist-url-input');
+
+  // Show loading state
+  addBtn.disabled = true;
+  addBtn.innerHTML = '<span class="tokenlist-loading"></span>Loading...';
+
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
+
+    const res = await fetch(url, { signal: controller.signal });
+    clearTimeout(timeoutId);
+
+    if (!res.ok) {
+      showTokenlistError('Failed to fetch: HTTP ' + res.status);
+      return false;
+    }
+
+    const data = await res.json();
+
+    // Validate tokenlist structure
+    if (!data.name || !Array.isArray(data.tokens)) {
+      showTokenlistError('Invalid tokenlist: must have name and tokens array');
+      return false;
+    }
+
+    // Check for duplicate
+    const exists = tokenlists.some(l =>
+      l.url === url || (l.name === data.name && !l.isDefault && !l.isLocal)
+    );
+    if (exists) {
+      showTokenlistError('Tokenlist already added');
+      return false;
+    }
+
+    // Add the list
+    data.url = url;
+    data.enabled = true;
+    data.isDefault = false;
+    data.isLocal = false;
+    tokenlists.push(data);
+
+    // Save to localStorage
+    saveUserTokenlists();
+    saveTokenlistStates();
+
+    // Rebuild token index
+    rebuildTokenIndex();
+
+    // Re-render panel
+    renderTokenlistPanel();
+
+    // Clear input
+    urlInput.value = '';
+
+    return true;
+  } catch (e) {
+    if (e.name === 'AbortError') {
+      showTokenlistError('Request timed out (10s)');
+    } else {
+      showTokenlistError('Failed to fetch: ' + e.message);
+    }
+    return false;
+  } finally {
+    addBtn.disabled = false;
+    addBtn.textContent = 'Add';
+  }
+}
+
+function importTokenlistFile(file) {
+  clearTokenlistError();
+
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const data = JSON.parse(e.target.result);
+
+      // Validate tokenlist structure
+      if (!data.name || !Array.isArray(data.tokens)) {
+        showTokenlistError('Invalid tokenlist: must have name and tokens array');
+        return;
+      }
+
+      // Check for duplicate
+      const exists = tokenlists.some(l =>
+        l.name === data.name && !l.isDefault && !l.isLocal
+      );
+      if (exists) {
+        showTokenlistError('Tokenlist with this name already exists');
+        return;
+      }
+
+      // Add the list
+      data.enabled = true;
+      data.isDefault = false;
+      data.isLocal = false;
+      tokenlists.push(data);
+
+      // Save to localStorage
+      saveUserTokenlists();
+      saveTokenlistStates();
+
+      // Rebuild token index
+      rebuildTokenIndex();
+
+      // Re-render panel
+      renderTokenlistPanel();
+    } catch (err) {
+      showTokenlistError('Invalid JSON file: ' + err.message);
+    }
+  };
+  reader.readAsText(file);
+}
+
+function exportLocalTokenlist() {
+  const localList = tokenlists.find(l => l.isLocal);
+
+  if (!localList || !localList.tokens || localList.tokens.length === 0) {
+    showTokenlistError('No local tokens to export');
+    return;
+  }
+
+  const exportData = {
+    name: 'Local Tokens',
+    version: { major: 1, minor: 0, patch: 0 },
+    timestamp: new Date().toISOString(),
+    tokens: localList.tokens
+  };
+
+  const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'local-tokens.json';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+function setupTokenlistPanel() {
+  const panel = document.getElementById('tokenlist-panel');
+  const toggle = document.getElementById('tokenlist-toggle');
+  const addBtn = document.getElementById('tokenlist-add-url');
+  const urlInput = document.getElementById('tokenlist-url-input');
+  const fileInput = document.getElementById('tokenlist-file-input');
+  const importBtn = document.getElementById('tokenlist-import-btn');
+  const exportBtn = document.getElementById('tokenlist-export-btn');
+
+  if (!panel || !toggle) return;
+
+  // Toggle collapse
+  toggle.addEventListener('click', function() {
+    panel.classList.toggle('collapsed');
+    tokenlistPanelState.collapsed = panel.classList.contains('collapsed');
+  });
+
+  // Add by URL
+  if (addBtn && urlInput) {
+    addBtn.addEventListener('click', async function() {
+      const url = urlInput.value.trim();
+      if (url) {
+        await addTokenlistByUrl(url);
+      }
+    });
+
+    urlInput.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        const url = urlInput.value.trim();
+        if (url) {
+          addTokenlistByUrl(url);
+        }
+      }
+    });
+  }
+
+  // Import file
+  if (fileInput && importBtn) {
+    importBtn.addEventListener('click', function() {
+      fileInput.click();
+    });
+
+    fileInput.addEventListener('change', function() {
+      if (fileInput.files.length > 0) {
+        importTokenlistFile(fileInput.files[0]);
+        fileInput.value = ''; // Reset for re-select
+      }
+    });
+  }
+
+  // Export local
+  if (exportBtn) {
+    exportBtn.addEventListener('click', exportLocalTokenlist);
+  }
+
+  // Initial render
+  renderTokenlistPanel();
+}
 loadTokenlists().then(() => {
   initAutocompletes();
+  setupTokenlistPanel();
 });
 
 // Load URL params to restore form state
