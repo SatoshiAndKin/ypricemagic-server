@@ -25,8 +25,9 @@ The UI is vanilla JS served as static files. No build step, no framework.
 ## Tokenlist Storage
 
 All tokenlist state lives in browser localStorage:
-- `tokenlists`: Array of {url, name, tokens[], enabled, isDefault}
-- `localTokenlist`: User-saved tokens from the unknown-token modal
+- `tokenlists`: Array of {url, name, tokens[], enabled, isDefault, isLocal}
+- `tokenlistStates`: Map of `{[url]: enabled}` used to persist toggle state
+- `localTokens`: User-saved tokens from the unknown-token modal
 - Default: Uniswap tokenlist loaded from /static/tokenlists/uniswap-default.json on first visit
 
 ## Deploy Architecture

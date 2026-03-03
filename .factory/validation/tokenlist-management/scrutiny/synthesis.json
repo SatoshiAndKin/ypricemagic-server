@@ -1,0 +1,46 @@
+{
+  "milestone": "tokenlist-management",
+  "round": 1,
+  "status": "pass",
+  "validatorsRun": {
+    "test": {
+      "passed": true,
+      "command": "uv run pytest",
+      "exitCode": 0
+    },
+    "typecheck": {
+      "passed": true,
+      "command": "uv run mypy src/",
+      "exitCode": 0
+    },
+    "lint": {
+      "passed": true,
+      "command": "uv run ruff check .",
+      "exitCode": 0
+    }
+  },
+  "reviewsSummary": {
+    "total": 1,
+    "passed": 1,
+    "failed": 0,
+    "failedFeatures": []
+  },
+  "blockingIssues": [],
+  "appliedUpdates": [
+    {
+      "target": "library",
+      "description": "Updated .factory/library/architecture.md Tokenlist Storage section to reflect current keys: localTokens, tokenlistStates, and isLocal in tokenlists.",
+      "sourceFeature": "tokenlist-management-ui"
+    }
+  ],
+  "suggestedGuidanceUpdates": [
+    {
+      "target": "skill:frontend-worker",
+      "suggestion": "Clarify the 'Write tests first (where applicable)' step to explicitly call out JS-only UI features as test-first exempt when Python/backend code is unchanged and browser-based validation is the primary method.",
+      "evidence": "Review for tokenlist-management-ui reported no automated test additions for a vanilla JS-only feature; skill text includes this implicitly but could be more explicit for consistency.",
+      "isSystemic": false
+    }
+  ],
+  "rejectedObservations": [],
+  "previousRound": null
+}

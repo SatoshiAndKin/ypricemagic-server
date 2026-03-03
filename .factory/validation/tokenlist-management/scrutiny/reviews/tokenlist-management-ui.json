@@ -1,0 +1,56 @@
+{
+  "featureId": "tokenlist-management-ui",
+  "reviewedAt": "2026-03-03T06:30:00.000Z",
+  "commitId": "0c19160",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "pass",
+  "codeReview": {
+    "summary": "The tokenlist management panel is well-implemented with solid XSS prevention and URL validation. All feature requirements are met: collapsible panel with summary, toggle/delete/add-by-URL/import/export, localStorage persistence, HTTPS-only URL enforcement, and chain-aware token counts. The escapeHtml() function is correctly applied to all tokenlist-sourced data rendered in the DOM. URL validation uses both a string prefix check and URL() constructor parsing, correctly rejecting javascript:, data:, file:, and http: schemes. Two non-blocking correctness issues identified around localStorage error handling and local list deletion cleanup.",
+    "issues": [
+      {
+        "file": "static/js/app.js",
+        "line": 1033,
+        "severity": "non_blocking",
+        "description": "deleteTokenlist() does not clean up localStorage key 'localTokens' when deleting the local (isLocal) list. After page reload, loadTokenlists() re-reads 'localTokens' from localStorage and recreates the local list. The local list effectively cannot be permanently deleted. Should add: if (list.isLocal) localStorage.setItem('localTokens', '[]'); before splice."
+      },
+      {
+        "file": "static/js/app.js",
+        "line": 139,
+        "severity": "non_blocking",
+        "description": "saveUserTokenlists() stores the FULL tokenlist data (including all tokens) via spread (...l) into localStorage without a try/catch. Large imported tokenlists (e.g., CoinGecko with 10K+ tokens) could exceed the ~5MB localStorage quota, causing an uncaught QuotaExceededError. Both saveUserTokenlists() and saveTokenlistStates() should wrap localStorage.setItem() in try/catch with user-visible error feedback."
+      },
+      {
+        "file": "static/js/app.js",
+        "line": 139,
+        "severity": "non_blocking",
+        "description": "saveUserTokenlists() uses spread (...l) which copies ALL properties from the tokenlist object, including potentially large fields like 'keywords', 'tags', 'logoURI', and 'extensions' from external sources. Consider storing only the essential fields (url, name, tokens, enabled, isDefault, isLocal) to reduce localStorage usage."
+      },
+      {
+        "file": "static/js/app.js",
+        "line": 1095,
+        "severity": "non_blocking",
+        "description": "addTokenlistByUrl() fetches external URLs via cross-origin fetch, which is subject to CORS. Many tokenlist CDNs support CORS but some do not. The error message for CORS failures would be 'Failed to fetch: TypeError: Failed to fetch' which is opaque. Consider detecting CORS-like failures and showing a more helpful message suggesting the user download the file and use Import instead."
+      }
+    ]
+  },
+  "sharedStateObservations": [
+    {
+      "area": "knowledge",
+      "observation": "architecture.md documents the localStorage key for user-saved tokens as 'localTokenlist' but the actual code (both pre-existing and new) uses 'localTokens'. The new feature's loadTokenlists() reads from 'localTokens'. This inconsistency could confuse future workers.",
+      "evidence": ".factory/library/architecture.md says 'localTokenlist: User-saved tokens from the unknown-token modal' but static/js/app.js:73 uses localStorage.getItem('localTokens')"
+    },
+    {
+      "area": "knowledge",
+      "observation": "architecture.md documents localStorage schema as 'tokenlists: Array of {url, name, tokens[], enabled, isDefault}' but actual storage now also includes 'isLocal' flag and the 'tokenlistStates' key for enabled/disabled state. The new feature adds a dual-storage pattern: enabled state in both 'tokenlists' data and separately in 'tokenlistStates'.",
+      "evidence": "static/js/app.js saveUserTokenlists() stores enabled in the list data, while saveTokenlistStates() stores it separately in 'tokenlistStates' key. loadTokenlistStates() uses the separate key as authoritative."
+    },
+    {
+      "area": "conventions",
+      "observation": "The frontend-worker skill says 'Write tests first (where applicable)' and the handoff notes 'No new automated tests - feature is vanilla JS UI tested via browser automation'. The skill should clarify that pure-JS UI features with no Python changes are exempt from the 'tests first' step, since browser-based manual testing is the primary verification method.",
+      "evidence": "Skill SKILL.md step 3 says 'Write tests first (where applicable)' with a note that 'For JS-only changes, manual browser verification is the primary test method' — the exemption exists but could be clearer."
+    }
+  ],
+  "addressesFailureFrom": null,
+  "summary": "PASS. The tokenlist management panel correctly implements all 15 expected behaviors from the feature spec: collapsible panel with summary counts, toggle on/off with immediate autocomplete updates, HTTPS-only URL validation (dual check: string prefix + URL constructor), import/export, delete with default-list protection, localStorage persistence, and XSS-safe rendering via escapeHtml(). Two non-blocking issues found: (1) deleting the local list doesn't clear its localStorage key so it reappears on reload, (2) no try/catch on localStorage writes risking silent failures on quota exceeded. Code style follows existing patterns (vanilla JS, escapeHtml, DOM manipulation). 472 lines added across 3 files (HTML, CSS, JS), all cleanly scoped to the panel feature."
+}
