@@ -1,0 +1,28 @@
+{
+  "featureId": "extract-inline-ui",
+  "reviewedAt": "2026-03-03T04:50:00.000Z",
+  "commitId": "a5c9880",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "pass",
+  "codeReview": {
+    "summary": "Clean extraction of the monolithic INDEX_HTML string (~490 lines) from server.py into three well-organized static files: static/index.html (79 lines), static/js/app.js (363 lines), static/css/style.css (42 lines). The / endpoint was updated from HTMLResponse returning an inline string to FileResponse serving the static file. Import changed from HTMLResponse to FileResponse. All CSS, JS, and HTML content was verified to be a faithful extraction with no logic changes or omissions. The STATIC_DIR variable (already defined by the prior static-file-infrastructure feature) is correctly reused. media_type='text/html' is explicitly set on the FileResponse. All expected behaviors were thoroughly verified via browser testing (chain selector, single price, batch, bucket, date picker, URL params, error display). 244 existing tests pass. Lint, format, and mypy all clean.",
+    "issues": [
+      {
+        "file": "src/tests/",
+        "line": null,
+        "severity": "non_blocking",
+        "description": "No pytest test was added for the GET / endpoint serving index.html via FileResponse. The prior test_static.py covers /static/* paths but not /. While browser testing verified correctness, a regression test (e.g., asserting GET / returns 200 with text/html content-type and contains '<script src=\"/static/js/app.js\">' ) would catch future breakage without requiring browser testing."
+      }
+    ]
+  },
+  "sharedStateObservations": [
+    {
+      "area": "skills",
+      "observation": "The frontend-worker skill procedure step 3 says 'Write tests first (where applicable)' and the example handoff shows adding test_static.py with 2 new test cases. The worker reported followedProcedure: true with no deviations, but actually added 0 tests. The worker's rationale ('No new Python tests needed as this is a refactoring') is reasonable but conflicts with the skill's explicit test-first instruction. The skill could clarify that pure HTML/CSS/JS extraction refactors (no new Python logic) don't require new Python tests, or it could suggest adding a basic GET / smoke test.",
+      "evidence": "Handoff tests.added: [] with coverage note 'No new Python tests needed as this is a refactoring of existing code.' Skill procedure step 3: 'Write tests first (where applicable)'. Skill example handoff shows adding 2 tests to test_static.py."
+    }
+  ],
+  "addressesFailureFrom": null,
+  "summary": "PASS. The extraction is clean and complete. The INDEX_HTML string is fully removed from server.py, all UI content is faithfully preserved in the three static files, and the FileResponse endpoint correctly serves index.html. All 10 validation assertions claimed by this feature were verified: static files served (VAL-STATIC-001), chain selector (002), single price (003), batch (004), bucket (005), date picker (006), URL params (007), error display (009), no INDEX_HTML (010), and Docker compatibility (VAL-CROSS-006). The only non-blocking observation is the absence of a pytest smoke test for GET /, which is a minor regression risk."
+}

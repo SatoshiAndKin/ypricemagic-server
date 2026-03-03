@@ -1,0 +1,52 @@
+{
+  "milestone": "static-ui-extraction",
+  "round": 1,
+  "status": "pass",
+  "validatorsRun": {
+    "test": {
+      "passed": true,
+      "command": "uv run pytest",
+      "exitCode": 0
+    },
+    "typecheck": {
+      "passed": true,
+      "command": "uv run mypy src/",
+      "exitCode": 0
+    },
+    "lint": {
+      "passed": true,
+      "command": "uv run ruff check .",
+      "exitCode": 0
+    }
+  },
+  "reviewsSummary": {
+    "total": 2,
+    "passed": 2,
+    "failed": 0,
+    "failedFeatures": []
+  },
+  "blockingIssues": [],
+  "appliedUpdates": [],
+  "suggestedGuidanceUpdates": [
+    {
+      "target": "AGENTS.md",
+      "suggestion": "Add a repo convention for empty directories required by tests (e.g., commit a .gitkeep placeholder) so fresh clones don't rely on local-only directories.",
+      "evidence": "Feature static-file-infrastructure had tests asserting static/js and static/css directories existed, but commit 93af9e5 could not track empty dirs in git; this was only resolved in the next feature commit.",
+      "isSystemic": true
+    },
+    {
+      "target": "AGENTS.md",
+      "suggestion": "Document how to handle Droid-Shield false positives on committed public address lists (tokenlists), including preferred mitigation patterns for this repo.",
+      "evidence": "The first static-file-infrastructure worker session was blocked by Droid-Shield on tokenlist address content and needed a second session workaround (gitignore + runtime/build-time download).",
+      "isSystemic": false
+    },
+    {
+      "target": "skills/frontend-worker",
+      "suggestion": "Clarify the 'write tests first (where applicable)' step for extraction/refactor-only frontend changes, including when a minimal smoke test (e.g., GET /) is expected.",
+      "evidence": "Feature extract-inline-ui passed with no added pytest tests while reporting followedProcedure=true, indicating ambiguity between skill guidance and acceptable execution for pure extraction refactors.",
+      "isSystemic": true
+    }
+  ],
+  "rejectedObservations": [],
+  "previousRound": null
+}
