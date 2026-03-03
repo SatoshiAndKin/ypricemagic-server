@@ -5,9 +5,13 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+    types: [opened, synchronize, reopened, ready_for_review]
 
 jobs:
   lockfile:
+    # Only check on PRs; push-to-main skips this because git deps (ypricemagic@master)
+    # can resolve to a newer commit between lockfile generation and the check.
+    if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 5
 
