@@ -1,5 +1,5 @@
 commands:
-  test: uv run pytest -x -q --tb=short -j 7
+  test: uv run pytest -x -q --tb=short
   test-coverage: uv run pytest --cov=src --cov-report=term-missing
   lint: uv run ruff check .
   format: uv run ruff format .
