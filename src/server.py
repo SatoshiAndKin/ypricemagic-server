@@ -743,23 +743,14 @@ INDEX_HTML = """<!DOCTYPE html>
     </div>
     <div class="form-group">
       <label for="price-block">Block / Date (optional)</label>
-      <input type="text" id="price-block" placeholder="e.g. 18000000">
-      <div class="hint" id="price-block-hint">Type a number for block, or type "/" to pick a date</div>
+      <input type="text" id="price-block" placeholder="defaults to latest">
+      <div class="hint" id="price-block-hint">Block number, or type "/" for a date picker. Defaults to latest block.</div>
     </div>
     <div class="form-group">
       <label for="price-amount">Amount (optional, token units for price impact)</label>
-      <input type="text" id="price-amount" placeholder="e.g. 1000">
+      <input type="text" id="price-amount" placeholder="e.g. 1">
     </div>
-    <div class="form-row">
-      <div class="form-group checkbox-group">
-        <input type="checkbox" id="price-skip-cache">
-        <label for="price-skip-cache">Skip Cache</label>
-      </div>
-      <div class="form-group checkbox-group">
-        <input type="checkbox" id="price-silent">
-        <label for="price-silent">Silent</label>
-      </div>
-    </div>
+
     <div class="form-group">
       <label for="price-ignore-pools">Ignore Pools (optional, comma-separated addresses)</label>
       <input type="text" id="price-ignore-pools" placeholder="0xabc...,0xdef...">
@@ -778,19 +769,10 @@ INDEX_HTML = """<!DOCTYPE html>
     </div>
     <div class="form-group">
       <label for="batch-block">Block / Date (optional)</label>
-      <input type="text" id="batch-block" placeholder="e.g. 18000000">
-      <div class="hint" id="batch-block-hint">Type a number for block, or type "/" to pick a date</div>
+      <input type="text" id="batch-block" placeholder="defaults to latest">
+      <div class="hint" id="batch-block-hint">Block number, or type "/" for a date picker. Defaults to latest block.</div>
     </div>
-    <div class="form-row">
-      <div class="form-group checkbox-group">
-        <input type="checkbox" id="batch-skip-cache">
-        <label for="batch-skip-cache">Skip Cache</label>
-      </div>
-      <div class="form-group checkbox-group">
-        <input type="checkbox" id="batch-silent">
-        <label for="batch-silent">Silent</label>
-      </div>
-    </div>
+
     <button type="submit" id="batch-submit">Get Prices</button>
   </form>
   <div id="batch-result" class="result"></div>
@@ -847,8 +829,8 @@ INDEX_HTML = """<!DOCTYPE html>
       function switchToBlock() {
         input.type = 'text';
         input.value = '';
-        input.placeholder = 'e.g. 18000000';
-        hint.textContent = 'Type a number for block, or type "/" to pick a date';
+        input.placeholder = 'defaults to latest';
+        hint.textContent = 'Block number, or type "/" for a date picker. Defaults to latest block.';
       }
 
       input.addEventListener('input', function() {
@@ -928,8 +910,6 @@ INDEX_HTML = """<!DOCTYPE html>
       const blockVal = blockInput.value.trim();
       const isDate = blockInput.type === 'datetime-local';
       const amount = document.getElementById('price-amount').value.trim();
-      const skipCache = document.getElementById('price-skip-cache').checked;
-      const silent = document.getElementById('price-silent').checked;
       const ignorePools = document.getElementById('price-ignore-pools').value.trim();
 
       priceSubmit.disabled = true;
@@ -944,8 +924,6 @@ INDEX_HTML = """<!DOCTYPE html>
           params.set('block', blockVal);
         }
         if (amount) params.set('amount', amount);
-        if (skipCache) params.set('skip_cache', 'true');
-        if (silent) params.set('silent', 'true');
         if (ignorePools) params.set('ignore_pools', ignorePools);
 
         const res = await fetch('/' + chain + '/price?' + params.toString());
@@ -1050,9 +1028,6 @@ INDEX_HTML = """<!DOCTYPE html>
       const batchBlockInput = document.getElementById('batch-block');
       const batchBlockVal = batchBlockInput.value.trim();
       const batchIsDate = batchBlockInput.type === 'datetime-local';
-      const skipCache = document.getElementById('batch-skip-cache').checked;
-      const silent = document.getElementById('batch-silent').checked;
-
       if (!tokens) {
         showError(batchResult, 'Add at least one token address');
         return;
@@ -1070,8 +1045,6 @@ INDEX_HTML = """<!DOCTYPE html>
           params.set('block', batchBlockVal);
         }
         if (amounts) params.set('amounts', amounts);
-        if (skipCache) params.set('skip_cache', 'true');
-        if (silent) params.set('silent', 'true');
 
         const res = await fetch('/' + chain + '/prices?' + params.toString());
         const data = await res.json();
@@ -1162,13 +1135,11 @@ INDEX_HTML = """<!DOCTYPE html>
         e.preventDefault();
         priceBlockEl.type = 'text';
         priceBlockEl.value = '';
-        priceBlockEl.placeholder = 'e.g. 18000000';
-        priceHint.textContent = 'Type a number for block, or type "/" to pick a date';
+        priceBlockEl.placeholder = 'defaults to latest';
+        priceHint.textContent = 'Block number, or type "/" for a date picker. Defaults to latest block.';
       });
     }
     if (params.get('amount')) document.getElementById('price-amount').value = params.get('amount');
-    if (params.get('skip_cache') === 'true') document.getElementById('price-skip-cache').checked = true;
-    if (params.get('silent') === 'true') document.getElementById('price-silent').checked = true;
     if (params.get('ignore_pools')) document.getElementById('price-ignore-pools').value = params.get('ignore_pools');
     if (params.get('tokens')) {
       const savedTokens = params.get('tokens').split(',');
