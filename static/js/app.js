@@ -15,6 +15,51 @@ function getChainId() {
   return CHAIN_IDS[getChain()] || 1;
 }
 
+// Default pairs per chain (factory defaults)
+const DEFAULT_PAIRS = {
+  ethereum: {
+    from: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48', // USDC
+    to: '0xf939E0A03FB07F59A73314E73794Be0E57ac1b4E'   // crvUSD
+  },
+  arbitrum: {
+    from: '0xaf88d065e77c8cC2239327C5EDb3A432268e5831', // USDC (native)
+    to: '0x82aF49447D8a07e3bd95BD0d56f35241523fBab1'   // WETH
+  },
+  optimism: {
+    from: '0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85', // USDC
+    to: '0x4200000000000000000000000000000000000006'    // WETH
+  },
+  base: {
+    from: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913', // USDC
+    to: '0x4200000000000000000000000000000000000006'    // WETH
+  }
+};
+
+// Get custom pairs from localStorage
+function getCustomPairs() {
+  try {
+    return JSON.parse(localStorage.getItem('defaultPairs') || '{}');
+  } catch (e) {
+    return {};
+  }
+}
+
+// Save custom pairs to localStorage
+function saveCustomPair(chain, from, to) {
+  const pairs = getCustomPairs();
+  pairs[chain] = { from, to };
+  localStorage.setItem('defaultPairs', JSON.stringify(pairs));
+}
+
+// Get the effective pair for a chain (custom if set, else factory default)
+function getEffectivePair(chain) {
+  const custom = getCustomPairs();
+  if (custom[chain]) {
+    return custom[chain];
+  }
+  return DEFAULT_PAIRS[chain] || { from: '', to: '' };
+}
+
 function escapeHtml(str) {
   if (str == null) return '';
   return String(str).replace(/[&<>"']/g, function(c) {
@@ -434,11 +479,9 @@ class TokenAutocomplete {
     const form = this.input.closest('form');
     const currentBlock = form ? form.querySelector('input[id$="-block"]') : null;
     const currentAmount = form ? form.querySelector('input[id$="-amount"]') : null;
-    const currentIgnorePools = form ? form.querySelector('input[id$="-ignore-pools"]') : null;
 
     const blockValue = currentBlock ? currentBlock.value : '';
     const amountValue = currentAmount ? currentAmount.value : '';
-    const ignorePoolsValue = currentIgnorePools ? currentIgnorePools.value : '';
 
     // Update token address
     this.input.value = token.address;
@@ -447,7 +490,6 @@ class TokenAutocomplete {
     // Restore adjacent field values (in case form framework resets them)
     if (currentBlock) currentBlock.value = blockValue;
     if (currentAmount) currentAmount.value = amountValue;
-    if (currentIgnorePools) currentIgnorePools.value = ignorePoolsValue;
   }
 
   destroy() {
@@ -651,14 +693,21 @@ function setupDatePickerSwitch(blockId, hintId) {
   });
 }
 
-setupDatePickerSwitch('price-block', 'price-block-hint');
+setupDatePickerSwitch('quote-block', 'quote-block-hint');
 setupDatePickerSwitch('batch-block', 'batch-block-hint');
 
-// Single Price Form
-const priceForm = document.getElementById('price-form');
-const priceResult = document.getElementById('price-result');
-const priceSubmit = document.getElementById('price-submit');
-const priceTokenInput = document.getElementById('price-token');
+// Quote Form
+const quoteForm = document.getElementById('quote-form');
+const quoteResult = document.getElementById('quote-result');
+const quoteSubmit = document.getElementById('quote-submit');
+const quoteFromInput = document.getElementById('quote-from');
+const quoteToInput = document.getElementById('quote-to');
+const quoteAmountInput = document.getElementById('quote-amount');
+const quoteAmountWarning = document.getElementById('quote-amount-warning');
+
+// Age update interval reference
+let quoteAgeInterval = null;
+let quoteBlockTimestamp = null;
 
 function chainMismatchWarning(expected, actual) {
   if (actual && actual !== expected) {
@@ -670,65 +719,206 @@ function chainMismatchWarning(expected, actual) {
   return '';
 }
 
-function showPriceResult(data, chain) {
-  priceResult.className = 'result show';
-  const mismatch = chainMismatchWarning(chain, data.chain);
-  const timestampField = data.block_timestamp != null ?
-    '<div class="field"><div class="field-label">Block Timestamp</div><div class="field-value">' + escapeHtml(data.block_timestamp) + '</div></div>' : '';
-  const amountField = data.amount != null ?
-    '<div class="field"><div class="field-label">Amount</div><div class="field-value">' + escapeHtml(data.amount) + '</div></div>' : '';
-  priceResult.innerHTML =
-    '<div class="result-header">Price Result</div>' + mismatch +
-    '<div class="field"><div class="field-label">Chain</div><div class="field-value">' + escapeHtml(data.chain) + '</div></div>' +
-    '<div class="field"><div class="field-label">Token</div><div class="field-value"><span class="dim">' + escapeHtml(data.token) + '</span></div></div>' +
-    '<div class="field"><div class="field-label">Block</div><div class="field-value">' + escapeHtml(data.block) + '</div></div>' + timestampField + amountField +
-    '<div class="field"><div class="field-label">Price (USD per token)</div><div class="field-value number">' + escapeHtml(data.price) + '</div></div>' +
-    '<div class="field"><div class="field-label">Cached</div><div class="field-value">' + (data.cached ? 'yes' : 'no') + '</div></div>';
+// Format relative age (e.g., "14s ago", "2m ago", "1h ago")
+function formatRelativeAge(timestamp) {
+  if (timestamp == null) return 'unknown';
+
+  const now = Math.floor(Date.now() / 1000);
+  const diff = now - timestamp;
+
+  if (diff < 0) return 'just now';
+  if (diff < 60) return diff + 's ago';
+  if (diff < 3600) return Math.floor(diff / 60) + 'm ago';
+  if (diff < 86400) return Math.floor(diff / 3600) + 'h ago';
+  return Math.floor(diff / 86400) + 'd ago';
 }
 
-priceForm.addEventListener('submit', async (e) => {
+// Format Unix timestamp to human-readable
+function formatTimestamp(timestamp) {
+  if (timestamp == null) return 'unknown';
+  const d = new Date(timestamp * 1000);
+  return d.toISOString().replace('T', ' ').slice(0, 19) + ' UTC';
+}
+
+// Update the age display in the result
+function updateQuoteAge() {
+  const ageEl = document.getElementById('quote-age-value');
+  if (ageEl && quoteBlockTimestamp != null) {
+    ageEl.textContent = formatRelativeAge(quoteBlockTimestamp);
+  }
+}
+
+// Stop the age update interval
+function stopQuoteAgeUpdate() {
+  if (quoteAgeInterval) {
+    clearInterval(quoteAgeInterval);
+    quoteAgeInterval = null;
+  }
+}
+
+// Start the age update interval
+function startQuoteAgeUpdate() {
+  stopQuoteAgeUpdate();
+  updateQuoteAge();
+  quoteAgeInterval = setInterval(updateQuoteAge, 1000);
+}
+
+function showQuoteResult(data, chain, fromPriceData, toPriceData) {
+  quoteResult.className = 'result show';
+  const mismatch = chainMismatchWarning(chain, data.chain);
+
+  // Store timestamp for age updates
+  quoteBlockTimestamp = data.block_timestamp;
+
+  // Get token info from autocomplete index
+  const chainId = CHAIN_IDS[chain] || 1;
+  const chainMap = tokenIndex.get(chainId);
+  const fromToken = chainMap ? chainMap.get(data.from.toLowerCase()) : null;
+  const toToken = chainMap ? chainMap.get(data.to.toLowerCase()) : null;
+
+  const fromSymbol = fromToken ? escapeHtml(fromToken.symbol) : escapeHtml(data.from.slice(0, 10) + '...');
+  const toSymbol = toToken ? escapeHtml(toToken.symbol) : escapeHtml(data.to.slice(0, 10) + '...');
+
+  // Conversion rate display
+  const conversionRate = data.output_amount / data.amount;
+  const oneUnitOutput = conversionRate.toFixed(8);
+
+  // USD prices from separate /price calls (or null if not fetched)
+  const fromPriceDisplay = fromPriceData && fromPriceData.price != null
+    ? '$' + escapeHtml(parseFloat(fromPriceData.price).toFixed(4))
+    : '<span class="null">N/A</span>';
+  const toPriceDisplay = toPriceData && toPriceData.price != null
+    ? '$' + escapeHtml(parseFloat(toPriceData.price).toFixed(4))
+    : '<span class="null">N/A</span>';
+
+  const timestampDisplay = data.block_timestamp != null
+    ? formatTimestamp(data.block_timestamp)
+    : 'unknown';
+
+  quoteResult.innerHTML =
+    '<div class="result-header">Quote Result</div>' + mismatch +
+    '<div class="field"><div class="field-label">Conversion</div><div class="field-value number">1 ' + fromSymbol + ' = ' + escapeHtml(oneUnitOutput) + ' ' + toSymbol + '</div></div>' +
+    '<div class="field"><div class="field-label">Input</div><div class="field-value">' + escapeHtml(data.amount) + ' ' + fromSymbol + ' → ' + escapeHtml(parseFloat(data.output_amount).toFixed(6)) + ' ' + toSymbol + '</div></div>' +
+    '<div class="field"><div class="field-label">From Token Price (USD)</div><div class="field-value number">' + fromPriceDisplay + '</div></div>' +
+    '<div class="field"><div class="field-label">To Token Price (USD)</div><div class="field-value number">' + toPriceDisplay + '</div></div>' +
+    '<div class="field"><div class="field-label">Chain</div><div class="field-value">' + escapeHtml(data.chain) + '</div></div>' +
+    '<div class="field"><div class="field-label">Block</div><div class="field-value">' + escapeHtml(data.block) + '</div></div>' +
+    '<div class="field"><div class="field-label">Block Timestamp</div><div class="field-value">' + escapeHtml(timestampDisplay) + '</div></div>' +
+    '<div class="field"><div class="field-label">Age</div><div class="field-value" id="quote-age-value">' + escapeHtml(formatRelativeAge(data.block_timestamp)) + '</div></div>' +
+    '<div class="field"><div class="field-label">Route</div><div class="field-value">' + escapeHtml(data.route) + '</div></div>';
+
+  // Start live age updates
+  startQuoteAgeUpdate();
+}
+
+// Amount warning handler
+quoteAmountInput.addEventListener('input', function() {
+  const value = this.value.trim();
+  if (value && parseFloat(value) > 0) {
+    quoteAmountWarning.style.display = 'block';
+  } else {
+    quoteAmountWarning.style.display = 'none';
+  }
+});
+
+// Quote form submission
+quoteForm.addEventListener('submit', async (e) => {
   e.preventDefault();
 
-  // Check for unknown token before proceeding
-  checkUnknownToken(priceTokenInput, async (proceed) => {
-    if (!proceed) return;
+  // Stop any previous age updates
+  stopQuoteAgeUpdate();
 
-    const chain = getChain();
-    const token = document.getElementById('price-token').value.trim();
-    const blockInput = document.getElementById('price-block');
-    const blockVal = blockInput.value.trim();
-    const isDate = blockInput.type === 'datetime-local';
-    const amount = document.getElementById('price-amount').value.trim();
-    const ignorePools = document.getElementById('price-ignore-pools').value.trim();
+  // Check for unknown tokens before proceeding
+  checkUnknownToken(quoteFromInput, async (proceedFrom) => {
+    if (!proceedFrom) return;
 
-    priceSubmit.disabled = true;
-    priceSubmit.textContent = 'Fetching...';
-    showLoading(priceResult, 'Fetching price...');
+    checkUnknownToken(quoteToInput, async (proceedTo) => {
+      if (!proceedTo) return;
 
-    try {
-      const params = new URLSearchParams({ token });
-      if (blockVal && isDate) {
-        params.set('timestamp', new Date(blockVal).toISOString());
-      } else if (blockVal) {
-        params.set('block', blockVal);
+      const chain = getChain();
+      const fromToken = quoteFromInput.value.trim();
+      const toToken = quoteToInput.value.trim();
+      const amount = quoteAmountInput.value.trim() || '1';
+      const blockInput = document.getElementById('quote-block');
+      const blockVal = blockInput.value.trim();
+      const isDate = blockInput.type === 'datetime-local';
+
+      if (!fromToken || !toToken) {
+        showError(quoteResult, 'Both From and To token addresses are required');
+        return;
       }
-      if (amount) params.set('amount', amount);
-      if (ignorePools) params.set('ignore_pools', ignorePools);
 
-      const res = await fetch('/' + chain + '/price?' + params.toString());
-      const data = await res.json();
+      quoteSubmit.disabled = true;
+      quoteSubmit.textContent = 'Fetching...';
+      showLoading(quoteResult, 'Fetching quote...');
 
-      if (data.error) {
-        showError(priceResult, data.error);
-      } else {
-        showPriceResult(data, chain);
+      try {
+        // Build quote request params
+        const params = new URLSearchParams({
+          from: fromToken,
+          to: toToken,
+          amount: amount
+        });
+        if (blockVal && isDate) {
+          params.set('timestamp', new Date(blockVal).toISOString());
+        } else if (blockVal) {
+          params.set('block', blockVal);
+        }
+
+        // Fetch quote
+        const quoteRes = await fetch('/' + chain + '/quote?' + params.toString());
+        const quoteData = await quoteRes.json();
+
+        if (quoteData.error) {
+          showError(quoteResult, quoteData.error);
+          return;
+        }
+
+        // Fetch USD prices for both tokens (parallel requests)
+        let fromPriceData = null;
+        let toPriceData = null;
+
+        try {
+          const fromPriceParams = new URLSearchParams({ token: fromToken });
+          if (blockVal && isDate) {
+            fromPriceParams.set('timestamp', new Date(blockVal).toISOString());
+          } else if (blockVal) {
+            fromPriceParams.set('block', blockVal);
+          }
+          const fromPriceRes = await fetch('/' + chain + '/price?' + fromPriceParams.toString());
+          if (fromPriceRes.ok) {
+            fromPriceData = await fromPriceRes.json();
+          }
+        } catch (err) {
+          console.error('Failed to fetch from token price:', err);
+        }
+
+        try {
+          const toPriceParams = new URLSearchParams({ token: toToken });
+          if (blockVal && isDate) {
+            toPriceParams.set('timestamp', new Date(blockVal).toISOString());
+          } else if (blockVal) {
+            toPriceParams.set('block', blockVal);
+          }
+          const toPriceRes = await fetch('/' + chain + '/price?' + toPriceParams.toString());
+          if (toPriceRes.ok) {
+            toPriceData = await toPriceRes.json();
+          }
+        } catch (err) {
+          console.error('Failed to fetch to token price:', err);
+        }
+
+        // Save custom pair
+        saveCustomPair(chain, fromToken, toToken);
+
+        showQuoteResult(quoteData, chain, fromPriceData, toPriceData);
+      } catch (err) {
+        showError(quoteResult, 'Request failed: ' + err.message);
+      } finally {
+        quoteSubmit.disabled = false;
+        quoteSubmit.textContent = 'Get Quote';
       }
-    } catch (err) {
-      showError(priceResult, 'Request failed: ' + err.message);
-    } finally {
-      priceSubmit.disabled = false;
-      priceSubmit.textContent = 'Get Price';
-    }
+    });
   });
 });
 
@@ -904,8 +1094,30 @@ bucketForm.addEventListener('submit', async (e) => {
   });
 });
 
-// Chain selector change handler - update autocomplete filtering
+// Chain selector change handler
 document.getElementById('chain').addEventListener('change', () => {
+  const chain = getChain();
+
+  // Update From/To to chain defaults if no custom override
+  const customPairs = getCustomPairs();
+  if (!customPairs[chain]) {
+    const pair = getEffectivePair(chain);
+    quoteFromInput.value = pair.from;
+    quoteToInput.value = pair.to;
+
+    // Reset suppressModal flags for the autocomplete instances
+    const fromAc = autocompleteInstances.get(quoteFromInput);
+    const toAc = autocompleteInstances.get(quoteToInput);
+    if (fromAc) {
+      fromAc.suppressModal = true;
+      fromAc.wasUserEdited = false;
+    }
+    if (toAc) {
+      toAc.suppressModal = true;
+      toAc.wasUserEdited = false;
+    }
+  }
+
   // Re-search all open autocompletes
   for (const [input, ac] of autocompleteInstances) {
     if (ac.isOpen) {
@@ -919,14 +1131,35 @@ document.getElementById('chain').addEventListener('change', () => {
 
 // Initialize autocomplete on token inputs
 function initAutocompletes() {
-  // Single price token input - suppress modal for pre-filled DAI
-  createAutocomplete(priceTokenInput, { suppressModal: true });
+  // Quote form token inputs
+  createAutocomplete(quoteFromInput, { suppressModal: true });
+  createAutocomplete(quoteToInput, { suppressModal: true });
 
   // Bucket token input
   createAutocomplete(bucketTokenInput);
 
   // Start with one empty batch row (will get autocomplete in addTokenRow)
   addTokenRow('', '');
+}
+
+// Set default token pair on load
+function setDefaultPair() {
+  const chain = getChain();
+  const pair = getEffectivePair(chain);
+  quoteFromInput.value = pair.from;
+  quoteToInput.value = pair.to;
+
+  // Mark as suppressModal so the unknown token modal doesn't appear
+  const fromAc = autocompleteInstances.get(quoteFromInput);
+  const toAc = autocompleteInstances.get(quoteToInput);
+  if (fromAc) {
+    fromAc.suppressModal = true;
+    fromAc.wasUserEdited = false;
+  }
+  if (toAc) {
+    toAc.suppressModal = true;
+    toAc.wasUserEdited = false;
+  }
 }
 
 // Tokenlist Management Panel
@@ -1334,41 +1567,51 @@ function setupTokenlistModal() {
   // Initial render of summary
   renderTokenlistSummary();
 }
+
 loadTokenlists().then(() => {
   initAutocompletes();
+  setDefaultPair();
   setupTokenlistModal();
 });
 
 // Load URL params to restore form state
 const params = new URLSearchParams(window.location.search);
 if (params.get('chain')) document.getElementById('chain').value = params.get('chain');
-if (params.get('token')) {
-  priceTokenInput.value = params.get('token');
-  // Mark as suppressModal but not edited - won't trigger modal on submit
-  const ac = autocompleteInstances.get(priceTokenInput);
+if (params.get('from') || params.get('token')) {
+  const fromToken = params.get('from') || params.get('token');
+  quoteFromInput.value = fromToken;
+  const ac = autocompleteInstances.get(quoteFromInput);
   if (ac) {
     ac.suppressModal = true;
     ac.wasUserEdited = false;
   }
 }
-if (params.get('block')) document.getElementById('price-block').value = params.get('block');
+if (params.get('to') || params.get('to_token')) {
+  const toToken = params.get('to') || params.get('to_token');
+  quoteToInput.value = toToken;
+  const ac = autocompleteInstances.get(quoteToInput);
+  if (ac) {
+    ac.suppressModal = true;
+    ac.wasUserEdited = false;
+  }
+}
+if (params.get('block')) document.getElementById('quote-block').value = params.get('block');
 if (params.get('timestamp')) {
-  const priceBlockEl = document.getElementById('price-block');
-  priceBlockEl.type = 'datetime-local';
+  const quoteBlockEl = document.getElementById('quote-block');
+  quoteBlockEl.type = 'datetime-local';
   const d = new Date(params.get('timestamp'));
-  if (!isNaN(d)) priceBlockEl.value = d.toISOString().slice(0, 16);
-  const priceHint = document.getElementById('price-block-hint');
-  priceHint.innerHTML = 'Pick a date/time. <a href="#" style="color:#58a6ff;cursor:pointer;" id="price-block-clear-restore">Clear</a> to switch back to block number.';
-  document.getElementById('price-block-clear-restore').addEventListener('click', function(e) {
+  if (!isNaN(d)) quoteBlockEl.value = d.toISOString().slice(0, 16);
+  const quoteHint = document.getElementById('quote-block-hint');
+  quoteHint.innerHTML = 'Pick a date/time. <a href="#" style="color:#58a6ff;cursor:pointer;" id="quote-block-clear-restore">Clear</a> to switch back to block number.';
+  document.getElementById('quote-block-clear-restore').addEventListener('click', function(e) {
     e.preventDefault();
-    priceBlockEl.type = 'text';
-    priceBlockEl.value = '';
-    priceBlockEl.placeholder = 'defaults to latest';
-    priceHint.textContent = 'Block number, or type "/" for a date picker. Defaults to latest block.';
+    quoteBlockEl.type = 'text';
+    quoteBlockEl.value = '';
+    quoteBlockEl.placeholder = 'defaults to latest';
+    quoteHint.textContent = 'Block number, or type "/" for a date picker. Defaults to latest block.';
   });
 }
-if (params.get('amount')) document.getElementById('price-amount').value = params.get('amount');
-if (params.get('ignore_pools')) document.getElementById('price-ignore-pools').value = params.get('ignore_pools');
+if (params.get('amount')) quoteAmountInput.value = params.get('amount');
 if (params.get('tokens')) {
   const savedTokens = params.get('tokens').split(',');
   const savedAmounts = params.get('amounts') ? params.get('amounts').split(',') : [];
@@ -1386,5 +1629,3 @@ if (params.get('bucket_token')) {
     ac.wasUserEdited = false;
   }
 }
-
-// No mutual exclusivity dispatch needed — block/date unified in one field

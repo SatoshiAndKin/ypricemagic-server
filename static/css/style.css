@@ -39,6 +39,7 @@ th { color: #888; font-size: 12px; text-transform: uppercase; }
 td { color: #d4d4d4; font-family: monospace; font-size: 13px; }
 td.null { color: #666; font-style: italic; }
 .hint { font-size: 12px; color: #888; margin-top: 4px; }
+.hint.warning { color: #ff8800; background: #332200; padding: 6px 10px; border-radius: 4px; border-left: 3px solid #ff8800; }
 .token-row { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; }
 .token-row input.token-addr { flex: 3; }
 .token-row input.token-amt { flex: 1; min-width: 100px; }
