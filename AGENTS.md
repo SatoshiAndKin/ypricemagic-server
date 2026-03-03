@@ -81,6 +81,13 @@ client → nginx:8000 → ypm-ethereum:8001
 
 Each chain container: brownie network connect → dank_mids patch → uvicorn FastAPI server.
 
+## Git Workflow
+
+- **Never commit directly to main.** Always create a feature branch, push it, and open a PR.
+- Use the `/commit-push-pr` command to commit, push, and create PRs.
+- Branch naming: `<type>/<short-description>` (e.g. `fix/release-please-config`, `feat/new-endpoint`, `chore/update-deps`).
+- Use squash merges via `gh pr merge --squash`.
+
 ## Code Conventions
 
 - Python 3.12, managed by [uv](https://github.com/astral-sh/uv)
