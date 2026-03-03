@@ -21,6 +21,10 @@ COPY . /app
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --locked
 
+# Download Uniswap default tokenlist (not in repo due to Droid-Shield false positives on addresses)
+RUN mkdir -p /app/static/tokenlists && \
+    curl -sf https://tokens.uniswap.org -o /app/static/tokenlists/uniswap-default.json
+
 RUN mkdir -p /data/cache
 
 ENV PYTHONUNBUFFERED=1

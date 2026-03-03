@@ -11,6 +11,7 @@ from fastapi import FastAPI, Query, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
 from prometheus_client import Counter, Histogram, make_asgi_app
 from tenacity import (
     RetryError,
@@ -121,6 +122,13 @@ app.add_middleware(
     allow_methods=["GET", "OPTIONS"],
     allow_headers=["*"],
 )
+
+# Mount static files at /static
+# Note: StaticFiles bypasses middleware, so CORS headers won't be added
+# This is fine for static assets (JS, CSS, JSON files)
+STATIC_DIR = os.path.join(os.path.dirname(__file__), "..", "static")
+if os.path.isdir(STATIC_DIR):
+    app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
 
 @app.middleware("http")
