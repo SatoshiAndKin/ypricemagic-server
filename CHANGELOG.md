@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.5.1](https://github.com/SatoshiAndKin/ypricemagic-server/compare/v0.5.0...v0.5.1) (2026-03-03)
+
+
+### Bug Fixes
+
+* add ready_for_review trigger and skip lockfile check on push-to-main ([#29](https://github.com/SatoshiAndKin/ypricemagic-server/issues/29)) ([6240fc4](https://github.com/SatoshiAndKin/ypricemagic-server/commit/6240fc4470a3d0d329a0cda02855745323b2dd48))
+* consistent button sizing and better bucket classification UX ([#32](https://github.com/SatoshiAndKin/ypricemagic-server/issues/32)) ([c3b0f36](https://github.com/SatoshiAndKin/ypricemagic-server/commit/c3b0f363f5458401d3c6ac3002bd58a2fb79c513))
+* make date picker clearable and include details in error messages ([#31](https://github.com/SatoshiAndKin/ypricemagic-server/issues/31)) ([03a33c6](https://github.com/SatoshiAndKin/ypricemagic-server/commit/03a33c65c40b1dd1c6fbfa1c432df16538d1a080))
+* remove skip-cache/silent from UI and improve form defaults ([#33](https://github.com/SatoshiAndKin/ypricemagic-server/issues/33)) ([15b8cfe](https://github.com/SatoshiAndKin/ypricemagic-server/commit/15b8cfe82f26d961fa6bc4fa345b64384646294f))
+* update ypricemagic to fix Chainlink feed resolution and reduce path explosion ([#34](https://github.com/SatoshiAndKin/ypricemagic-server/issues/34)) ([6e8adee](https://github.com/SatoshiAndKin/ypricemagic-server/commit/6e8adeee574066396aefa1da9bdacb1d99970c11))
+
 ## [0.5.0](https://github.com/SatoshiAndKin/ypricemagic-server/compare/v0.4.1...v0.5.0) (2026-03-03)
 
 
