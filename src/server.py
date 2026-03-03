@@ -711,6 +711,13 @@ INDEX_HTML = """<!DOCTYPE html>
     td { color: #d4d4d4; font-family: monospace; font-size: 13px; }
     td.null { color: #666; font-style: italic; }
     .hint { font-size: 12px; color: #888; margin-top: 4px; }
+    .token-row { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; }
+    .token-row input.token-addr { flex: 3; }
+    .token-row input.token-amt { flex: 1; min-width: 100px; }
+    .token-row .btn-remove { background: #e74c3c; color: white; border: none; border-radius: 4px; padding: 10px 12px; cursor: pointer; font-size: 14px; line-height: 1; flex-shrink: 0; }
+    .token-row .btn-remove:hover { background: #c0392b; }
+    .btn-add { background: #27ae60; color: white; border: none; border-radius: 4px; padding: 8px 16px; cursor: pointer; font-size: 14px; margin-top: 4px; }
+    .btn-add:hover { background: #219a52; }
   </style>
 </head>
 <body>
@@ -772,8 +779,9 @@ INDEX_HTML = """<!DOCTYPE html>
   <h2>Batch Token Pricing</h2>
   <form id="batch-form">
     <div class="form-group">
-      <label for="batch-tokens">Token Addresses (comma-separated)</label>
-      <textarea id="batch-tokens" placeholder="0x6B175474E89094C44Da98b954EedeAC495271d0F,0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"></textarea>
+      <label>Tokens</label>
+      <div id="batch-token-rows"></div>
+      <button type="button" id="batch-add-token" class="btn-add">+ Add Token</button>
     </div>
     <div class="form-row">
       <div class="form-group">
@@ -784,10 +792,6 @@ INDEX_HTML = """<!DOCTYPE html>
         <label for="batch-timestamp">Timestamp (optional)</label>
         <input type="text" id="batch-timestamp" placeholder="Unix epoch or ISO 8601">
       </div>
-    </div>
-    <div class="form-group">
-      <label for="batch-amounts">Amounts (optional, comma-separated, matches token order)</label>
-      <input type="text" id="batch-amounts" placeholder="e.g. 1000,500">
     </div>
     <div class="form-row">
       <div class="form-group checkbox-group">
@@ -867,8 +871,19 @@ INDEX_HTML = """<!DOCTYPE html>
     const priceResult = document.getElementById('price-result');
     const priceSubmit = document.getElementById('price-submit');
 
-    function showPriceResult(data) {
+    function chainMismatchWarning(expected, actual) {
+      if (actual && actual !== expected) {
+        return `<div class="field" style="background:#553300;padding:8px;border-radius:4px;margin-bottom:12px;">
+          <div class="field-label" style="color:#ffaa00;">&#9888; Chain Mismatch</div>
+          <div class="field-value" style="color:#ffcc44;">Expected <b>${escapeHtml(expected)}</b> but backend reported <b>${escapeHtml(actual)}</b>. Check your nginx routing.</div>
+        </div>`;
+      }
+      return '';
+    }
+
+    function showPriceResult(data, chain) {
       priceResult.className = 'result show';
+      const mismatch = chainMismatchWarning(chain, data.chain);
       const timestampField = data.block_timestamp != null ? `
         <div class="field">
           <div class="field-label">Block Timestamp</div>
@@ -880,7 +895,7 @@ INDEX_HTML = """<!DOCTYPE html>
           <div class="field-value">${escapeHtml(data.amount)}</div>
         </div>` : '';
       priceResult.innerHTML = `
-        <div class="result-header">Price Result</div>
+        <div class="result-header">Price Result</div>${mismatch}
         <div class="field">
           <div class="field-label">Chain</div>
           <div class="field-value">${escapeHtml(data.chain)}</div>
@@ -934,7 +949,7 @@ INDEX_HTML = """<!DOCTYPE html>
         if (data.error) {
           showError(priceResult, data.error);
         } else {
-          showPriceResult(data);
+          showPriceResult(data, chain);
         }
       } catch (err) {
         showError(priceResult, 'Request failed: ' + err.message);
@@ -944,10 +959,30 @@ INDEX_HTML = """<!DOCTYPE html>
       }
     });
 
-    // Batch Pricing Form
+    // Batch Pricing Form — dynamic token rows
     const batchForm = document.getElementById('batch-form');
     const batchResult = document.getElementById('batch-result');
     const batchSubmit = document.getElementById('batch-submit');
+    const batchTokenRows = document.getElementById('batch-token-rows');
+
+    function addTokenRow(token, amount) {
+      const row = document.createElement('div');
+      row.className = 'token-row';
+      row.innerHTML = `<input type="text" class="token-addr" placeholder="0x..." value="${escapeHtml(token || '')}">` +
+        `<input type="text" class="token-amt" placeholder="Amount (opt)" value="${escapeHtml(amount || '')}">` +
+        `<button type="button" class="btn-remove" title="Remove">&times;</button>`;
+      row.querySelector('.btn-remove').addEventListener('click', function() {
+        row.remove();
+      });
+      batchTokenRows.appendChild(row);
+    }
+
+    document.getElementById('batch-add-token').addEventListener('click', function() {
+      addTokenRow('', '');
+    });
+
+    // Start with one empty row
+    addTokenRow('', '');
 
     function showBatchResult(data) {
       batchResult.className = 'result show';
@@ -990,15 +1025,30 @@ INDEX_HTML = """<!DOCTYPE html>
     batchForm.addEventListener('submit', async (e) => {
       e.preventDefault();
       const chain = getChain();
-      const tokens = document.getElementById('batch-tokens').value.trim();
+
+      const rows = batchTokenRows.querySelectorAll('.token-row');
+      const tokenList = [];
+      const amountList = [];
+      let hasAnyAmount = false;
+      for (const row of rows) {
+        const t = row.querySelector('.token-addr').value.trim();
+        const a = row.querySelector('.token-amt').value.trim();
+        if (t) {
+          tokenList.push(t);
+          amountList.push(a);
+          if (a) hasAnyAmount = true;
+        }
+      }
+      const tokens = tokenList.join(',');
+      const amounts = hasAnyAmount ? amountList.join(',') : '';
+
       const block = document.getElementById('batch-block').value.trim();
       const timestamp = document.getElementById('batch-timestamp').value.trim();
-      const amounts = document.getElementById('batch-amounts').value.trim();
       const skipCache = document.getElementById('batch-skip-cache').checked;
       const silent = document.getElementById('batch-silent').checked;
 
       if (!tokens) {
-        showError(batchResult, 'Token addresses are required');
+        showError(batchResult, 'Add at least one token address');
         return;
       }
 
@@ -1035,11 +1085,12 @@ INDEX_HTML = """<!DOCTYPE html>
     const bucketResult = document.getElementById('bucket-result');
     const bucketSubmit = document.getElementById('bucket-submit');
 
-    function showBucketResult(data) {
+    function showBucketResult(data, chain) {
       bucketResult.className = 'result show';
+      const mismatch = chainMismatchWarning(chain, data.chain);
       const bucketDisplay = data.bucket !== null ? escapeHtml(data.bucket) : '<span class="null">null</span>';
       bucketResult.innerHTML = `
-        <div class="result-header">Classification Result</div>
+        <div class="result-header">Classification Result</div>${mismatch}
         <div class="field">
           <div class="field-label">Token</div>
           <div class="field-value"><span class="dim">${escapeHtml(data.token)}</span></div>
@@ -1076,7 +1127,7 @@ INDEX_HTML = """<!DOCTYPE html>
         if (data.error) {
           showError(bucketResult, data.error);
         } else {
-          showBucketResult(data);
+          showBucketResult(data, chain);
         }
       } catch (err) {
         showError(bucketResult, 'Request failed: ' + err.message);
@@ -1096,8 +1147,14 @@ INDEX_HTML = """<!DOCTYPE html>
     if (params.get('skip_cache') === 'true') document.getElementById('price-skip-cache').checked = true;
     if (params.get('silent') === 'true') document.getElementById('price-silent').checked = true;
     if (params.get('ignore_pools')) document.getElementById('price-ignore-pools').value = params.get('ignore_pools');
-    if (params.get('tokens')) document.getElementById('batch-tokens').value = params.get('tokens');
-    if (params.get('amounts')) document.getElementById('batch-amounts').value = params.get('amounts');
+    if (params.get('tokens')) {
+      const savedTokens = params.get('tokens').split(',');
+      const savedAmounts = params.get('amounts') ? params.get('amounts').split(',') : [];
+      batchTokenRows.innerHTML = '';
+      savedTokens.forEach(function(t, i) {
+        addTokenRow(t.trim(), savedAmounts[i] ? savedAmounts[i].trim() : '');
+      });
+    }
     if (params.get('bucket_token')) document.getElementById('bucket-token').value = params.get('bucket_token');
 
     // Dispatch input events to enforce block/timestamp mutual exclusivity after URL restoration
