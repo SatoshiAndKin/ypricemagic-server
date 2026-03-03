@@ -8,7 +8,18 @@ Testing surface: tools, URLs, setup steps, isolation notes, known quirks.
 
 - **URL**: http://localhost:8000 (nginx proxy)
 - **Tool**: agent-browser (Playwright MCP) for UI interaction
+- **API testing**: curl against http://localhost:8000
 - **Docker**: `docker compose up -d` must be running for full integration tests
+
+## Key Endpoints for Testing
+
+- `GET /ethereum/quote?from=<addr>&to=<addr>&amount=<n>` — from→to quote
+- `GET /ethereum/price/history?token=<addr>&period=7d` — historical prices
+- `POST /ethereum/price/backfill` — trigger cache backfill (JSON body)
+- `GET /ethereum/price?token=<addr>` — single token USD price
+- `GET /ethereum/prices?tokens=<addr1>,<addr2>` — batch prices
+- `GET /ethereum/check_bucket?token=<addr>` — token classification
+- `GET /health` — health check
 
 ## Setup
 

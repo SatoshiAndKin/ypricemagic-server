@@ -9,30 +9,35 @@ NOTE: Startup and cleanup are handled by `worker-base`. This skill defines the W
 
 ## When to Use This Skill
 
-Use for features involving the browser UI: HTML, CSS, vanilla JavaScript, static file serving, autocomplete components, modals, localStorage management, tokenlist handling.
+Use for features involving the browser UI: HTML, CSS, vanilla JavaScript, static file serving, autocomplete components, modals, localStorage management, tokenlist handling, charts, and theming.
 
 ## Work Procedure
 
 1. **Read the feature description** carefully. Understand what assertions this feature fulfills (check the `fulfills` field).
 
 2. **Read existing code** before writing anything:
-   - `static/index.html`, `static/js/app.js`, `static/css/style.css` (after extraction)
+   - `static/index.html` — page structure, forms, modals
+   - `static/js/app.js` — all JavaScript logic, tokenlist management, form handlers, autocomplete
+   - `static/css/style.css` — all styles, CSS custom properties for theming
    - `src/server.py` for the `/` endpoint and StaticFiles mount
    - `nginx.conf` for static file routing
    - `.factory/library/tokenlist-format.md` for tokenlist schema
    - `.factory/library/architecture.md` for the UI architecture
 
 3. **Write tests first** (where applicable):
-   - For Python changes (e.g., StaticFiles mount), write pytest tests that verify static file serving works
+   - For Python changes (e.g., StaticFiles mount), write pytest tests
    - Run `uv run pytest` to confirm tests fail (red)
    - For JS-only changes, manual browser verification is the primary test method
 
 4. **Implement the feature**:
    - Vanilla JS only — NO frameworks (React, Vue, etc.), NO npm, NO build tools
-   - Follow existing code style: `escapeHtml()` for all user/tokenlist data, system-ui font stack, CSS custom properties
+   - Follow existing code style: `escapeHtml()` for all user/tokenlist data, system-ui font stack
    - All tokenlist data rendered in the DOM MUST be escaped (XSS prevention)
    - Keep JavaScript in `static/js/app.js` — do not split into multiple JS files unless the feature description says to
    - Use semantic HTML elements where appropriate
+   - **Theming**: Use CSS custom properties (e.g., `var(--bg-primary)`) for all colors. Define light/dark values using `[data-theme="dark"]` and `[data-theme="light"]` selectors. System default uses `@media (prefers-color-scheme: dark)`.
+   - **Charts**: Use lightweight-charts from CDN. The script tag goes in index.html. Chart creation/update logic in app.js.
+   - **localStorage keys**: `theme` for theme preference, `defaultPairs` for per-chain default token pairs, existing keys (`tokenlists`, `tokenlistStates`, `localTokens`) unchanged.
 
 5. **Run validators**:
    - `uv run pytest` — all existing tests must pass
@@ -43,9 +48,11 @@ Use for features involving the browser UI: HTML, CSS, vanilla JavaScript, static
 6. **Manual verification** with agent-browser:
    - Navigate to http://localhost:8000
    - Test each user interaction described in the feature's `expectedBehavior`
-   - For autocomplete: type in token input, verify dropdown appears, select a token, verify it fills
-   - For modals: enter unknown address, verify modal appears, test each button
-   - For tokenlist mgmt: add/remove/toggle lists, verify autocomplete updates
+   - For forms: fill inputs, submit, verify results appear
+   - For autocomplete: type in token input, verify dropdown, select, verify fill
+   - For modals: test open/close, button actions
+   - For charts: verify rendering, zoom, tooltips
+   - For theming: toggle modes, verify all areas render correctly
    - Take screenshots as evidence
 
 7. **Rebuild Docker if needed**: If you changed Python files, nginx.conf, or Dockerfile:

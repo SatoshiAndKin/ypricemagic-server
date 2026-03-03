@@ -9,7 +9,7 @@ NOTE: Startup and cleanup are handled by `worker-base`. This skill defines the W
 
 ## When to Use This Skill
 
-Use for all ypricemagic-server features: API endpoint changes, param parsing, caching, error handling, tests, nginx config, and HTML UI updates.
+Use for all ypricemagic-server features: API endpoint changes, param parsing, caching, error handling, tests, and openapi.json updates.
 
 ## Work Procedure
 
@@ -21,9 +21,10 @@ Read the feature description, preconditions, expectedBehavior, and verificationS
 
 Before writing anything, read the files you'll modify:
 - `src/server.py` — endpoint definitions, error handling, response shapes
-- `src/params.py` — parameter validation patterns (ParseResult, ParseError, ParseSuccess)
-- `src/cache.py` — caching logic (make_key, get/set patterns)
+- `src/params.py` — parameter validation patterns (ParseResult, ParseError, ParseSuccess, parse_price_params, parse_batch_params)
+- `src/cache.py` — caching logic (make_key, get/set patterns, diskcache)
 - Relevant test files in `src/tests/`
+- `openapi.json` — if updating API docs
 
 Understand the EXISTING patterns before adding new code.
 
@@ -32,7 +33,7 @@ Understand the EXISTING patterns before adding new code.
 Write failing tests BEFORE implementation:
 - For params: add test classes/methods in `test_params.py` following existing style (TestIsValidAddress, TestParsePriceParams patterns)
 - For cache: add tests in `test_cache.py` following existing style (tmp_path + mock.patch)
-- For server behavior: create `test_server.py` if it doesn't exist, using `unittest.mock.patch` to mock ypricemagic imports (they're lazy imports so patch the import path)
+- For server behavior: use `test_server.py`, using `unittest.mock.patch` to mock ypricemagic imports (they're lazy imports inside functions, so patch the import path at the call site)
 - Every expectedBehavior item should have at least one test
 
 Run tests to confirm they fail: `uv run pytest -x -q`
@@ -42,8 +43,12 @@ Run tests to confirm they fail: `uv run pytest -x -q`
 Write the implementation to make tests pass:
 - Follow existing code style exactly (double quotes, type annotations, error patterns)
 - Use the `{"error": "<message>"}` format for all error responses
-- Keep imports lazy for ypricemagic/brownie (inside functions)
+- Keep imports lazy for ypricemagic/brownie (inside functions, not at module top)
 - Type all functions with mypy-strict annotations
+- New endpoints: follow the existing pattern in server.py (Query params, parse function, error handling, Prometheus metrics)
+- New dataclasses: follow PriceParams/BatchParams pattern in params.py
+- Cache operations: use existing get_cached_price/set_cached_price patterns
+- For async background tasks: use `asyncio.create_task()` — do not block the response
 
 ### 5. Run All Validators
 
@@ -60,13 +65,10 @@ Fix any failures before proceeding. If ruff format fails, run `uv run ruff forma
 ### 6. Manual Verification (if applicable)
 
 For features that modify API behavior:
-- If Docker stack is running, test with curl against localhost:8000
-- Check response shapes, status codes, headers
-- Verify backwards compatibility
-
-For Docker rebuild features:
-- Actually run `docker compose build` and `docker compose up -d`
-- Wait for healthchecks and verify with curl
+- If Docker stack is running, rebuild: `docker compose down && docker compose build && docker compose up -d`
+- Wait for health: `sleep 60 && curl -sf http://localhost:8000/ethereum/health`
+- Test with curl against localhost:8000 — check response shapes, status codes
+- Verify backwards compatibility (existing endpoints unchanged)
 
 ### 7. Commit
 
