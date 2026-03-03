@@ -30,6 +30,12 @@ All tokenlist state lives in browser localStorage:
 - `localTokens`: User-saved tokens from the unknown-token modal
 - Default: Uniswap tokenlist loaded from /static/tokenlists/uniswap-default.json on first visit
 
+### CI / Clean Checkout Note
+
+- `static/tokenlists/uniswap-default.json` is gitignored (to avoid Droid-Shield false positives) and may be absent in clean checkouts.
+- Tests handle this via `src/tests/conftest.py`: an autouse fixture writes a minimal valid tokenlist fixture only when the file is missing.
+- Runtime behavior is unchanged: production/local runtime paths still use the full Uniswap list provided by Docker/init flows.
+
 ## Deploy Architecture
 
 Single VPS. Docker Compose with nginx as reverse proxy. Rolling deploy: one chain at a time, health check gating, graceful drain.
