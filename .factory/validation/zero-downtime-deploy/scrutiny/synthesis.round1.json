@@ -1,0 +1,64 @@
+{
+  "milestone": "zero-downtime-deploy",
+  "round": 1,
+  "status": "fail",
+  "validatorsRun": {
+    "test": {
+      "passed": true,
+      "command": "uv run pytest",
+      "exitCode": 0
+    },
+    "typecheck": {
+      "passed": true,
+      "command": "uv run mypy src/",
+      "exitCode": 0
+    },
+    "lint": {
+      "passed": true,
+      "command": "uv run ruff check .",
+      "exitCode": 0
+    }
+  },
+  "reviewsSummary": {
+    "total": 1,
+    "passed": 0,
+    "failed": 1,
+    "failedFeatures": [
+      "docker-swarm-deploy"
+    ]
+  },
+  "blockingIssues": [
+    {
+      "featureId": "docker-swarm-deploy",
+      "severity": "blocking",
+      "description": "Chain services in docker-compose.yml define build: . without image:. docker stack deploy ignores build and requires image, so deployment will fail."
+    },
+    {
+      "featureId": "docker-swarm-deploy",
+      "severity": "blocking",
+      "description": "CD deploy step runs docker stack deploy without sourcing .env. Stack deploy does not auto-load .env, so RPC_URL_* and ETHERSCAN_TOKEN resolve empty."
+    }
+  ],
+  "appliedUpdates": [
+    {
+      "target": "library",
+      "description": "Added Docker Swarm deploy gotchas to .factory/library/environment.md documenting image: requirement and .env handling differences for docker stack deploy.",
+      "sourceFeature": "docker-swarm-deploy"
+    }
+  ],
+  "suggestedGuidanceUpdates": [
+    {
+      "target": "AGENTS.md",
+      "suggestion": "In deploy guidance, explicitly require dual build+image service definitions when compose files are used for both local docker compose and docker stack deploy workflows.",
+      "evidence": "Review of docker-swarm-deploy found all chain services had build but no image, causing Swarm deploy failure.",
+      "isSystemic": false
+    }
+  ],
+  "rejectedObservations": [
+    {
+      "observation": "Create a deployment runbook from cd.yml comments.",
+      "reason": "out-of-scope for this scrutiny pass; recommendation is valid but not required to resolve the detected deployment correctness failures"
+    }
+  ],
+  "previousRound": null
+}
