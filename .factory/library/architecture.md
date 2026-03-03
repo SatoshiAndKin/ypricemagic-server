@@ -59,6 +59,13 @@ All tokenlist state lives in browser localStorage:
 - `defaultPairs`: Per-chain custom default token pairs
 - Default: Uniswap tokenlist loaded from /static/tokenlists/uniswap-default.json on first visit
 
+## Frontend Quote Form State Gotcha
+
+- When programmatically updating `quoteFromInput` / `quoteToInput` during chain switches or default-pair restoration, reset both autocomplete instances to:
+  - `suppressModal = false`
+  - `wasUserEdited = false`
+- This prevents stale unknown-token modal behavior from carrying over across chains after auto-filled values are applied.
+
 ### CI / Clean Checkout Note
 
 - `static/tokenlists/uniswap-default.json` is gitignored (to avoid Droid-Shield false positives) and may be absent in clean checkouts.
