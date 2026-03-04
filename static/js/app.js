@@ -136,6 +136,28 @@ function getEffectivePair(chain) {
   return DEFAULT_PAIRS[chain] || { from: '', to: '' };
 }
 
+// Reset custom pairs for a specific chain (or all chains)
+function resetCustomPairs(chain) {
+  if (chain) {
+    // Reset only the specified chain
+    const pairs = getCustomPairs();
+    delete pairs[chain];
+    localStorage.setItem('defaultPairs', JSON.stringify(pairs));
+  } else {
+    // Reset all chains
+    localStorage.removeItem('defaultPairs');
+  }
+}
+
+// Reset to factory defaults for the current chain
+function resetToFactoryDefaults() {
+  const chain = getChain();
+  resetCustomPairs(chain);
+  const factoryPair = DEFAULT_PAIRS[chain] || { from: '', to: '' };
+  quoteFromInput.value = factoryPair.from;
+  quoteToInput.value = factoryPair.to;
+}
+
 function escapeHtml(str) {
   if (str == null) return '';
   return String(str).replace(/[&<>"']/g, function(c) {
@@ -1456,6 +1478,9 @@ function deleteTokenlist(index) {
   const list = tokenlists[index];
   if (list.isDefault) return; // Cannot delete default
 
+  // Get the list name before deletion for cascade check
+  const deletedListName = list.name;
+
   // Remove from array
   tokenlists.splice(index, 1);
 
@@ -1466,8 +1491,53 @@ function deleteTokenlist(index) {
   // Rebuild token index
   rebuildTokenIndex();
 
+  // Check if current default pair tokens came from the deleted list
+  // and revert to factory defaults if needed
+  checkAndRevertDefaultsForDeletedList(deletedListName);
+
   // Re-render panel
   renderTokenlistPanel();
+}
+
+// Check if current default pair tokens came from a deleted list and revert if needed
+function checkAndRevertDefaultsForDeletedList(deletedListName) {
+  const chain = getChain();
+  const chainId = getChainId();
+  const customPairs = getCustomPairs();
+
+  // If no custom pair for this chain, nothing to check
+  if (!customPairs[chain]) return;
+
+  const currentFrom = customPairs[chain].from.toLowerCase();
+  const currentTo = customPairs[chain].to.toLowerCase();
+
+  // Check if the current from/to tokens were sourced from the deleted list
+  const chainMap = tokenIndex.get(chainId);
+  let needsRevert = false;
+
+  if (chainMap) {
+    const fromToken = chainMap.get(currentFrom);
+    const toToken = chainMap.get(currentTo);
+
+    // If either token's source list matches the deleted list, need to revert
+    // Note: After rebuildTokenIndex(), tokens from deleted list are no longer in index
+    // So we check if the token is no longer found OR if it was from the deleted list
+    if (!fromToken || fromToken.sourceList === deletedListName ||
+        !toToken || toToken.sourceList === deletedListName) {
+      needsRevert = true;
+    }
+  } else {
+    // No tokens in index for this chain, definitely need to revert
+    needsRevert = true;
+  }
+
+  if (needsRevert) {
+    // Revert to factory defaults for this chain
+    resetCustomPairs(chain);
+    const factoryPair = DEFAULT_PAIRS[chain] || { from: '', to: '' };
+    quoteFromInput.value = factoryPair.from;
+    quoteToInput.value = factoryPair.to;
+  }
 }
 
 // Delete confirmation modal
@@ -1824,7 +1894,18 @@ loadTokenlists().then(() => {
   setDefaultPair();
   setupTokenlistModal();
   initTheme(); // Initialize theme toggle
+  setupResetButton(); // Initialize reset defaults button
 });
+
+// Setup reset defaults button
+function setupResetButton() {
+  const resetBtn = document.getElementById('reset-defaults-btn');
+  if (resetBtn) {
+    resetBtn.addEventListener('click', function() {
+      resetToFactoryDefaults();
+    });
+  }
+}
 
 // Load URL params to restore form state
 const params = new URLSearchParams(window.location.search);
