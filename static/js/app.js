@@ -1563,34 +1563,65 @@ function renderTokenlistPanel() {
   for (let i = 0; i < tokenlists.length; i++) {
     const list = tokenlists[i];
     const chainId = getChainId();
+    const chainName = getChain();
     const tokenCount = countTokensForChain(list, chainId);
     const sourceLabel = getTokenlistSourceLabel(list);
+    const hasError = !!list.error;
 
     const itemEl = document.createElement('div');
-    itemEl.className = 'tokenlist-item' + (list.enabled ? '' : ' disabled');
+    let itemClass = 'tokenlist-item';
+    if (!list.enabled) itemClass += ' disabled';
+    if (hasError) itemClass += ' error-state';
+    itemEl.className = itemClass;
 
-    // Toggle switch
-    const toggleHtml =
-      '<div class="tokenlist-toggle ' + (list.enabled ? 'enabled' : '') + '" data-index="' + i + '">' +
-        '<div class="tokenlist-toggle-knob"></div>' +
-      '</div>';
+    if (hasError) {
+      // Error state: show error message + retry button
+      let deleteHtml = '';
+      if (!list.isDefault) {
+        deleteHtml = '<button type="button" class="tokenlist-delete-x" data-index="' + i + '" data-name="' + escapeHtml(list.name || list.url || 'Unknown') + '" title="Delete list">×</button>';
+      }
 
-    // Delete button: only show × for non-default lists, no button for default lists
-    let deleteHtml = '';
-    if (!list.isDefault) {
-      deleteHtml = '<button type="button" class="tokenlist-delete-x" data-index="' + i + '" data-name="' + escapeHtml(list.name) + '" title="Delete list">×</button>';
+      itemEl.innerHTML =
+        '<div class="tokenlist-item-info">' +
+          '<div class="tokenlist-item-name">' + escapeHtml(list.name || list.url || 'Unknown') + '</div>' +
+          '<div class="tokenlist-item-source">' + escapeHtml(sourceLabel) + '</div>' +
+          '<div class="tokenlist-item-error">' + escapeHtml(list.error) + '</div>' +
+        '</div>' +
+        '<div class="tokenlist-item-actions">' +
+          '<button type="button" class="tokenlist-retry-btn" data-index="' + i + '">Retry</button>' +
+          deleteHtml +
+        '</div>';
+    } else {
+      // Normal state: toggle, count, delete
+      const toggleHtml =
+        '<div class="tokenlist-toggle ' + (list.enabled ? 'enabled' : '') + '" data-index="' + i + '">' +
+          '<div class="tokenlist-toggle-knob"></div>' +
+        '</div>';
+
+      let deleteHtml = '';
+      if (!list.isDefault) {
+        deleteHtml = '<button type="button" class="tokenlist-delete-x" data-index="' + i + '" data-name="' + escapeHtml(list.name) + '" title="Delete list">×</button>';
+      }
+
+      // Chain-aware count with zero-token warning
+      let countHtml;
+      if (tokenCount === 0) {
+        countHtml = '<div class="tokenlist-item-chain-warning">0 tokens on ' + escapeHtml(chainName) + ' ⚠</div>';
+      } else {
+        countHtml = '<div class="tokenlist-item-count">' + tokenCount + ' tokens on ' + escapeHtml(chainName) + '</div>';
+      }
+
+      itemEl.innerHTML =
+        '<div class="tokenlist-item-info">' +
+          '<div class="tokenlist-item-name">' + escapeHtml(list.name) + '</div>' +
+          '<div class="tokenlist-item-source">' + escapeHtml(sourceLabel) + '</div>' +
+          countHtml +
+        '</div>' +
+        '<div class="tokenlist-item-actions">' +
+          toggleHtml +
+          deleteHtml +
+        '</div>';
     }
-
-    itemEl.innerHTML =
-      '<div class="tokenlist-item-info">' +
-        '<div class="tokenlist-item-name">' + escapeHtml(list.name) + '</div>' +
-        '<div class="tokenlist-item-source">' + escapeHtml(sourceLabel) + '</div>' +
-        '<div class="tokenlist-item-count">' + tokenCount + ' tokens on ' + getChain() + '</div>' +
-      '</div>' +
-      '<div class="tokenlist-item-actions">' +
-        toggleHtml +
-        deleteHtml +
-      '</div>';
 
     listsEl.appendChild(itemEl);
   }
@@ -1608,6 +1639,13 @@ function renderTokenlistPanel() {
       const index = parseInt(this.dataset.index, 10);
       const listName = this.dataset.name;
       showDeleteConfirmation(listName, index);
+    });
+  });
+
+  listsEl.querySelectorAll('.tokenlist-retry-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+      const index = parseInt(this.dataset.index, 10);
+      retryTokenlist(index);
     });
   });
 }
@@ -1789,12 +1827,37 @@ function clearTokenlistError() {
   }
 }
 
+// Inline status message helpers
+function showTokenlistMessage(text, type) {
+  const msgEl = document.getElementById('tokenlist-message');
+  if (!msgEl) return;
+  msgEl.className = 'tokenlist-message ' + type;
+  msgEl.textContent = text;
+
+  // Auto-clear success messages after 5 seconds
+  if (type === 'success') {
+    setTimeout(() => {
+      if (msgEl.textContent === text) {
+        clearTokenlistMessage();
+      }
+    }, 5000);
+  }
+}
+
+function clearTokenlistMessage() {
+  const msgEl = document.getElementById('tokenlist-message');
+  if (!msgEl) return;
+  msgEl.className = 'tokenlist-message';
+  msgEl.textContent = '';
+}
+
 async function addTokenlistByUrl(url) {
   clearTokenlistError();
+  clearTokenlistMessage();
 
   // Validate URL scheme
   if (!url.startsWith('https://')) {
-    showTokenlistError('Only https:// URLs are allowed');
+    showTokenlistMessage('Only https:// URLs are allowed', 'error');
     return false;
   }
 
@@ -1802,11 +1865,11 @@ async function addTokenlistByUrl(url) {
   try {
     const parsed = new URL(url);
     if (parsed.protocol !== 'https:') {
-      showTokenlistError('Only https:// URLs are allowed');
+      showTokenlistMessage('Only https:// URLs are allowed', 'error');
       return false;
     }
   } catch (e) {
-    showTokenlistError('Invalid URL format');
+    showTokenlistMessage('Invalid URL format', 'error');
     return false;
   }
 
@@ -1816,16 +1879,20 @@ async function addTokenlistByUrl(url) {
   // Show loading state
   addBtn.disabled = true;
   addBtn.innerHTML = '<span class="tokenlist-loading"></span>Loading...';
+  showTokenlistMessage('Loading...', 'loading');
 
   try {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000);
+    const timeoutId = setTimeout(() => controller.abort(), 30000);
 
-    const res = await fetch(url, { signal: controller.signal });
+    // Route through server-side proxy to avoid CORS issues
+    const res = await fetch('/tokenlist/proxy?url=' + encodeURIComponent(url), { signal: controller.signal });
     clearTimeout(timeoutId);
 
     if (!res.ok) {
-      showTokenlistError('Failed to fetch: HTTP ' + res.status);
+      const errBody = await res.json().catch(() => null);
+      const errMsg = (errBody && errBody.detail) ? errBody.detail : 'HTTP ' + res.status;
+      showTokenlistMessage('Failed to fetch: ' + errMsg, 'error');
       return false;
     }
 
@@ -1833,7 +1900,7 @@ async function addTokenlistByUrl(url) {
 
     // Validate tokenlist structure
     if (!data.name || !Array.isArray(data.tokens)) {
-      showTokenlistError('Invalid tokenlist: must have name and tokens array');
+      showTokenlistMessage('Invalid tokenlist: must have name and tokens array', 'error');
       return false;
     }
 
@@ -1842,7 +1909,7 @@ async function addTokenlistByUrl(url) {
       l.url === url || (l.name === data.name && !l.isDefault && !l.isLocal)
     );
     if (exists) {
-      showTokenlistError('Tokenlist already added');
+      showTokenlistMessage('Tokenlist already added', 'error');
       return false;
     }
 
@@ -1863,20 +1930,88 @@ async function addTokenlistByUrl(url) {
     // Re-render panel
     renderTokenlistPanel();
 
+    // Show success message with chain-aware count
+    const chainId = getChainId();
+    const chainName = getChain();
+    const chainCount = countTokensForChain(data, chainId);
+    showTokenlistMessage('Added: ' + data.name + ' — ' + chainCount + ' tokens on ' + chainName, 'success');
+
     // Clear input
     urlInput.value = '';
 
     return true;
   } catch (e) {
     if (e.name === 'AbortError') {
-      showTokenlistError('Request timed out (10s)');
+      showTokenlistMessage('Request timed out', 'error');
     } else {
-      showTokenlistError('Failed to fetch: ' + e.message);
+      showTokenlistMessage('Failed to fetch: ' + e.message, 'error');
     }
     return false;
   } finally {
     addBtn.disabled = false;
     addBtn.textContent = 'Add';
+  }
+}
+
+// Retry loading a failed tokenlist entry
+async function retryTokenlist(index) {
+  if (index < 0 || index >= tokenlists.length) return;
+
+  const list = tokenlists[index];
+  if (!list.url || !list.error) return;
+
+  // Clear error, show loading
+  list.error = null;
+  list.loaded = false;
+  renderTokenlistPanel();
+
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000);
+
+    const res = await fetch('/tokenlist/proxy?url=' + encodeURIComponent(list.url), { signal: controller.signal });
+    clearTimeout(timeoutId);
+
+    if (!res.ok) {
+      const errBody = await res.json().catch(() => null);
+      const errMsg = (errBody && errBody.detail) ? errBody.detail : 'HTTP ' + res.status;
+      list.error = 'Failed to fetch: ' + errMsg;
+      list.loaded = false;
+      renderTokenlistPanel();
+      return;
+    }
+
+    const data = await res.json();
+
+    if (!data.name || !Array.isArray(data.tokens)) {
+      list.error = 'Invalid tokenlist: must have name and tokens array';
+      list.loaded = false;
+      renderTokenlistPanel();
+      return;
+    }
+
+    // Success - update the list data in place
+    list.name = data.name;
+    list.tokens = data.tokens;
+    list.error = null;
+    list.loaded = true;
+
+    // Save to localStorage
+    saveUserTokenlists();
+
+    // Rebuild token index
+    rebuildTokenIndex();
+
+    // Re-render panel
+    renderTokenlistPanel();
+  } catch (e) {
+    if (e.name === 'AbortError') {
+      list.error = 'Request timed out';
+    } else {
+      list.error = 'Failed to fetch: ' + e.message;
+    }
+    list.loaded = false;
+    renderTokenlistPanel();
   }
 }
 

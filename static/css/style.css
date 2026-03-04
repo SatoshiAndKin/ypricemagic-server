@@ -1139,3 +1139,85 @@ td.null {
 .delete-confirm-delete:hover {
   background: var(--danger-hover);
 }
+
+/* Tokenlist Trust Warning */
+.tokenlist-trust-warning {
+  background: var(--warning-bg);
+  border-left: 3px solid var(--warning-border);
+  padding: 8px 12px;
+  margin-bottom: 12px;
+  font-size: 12px;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+/* Tokenlist Inline Status Message */
+.tokenlist-message {
+  font-size: 12px;
+  line-height: 1.5;
+  padding: 0;
+  margin-top: 4px;
+  margin-bottom: 4px;
+  min-height: 0;
+  transition: all 0.15s;
+}
+
+.tokenlist-message:empty {
+  display: none;
+}
+
+.tokenlist-message.loading {
+  color: var(--text-muted);
+  padding: 6px 10px;
+  background: var(--bg-tertiary);
+  border-radius: 4px;
+}
+
+.tokenlist-message.success {
+  color: var(--success);
+  padding: 6px 10px;
+  background: var(--bg-tertiary);
+  border-radius: 4px;
+}
+
+.tokenlist-message.error {
+  color: var(--error-text);
+  padding: 6px 10px;
+  background: var(--error-bg);
+  border-radius: 4px;
+}
+
+/* Tokenlist Entry Error State */
+.tokenlist-item.error-state {
+  border-left: 4px solid var(--danger);
+  opacity: 1;
+}
+
+.tokenlist-item-error {
+  color: var(--error-text);
+  font-size: 11px;
+  margin-top: 2px;
+  font-weight: 600;
+}
+
+.tokenlist-retry-btn {
+  padding: 4px 10px;
+  font-size: 11px;
+  background: var(--accent);
+  color: var(--accent-text);
+  border: none;
+  border-radius: 3px;
+  cursor: pointer;
+  min-width: auto;
+}
+
+.tokenlist-retry-btn:hover {
+  background: var(--accent-hover);
+}
+
+/* Chain warning for zero-token lists */
+.tokenlist-item-chain-warning {
+  color: var(--warning);
+  font-size: 11px;
+  margin-top: 2px;
+}

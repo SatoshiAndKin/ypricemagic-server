@@ -46,12 +46,14 @@
         <button type="button" id="tokenlist-modal-close" class="modal-close-btn" title="Close">×</button>
       </div>
       <div class="tokenlist-modal-body">
+        <div class="tokenlist-trust-warning">⚠️ Only load tokenlists from trusted sources. Malicious lists can show fake tokens designed to steal funds.</div>
         <div class="tokenlist-lists" id="tokenlist-lists"></div>
         <div class="tokenlist-actions">
           <div class="tokenlist-action-row">
             <input type="text" id="tokenlist-url-input" placeholder="Add list by URL (https://...)" class="tokenlist-url-input">
             <button type="button" id="tokenlist-add-url" class="btn-small">Add</button>
           </div>
+          <div id="tokenlist-message" class="tokenlist-message"></div>
           <div class="tokenlist-action-row">
             <input type="file" id="tokenlist-file-input" accept=".json" style="display:none">
             <button type="button" id="tokenlist-import-btn" class="btn-small">Import File</button>
