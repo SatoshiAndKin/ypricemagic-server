@@ -1,0 +1,89 @@
+{
+  "groupId": "r3-group-a",
+  "milestone": "ui-polish",
+  "testedAt": "2026-03-04T06:03:00Z",
+  "credentials": {
+    "account": "n/a",
+    "namespace": "r3-group-a"
+  },
+  "toolsUsed": ["playwright-browser"],
+  "assertions": {
+    "VAL-POLISH-006": {
+      "status": "fail",
+      "evidence": "Computed WCAG contrast ratios via JavaScript in browser. Light mode has critical failures: --text-muted (#999999) on form backgrounds yields 2.61:1 (bg-primary) and 2.85:1 (bg-secondary), both well below the 4.5:1 AA threshold. --link-color (#58a6ff) on white yields 2.53:1, also failing. Dark mode has a borderline failure: --text-muted (#888888) on --bg-secondary (#242424) yields 4.38:1, just below 4.5:1. Note: static/css/style.css has uncommitted local changes that fix these values (#767676 light text-muted, #a5a5a5 dark text-muted, #2672c1 light link-color), but the Docker container was NOT rebuilt so it still serves the old values.",
+      "contrastMeasurements": {
+        "lightMode": {
+          "bodyText": {"color": "#333333", "bg": "#f5f5f5", "ratio": 11.59, "pass": true},
+          "labelText": {"color": "#555555", "bg": "#ffffff", "ratio": 7.46, "pass": true},
+          "hintText_on_bgPrimary": {"color": "#999999", "bg": "#f5f5f5", "ratio": 2.61, "pass": false},
+          "hintText_on_bgSecondary": {"color": "#999999", "bg": "#ffffff", "ratio": 2.85, "pass": false},
+          "linkColor_on_bgSecondary": {"color": "#58a6ff", "bg": "#ffffff", "ratio": 2.53, "pass": false},
+          "linkColor_on_bgPrimary": {"color": "#58a6ff", "bg": "#f5f5f5", "ratio": 2.32, "pass": false},
+          "buttonText": {"color": "#ffffff", "bg": "#0066cc", "ratio": 5.57, "pass": true}
+        },
+        "darkMode": {
+          "bodyText": {"color": "#e0e0e0", "bg": "#1a1a1a", "ratio": 13.18, "pass": true},
+          "labelText": {"color": "#c0c0c0", "bg": "#242424", "ratio": 8.53, "pass": true},
+          "hintText_on_bgPrimary": {"color": "#888888", "bg": "#1a1a1a", "ratio": 4.91, "pass": true},
+          "hintText_on_bgSecondary": {"color": "#888888", "bg": "#242424", "ratio": 4.38, "pass": false},
+          "linkColor_on_bgSecondary": {"color": "#58a6ff", "bg": "#242424", "ratio": 6.15, "pass": true},
+          "linkColor_on_bgPrimary": {"color": "#58a6ff", "bg": "#1a1a1a", "ratio": 6.89, "pass": true},
+          "buttonText": {"color": "#ffffff", "bg": "#0066cc", "ratio": 5.57, "pass": true}
+        }
+      },
+      "failingElements": [
+        "Light mode: hint text (--text-muted #999999) on form bg (--bg-secondary #ffffff): 2.85:1 — FAILS (need 4.5:1)",
+        "Light mode: hint text (--text-muted #999999) on page bg (--bg-primary #f5f5f5): 2.61:1 — FAILS (need 4.5:1)",
+        "Light mode: link color (--link-color #58a6ff) on form bg (--bg-secondary #ffffff): 2.53:1 — FAILS (need 4.5:1)",
+        "Light mode: link color (--link-color #58a6ff) on page bg (--bg-primary #f5f5f5): 2.32:1 — FAILS (need 4.5:1)",
+        "Dark mode: hint text (--text-muted #888888) on form bg (--bg-secondary #242424): 4.38:1 — FAILS (need 4.5:1, borderline)"
+      ],
+      "screenshots": [
+        ".factory/validation/ui-polish/user-testing/flows/r3-group-a-VAL-POLISH-006-light.png",
+        ".factory/validation/ui-polish/user-testing/flows/r3-group-a-VAL-POLISH-006-dark.png"
+      ]
+    },
+    "VAL-CROSS-009": {
+      "status": "pass",
+      "evidence": "Triggered a 400 error by submitting quote form with from=0xinvalid. API returned HTTP 400 with JSON error 'Invalid from token address: 0xinvalid'. In light mode: error displayed in result panel with red border (rgb(231,76,60)), pink background (rgba(231,76,60,0.1)), dark red text (rgb(192,57,43)). In dark mode (toggled via data-theme attribute): same error message shown with red border (rgb(231,76,60)), translucent dark red background (rgba(231,76,60,0.15)), lighter red text (rgb(255,107,107)) for readability on dark background. Both themes have distinct visual treatment with visible red border. Get Quote button re-enabled immediately after error. Batch Token Pricing and Token Classification form sections unaffected (all buttons non-disabled). Console errors limited to expected favicon 404 and the intentional 400 request.",
+      "steps": [
+        {"action": "Navigate to http://localhost:8000", "expected": "Page loads", "observed": "Page loaded successfully"},
+        {"action": "Set theme to light via JS (data-theme='light')", "expected": "Light theme applied", "observed": "Light theme applied"},
+        {"action": "Clear From Token field and enter '0xinvalid'", "expected": "Invalid address accepted in field", "observed": "Field filled with '0xinvalid', autocomplete shows 'No matches'"},
+        {"action": "Press Escape to dismiss autocomplete, then click Get Quote", "expected": "Form submits with 400 error", "observed": "API returned 400; error 'Invalid from token address: 0xinvalid' displayed in red-styled panel"},
+        {"action": "Screenshot light mode error state", "expected": "Error with red styling visible", "observed": "Error panel shows red border (#e74c3c), pink bg, dark red text"},
+        {"action": "Switch to dark theme via JS (data-theme='dark')", "expected": "Dark theme applies, error persists", "observed": "Dark theme applied; error remains visible with red border and lighter red text on dark background"},
+        {"action": "Screenshot dark mode error state", "expected": "Error readable in dark mode", "observed": "Error visible with distinct red styling against dark background"},
+        {"action": "Verify all form buttons re-enabled", "expected": "Get Quote, Get Prices, Check Bucket all enabled", "observed": "All buttons enabled and not in loading state"}
+      ],
+      "evidence_detail": {
+        "lightMode": {
+          "network": "GET /ethereum/quote?from=0xinvalid&to=0xf939E0A03...&amount=1 => 400 Bad Request",
+          "errorBorderColor": "rgb(231, 76, 60)",
+          "errorBgColor": "rgba(231, 76, 60, 0.1)",
+          "errorTextColor": "rgb(192, 57, 43)"
+        },
+        "darkMode": {
+          "errorBorderColor": "rgb(231, 76, 60)",
+          "errorBgColor": "rgba(231, 76, 60, 0.15)",
+          "errorTextColor": "rgb(255, 107, 107)"
+        },
+        "consoleErrors": "favicon 404 (pre-existing known issue) + expected 400 from test request only"
+      },
+      "screenshots": [
+        ".factory/validation/ui-polish/user-testing/flows/r3-group-a-VAL-CROSS-009-error-light.png",
+        ".factory/validation/ui-polish/user-testing/flows/r3-group-a-VAL-CROSS-009-error-dark.png"
+      ]
+    }
+  },
+  "frictions": [
+    {
+      "description": "Autocomplete dropdown shows 'No matches' when typing invalid address, overlapping the submit area. Had to press Escape before clicking Get Quote.",
+      "resolved": true,
+      "resolution": "Pressed Escape key to dismiss the autocomplete dropdown before clicking the button.",
+      "affectedAssertions": ["VAL-CROSS-009"]
+    }
+  ],
+  "blockers": [],
+  "summary": "Tested 2 assertions. VAL-CROSS-009 PASSES: 400 errors display correctly in both light and dark themes with red border/background/text styling, other form sections unaffected. VAL-POLISH-006 FAILS: Light mode has severe WCAG AA failures — hint text (#999999 on #ffffff = 2.85:1) and link color (#58a6ff on #ffffff = 2.53:1) both far below 4.5:1 threshold. Dark mode has a borderline failure — hint text (#888888 on #242424 = 4.38:1, just below 4.5:1). Note: local CSS changes fixing these values exist but Docker has not been rebuilt with them."
+}

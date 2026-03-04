@@ -44,6 +44,9 @@ Testing surface: tools, URLs, setup steps, isolation notes, known quirks.
 - Some `agent-browser` builds use `eval` (not `evaluate`/`run-code`) for page script execution; if unsure, check `agent-browser --help` before scripting validators.
 - `agent-browser` screenshot filename flags are not consistent across wrappers; passing `--filename` can create a literal file named `--filename`. Prefer the wrapper's documented filename argument format for the current environment.
 - The tokenlist import UI uses a dynamically-created hidden file input; direct file-upload automation may fail, but calling the app's `importTokenlistFile()` function with a synthesized `File` object is a reliable equivalent
+- After clearing localStorage, the default quote pair can repopulate asynchronously; wait briefly before asserting first-visit defaults.
+- During quote error validations, unpriceable-token scenarios may intermittently surface as 502 timeout responses instead of clean 404s; capture the observed status and retry after warm-up when strict status coverage is required.
+- For unknown/unlisted token quote probes, the app shows a warning modal first; click **Continue** to actually dispatch the quote request before asserting response behavior.
 - If containers stop mid-run, recover with `docker compose up -d` and re-check `curl -sf http://localhost:8000/ethereum/health` before resuming
 - After static UI code changes (`static/js/*`, `static/css/*`, `static/index.html`), `docker compose up -d` may keep serving old assets from the existing image; run `docker compose build && docker compose up -d` before validation.
 - `docker stack config -c docker-compose.yml` can fail when `depends_on` uses extended `condition` syntax (`service_healthy`); Swarm ignores `depends_on` at deploy time, so validate this separately from deploy section checks.
