@@ -24,9 +24,10 @@ textarea { min-height: 80px; resize: vertical; }
 button { padding: 12px 24px; font-size: 16px; cursor: pointer; background: #0066cc; color: white; border: none; border-radius: 4px; min-width: 160px; text-align: center; }
 button:hover { background: #0052a3; }
 button:disabled { opacity: 0.6; cursor: not-allowed; }
+button.loading { opacity: 0.7; }
 .result { background: #1e1e1e; color: #d4d4d4; padding: 20px; border-radius: 8px; display: none; margin-top: 20px; }
 .result.show { display: block; }
-.error { color: #e74c3c; }
+.error { color: #e74c3c; background: rgba(231,76,60,0.1); border: 1px solid #e74c3c; padding: 12px; border-radius: 4px; }
 .result-header { color: #888; margin-bottom: 12px; font-size: 14px; }
 .field { margin-bottom: 12px; }
 .field-label { color: #888; font-size: 12px; text-transform: uppercase; }

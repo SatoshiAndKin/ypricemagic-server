@@ -98,6 +98,84 @@ async function loadTokenlists() {
     console.error('Failed to load Uniswap tokenlist:', e);
   }
 
+  // BUG 3 FIX: Add default-pair tokens as built-in supplemental tokenlist
+  // This ensures crvUSD and other default tokens are always resolvable
+  const defaultPairTokens = [
+    // Ethereum: crvUSD (not in Uniswap default)
+    {
+      chainId: 1,
+      address: '0xf939E0A03FB07F59A73314E73794Be0E57ac1b4E',
+      symbol: 'crvUSD',
+      name: 'Curve USD',
+      decimals: 18
+    },
+    // Ethereum: USDC (for consistency)
+    {
+      chainId: 1,
+      address: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48',
+      symbol: 'USDC',
+      name: 'USD Coin',
+      decimals: 6
+    },
+    // Arbitrum: USDC (native)
+    {
+      chainId: 42161,
+      address: '0xaf88d065e77c8cC2239327C5EDb3A432268e5831',
+      symbol: 'USDC',
+      name: 'USD Coin',
+      decimals: 6
+    },
+    // Arbitrum: WETH
+    {
+      chainId: 42161,
+      address: '0x82aF49447D8a07e3bd95BD0d56f35241523fBab1',
+      symbol: 'WETH',
+      name: 'Wrapped Ether',
+      decimals: 18
+    },
+    // Optimism: USDC
+    {
+      chainId: 10,
+      address: '0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85',
+      symbol: 'USDC',
+      name: 'USD Coin',
+      decimals: 6
+    },
+    // Optimism: WETH
+    {
+      chainId: 10,
+      address: '0x4200000000000000000000000000000000000006',
+      symbol: 'WETH',
+      name: 'Wrapped Ether',
+      decimals: 18
+    },
+    // Base: USDC
+    {
+      chainId: 8453,
+      address: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',
+      symbol: 'USDC',
+      name: 'USD Coin',
+      decimals: 6
+    },
+    // Base: WETH
+    {
+      chainId: 8453,
+      address: '0x4200000000000000000000000000000000000006',
+      symbol: 'WETH',
+      name: 'Wrapped Ether',
+      decimals: 18
+    }
+  ];
+
+  tokenlists.push({
+    name: 'Default Pairs',
+    version: { major: 1, minor: 0, patch: 0 },
+    timestamp: new Date().toISOString(),
+    tokens: defaultPairTokens,
+    enabled: true,
+    isDefault: true  // Cannot be deleted
+  });
+
   // Load user tokenlists from localStorage
   try {
     const savedLists = JSON.parse(localStorage.getItem('tokenlists') || '[]');
@@ -821,6 +899,23 @@ quoteAmountInput.addEventListener('input', function() {
   }
 });
 
+// BUG 1 FIX: Persist custom pair on input change/blur
+function trySaveCustomPair() {
+  const from = quoteFromInput.value.trim();
+  const to = quoteToInput.value.trim();
+  const chain = getChain();
+
+  // Only save if both are valid hex addresses
+  if (isValidHexAddress(from) && isValidHexAddress(to)) {
+    saveCustomPair(chain, from, to);
+  }
+}
+
+quoteFromInput.addEventListener('change', trySaveCustomPair);
+quoteFromInput.addEventListener('blur', trySaveCustomPair);
+quoteToInput.addEventListener('change', trySaveCustomPair);
+quoteToInput.addEventListener('blur', trySaveCustomPair);
+
 // Quote form submission
 quoteForm.addEventListener('submit', async (e) => {
   e.preventDefault();
@@ -850,6 +945,7 @@ quoteForm.addEventListener('submit', async (e) => {
 
       quoteSubmit.disabled = true;
       quoteSubmit.textContent = 'Fetching...';
+      quoteSubmit.classList.add('loading');  // BUG 2 FIX: Add loading state
       showLoading(quoteResult, 'Fetching quote...');
 
       try {
@@ -917,6 +1013,7 @@ quoteForm.addEventListener('submit', async (e) => {
       } finally {
         quoteSubmit.disabled = false;
         quoteSubmit.textContent = 'Get Quote';
+        quoteSubmit.classList.remove('loading');  // BUG 2 FIX: Remove loading state
       }
     });
   });
