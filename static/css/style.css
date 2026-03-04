@@ -842,6 +842,25 @@ td.null {
   cursor: not-allowed;
 }
 
+/* Small × delete icon button */
+.tokenlist-delete-x {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-size: 14px;
+  padding: 2px 6px;
+  cursor: pointer;
+  border-radius: 3px;
+  line-height: 1;
+  min-width: auto;
+  transition: color 0.15s, background-color 0.15s;
+}
+
+.tokenlist-delete-x:hover {
+  color: var(--danger);
+  background: var(--error-bg);
+}
+
 .tokenlist-action-row {
   display: flex;
   gap: 8px;
@@ -916,4 +935,86 @@ td.null {
   to {
     transform: rotate(360deg);
   }
+}
+
+/* Delete Confirmation Modal */
+.delete-confirm-modal {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 4000;
+}
+
+.delete-confirm-modal.open {
+  display: block;
+}
+
+.delete-confirm-backdrop {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: var(--modal-overlay);
+  cursor: pointer;
+}
+
+.delete-confirm-content {
+  position: relative;
+  background: var(--modal-bg);
+  color: var(--text-primary);
+  max-width: 400px;
+  width: 90%;
+  margin: 20vh auto;
+  border-radius: 8px;
+  padding: 24px;
+  box-shadow: 0 8px 32px var(--modal-shadow);
+}
+
+.delete-confirm-message {
+  font-size: 15px;
+  line-height: 1.5;
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+.delete-confirm-listname {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.delete-confirm-buttons {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+}
+
+.delete-confirm-btn {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  min-width: 100px;
+}
+
+.delete-confirm-cancel {
+  background: var(--toggle-bg);
+  color: var(--text-primary);
+}
+
+.delete-confirm-cancel:hover {
+  background: var(--border-color);
+}
+
+.delete-confirm-delete {
+  background: var(--danger);
+  color: white;
+}
+
+.delete-confirm-delete:hover {
+  background: var(--danger-hover);
 }

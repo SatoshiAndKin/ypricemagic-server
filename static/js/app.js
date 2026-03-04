@@ -1385,9 +1385,11 @@ function renderTokenlistPanel() {
         '<div class="tokenlist-toggle-knob"></div>' +
       '</div>';
 
-    // Delete button (disabled for default list)
-    const deleteDisabled = list.isDefault ? ' disabled title="Cannot delete default list"' : '';
-    const deleteHtml = '<button type="button" class="tokenlist-delete" data-index="' + i + '"' + deleteDisabled + '>Delete</button>';
+    // Delete button: only show × for non-default lists, no button for default lists
+    let deleteHtml = '';
+    if (!list.isDefault) {
+      deleteHtml = '<button type="button" class="tokenlist-delete-x" data-index="' + i + '" data-name="' + escapeHtml(list.name) + '" title="Delete list">×</button>';
+    }
 
     itemEl.innerHTML =
       '<div class="tokenlist-item-info">' +
@@ -1410,10 +1412,11 @@ function renderTokenlistPanel() {
     });
   });
 
-  listsEl.querySelectorAll('.tokenlist-delete').forEach(btn => {
+  listsEl.querySelectorAll('.tokenlist-delete-x').forEach(btn => {
     btn.addEventListener('click', function() {
       const index = parseInt(this.dataset.index, 10);
-      deleteTokenlist(index);
+      const listName = this.dataset.name;
+      showDeleteConfirmation(listName, index);
     });
   });
 
@@ -1459,6 +1462,81 @@ function deleteTokenlist(index) {
 
   // Re-render panel
   renderTokenlistPanel();
+}
+
+// Delete confirmation modal
+let deleteConfirmModal = null;
+let deleteConfirmCallback = null;
+
+function createDeleteConfirmModal() {
+  if (deleteConfirmModal) return deleteConfirmModal;
+
+  deleteConfirmModal = document.createElement('div');
+  deleteConfirmModal.className = 'delete-confirm-modal';
+  deleteConfirmModal.innerHTML =
+    '<div class="delete-confirm-backdrop"></div>' +
+    '<div class="delete-confirm-content">' +
+      '<div class="delete-confirm-message" id="delete-confirm-message">Are you sure you want to delete this list?</div>' +
+      '<div class="delete-confirm-buttons">' +
+        '<button type="button" class="delete-confirm-btn delete-confirm-cancel">Cancel</button>' +
+        '<button type="button" class="delete-confirm-btn delete-confirm-delete">Delete</button>' +
+      '</div>' +
+    '</div>';
+
+  document.body.appendChild(deleteConfirmModal);
+
+  // Button handlers
+  deleteConfirmModal.querySelector('.delete-confirm-cancel').addEventListener('click', () => {
+    closeDeleteConfirmModal(false);
+  });
+
+  deleteConfirmModal.querySelector('.delete-confirm-delete').addEventListener('click', () => {
+    closeDeleteConfirmModal(true);
+  });
+
+  // Backdrop click closes modal
+  deleteConfirmModal.querySelector('.delete-confirm-backdrop').addEventListener('click', () => {
+    closeDeleteConfirmModal(false);
+  });
+
+  // Escape key
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape' && deleteConfirmModal && deleteConfirmModal.classList.contains('open')) {
+      closeDeleteConfirmModal(false);
+    }
+  });
+
+  return deleteConfirmModal;
+}
+
+function showDeleteConfirmation(listName, index) {
+  createDeleteConfirmModal();
+
+  // Update message with dynamic list name
+  const messageEl = deleteConfirmModal.querySelector('#delete-confirm-message');
+  messageEl.innerHTML = 'Are you sure you want to delete "<span class="delete-confirm-listname">' + escapeHtml(listName) + '</span>"?';
+
+  // Store callback
+  deleteConfirmCallback = () => {
+    deleteTokenlist(index);
+  };
+
+  // Show modal
+  deleteConfirmModal.classList.add('open');
+
+  // Focus the cancel button (safer default)
+  deleteConfirmModal.querySelector('.delete-confirm-cancel').focus();
+}
+
+function closeDeleteConfirmModal(confirmed) {
+  if (!deleteConfirmModal) return;
+
+  deleteConfirmModal.classList.remove('open');
+
+  if (confirmed && deleteConfirmCallback) {
+    deleteConfirmCallback();
+    deleteConfirmCallback = null;
+  }
 }
 
 function showTokenlistError(msg) {
