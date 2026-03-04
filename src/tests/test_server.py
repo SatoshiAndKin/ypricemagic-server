@@ -2063,6 +2063,8 @@ class TestQuoteEndpoint:
             assert "chain" in data
             assert "block_timestamp" in data
             assert "route" in data
+            assert "from_trade_path" in data
+            assert "to_trade_path" in data
             # Verify values
             assert data["from"] == USDC
             assert data["to"] == WETH
@@ -2474,6 +2476,8 @@ class TestQuoteEndpoint:
                 "chain",
                 "block_timestamp",
                 "route",
+                "from_trade_path",
+                "to_trade_path",
             }
             assert set(data.keys()) == expected_keys
 

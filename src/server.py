@@ -885,6 +885,8 @@ async def quote(
         "chain": CHAIN_NAME,
         "block_timestamp": block_timestamp,
         "route": "divide",
+        "from_trade_path": from_trade_path,
+        "to_trade_path": to_trade_path,
     }
 
 
