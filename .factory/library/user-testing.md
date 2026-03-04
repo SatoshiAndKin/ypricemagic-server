@@ -49,6 +49,7 @@ Testing surface: tools, URLs, setup steps, isolation notes, known quirks.
 - For unknown/unlisted token quote probes, the app shows a warning modal first; click **Continue** to actually dispatch the quote request before asserting response behavior.
 - If containers stop mid-run, recover with `docker compose up -d` and re-check `curl -sf http://localhost:8000/ethereum/health` before resuming
 - After static UI code changes (`static/js/*`, `static/css/*`, `static/index.html`), `docker compose up -d` may keep serving old assets from the existing image; run `docker compose build && docker compose up -d` before validation.
+- After `docker compose build && docker compose up -d`, nginx may have stale DNS for the chain containers (IPs swap after container recreation). If `/ethereum/health` returns the wrong chain name, run `docker compose restart nginx` to force DNS re-resolution.
 - `docker stack config -c docker-compose.yml` can fail when `depends_on` uses extended `condition` syntax (`service_healthy`); Swarm ignores `depends_on` at deploy time, so validate this separately from deploy section checks.
 
 ## Test Isolation

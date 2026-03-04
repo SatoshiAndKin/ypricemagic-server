@@ -1,46 +1,35 @@
 {
   "milestone": "ui-polish",
-  "round": 3,
-  "status": "fail",
+  "round": 4,
+  "status": "pass",
   "assertionsSummary": {
-    "total": 2,
+    "total": 1,
     "passed": 1,
-    "failed": 1,
+    "failed": 0,
     "blocked": 0
   },
-  "passedAssertions": ["VAL-CROSS-009"],
-  "failedAssertions": [
-    {
-      "id": "VAL-POLISH-006",
-      "reason": "WCAG AA contrast not met in current Docker deployment. Light mode: --text-muted (#999999) on white bg = 2.85:1 (need 4.5:1); --link-color (#58a6ff) on white = 2.53:1 (need 4.5:1). Dark mode: --text-muted (#888888) on #242424 = 4.38:1 (need 4.5:1). Note: static/css/style.css has uncommitted local fixes that would resolve all these issues, but Docker was not rebuilt to deploy them."
-    }
-  ],
+  "passedAssertions": ["VAL-POLISH-006"],
+  "failedAssertions": [],
   "blockedAssertions": [],
   "appliedUpdates": [
     {
       "target": "user-testing.md",
-      "description": "Confirmed existing note about Docker rebuild requirement for static file changes. No new knowledge added.",
-      "source": "flow-report"
+      "description": "No new knowledge; existing Docker rebuild note covers the fix flow. nginx stale DNS after docker compose up -d requires restarting the nginx container separately (docker compose restart nginx).",
+      "source": "setup"
     }
   ],
-  "previousRound": ".factory/validation/ui-polish/user-testing/synthesis.round2.json",
+  "previousRound": ".factory/validation/ui-polish/user-testing/synthesis.round3.json",
   "toolsUsed": ["agent-browser", "curl"],
   "frictions": [
     {
-      "description": "Autocomplete dropdown overlaps submit button when invalid address typed; must press Escape before clicking.",
+      "description": "After docker compose build && up -d, nginx had stale DNS entries for ypm-ethereum and ypm-base (IPs swapped after container recreation). Required an explicit 'docker compose restart nginx' to resolve.",
       "resolved": true,
-      "resolution": "Pressed Escape key to dismiss autocomplete before clicking Get Quote.",
-      "affectedAssertions": ["VAL-CROSS-009"]
+      "resolution": "Restarted nginx container after rebuilding chain containers.",
+      "affectedAssertions": []
     }
   ],
-  "blockers": [
-    {
-      "description": "VAL-POLISH-006: Contrast fix exists in uncommitted static/css/style.css changes (--text-muted: #767676 light, #a5a5a5 dark; --link-color: #2672c1 light) but Docker container was not rebuilt to serve them. The deployed app still has the old failing values.",
-      "affectedAssertions": ["VAL-POLISH-006"],
-      "quickFixAttempted": "Validated current running app. Fix requires: commit the working tree CSS changes, run docker compose build && docker compose up -d, then re-validate."
-    }
-  ],
+  "blockers": [],
   "reports": [
-    ".factory/validation/ui-polish/user-testing/flows/r3-group-a.json"
+    ".factory/validation/ui-polish/user-testing/flows/r4-group-a.json"
   ]
 }
