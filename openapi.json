@@ -358,6 +358,292 @@
           }
         }
       }
+    },
+    "/quote": {
+      "get": {
+        "summary": "Quote",
+        "description": "From\u2192to token quote endpoint.",
+        "operationId": "quote_quote_get",
+        "parameters": [
+          {
+            "name": "from",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "From"
+            },
+            "description": "Input token address"
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "To"
+            },
+            "description": "Output token address"
+          },
+          {
+            "name": "amount",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Amount"
+            },
+            "description": "Input token amount"
+          },
+          {
+            "name": "block",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Block"
+            },
+            "description": "Historical block number (mutually exclusive with timestamp)"
+          },
+          {
+            "name": "timestamp",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Timestamp"
+            },
+            "description": "Historical timestamp (mutually exclusive with block)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuoteResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Upstream Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/{chain}/quote": {
+      "get": {
+        "summary": "Quote Through Chain Router",
+        "description": "Public nginx-routed quote endpoint.",
+        "operationId": "quote_chain_quote_get",
+        "parameters": [
+          {
+            "name": "chain",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "ethereum",
+                "arbitrum",
+                "optimism",
+                "base"
+              ],
+              "title": "Chain"
+            },
+            "description": "Target chain"
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "From"
+            },
+            "description": "Input token address"
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "To"
+            },
+            "description": "Output token address"
+          },
+          {
+            "name": "amount",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Amount"
+            },
+            "description": "Input token amount"
+          },
+          {
+            "name": "block",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Block"
+            },
+            "description": "Historical block number (mutually exclusive with timestamp)"
+          },
+          {
+            "name": "timestamp",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Timestamp"
+            },
+            "description": "Historical timestamp (mutually exclusive with block)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuoteResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Upstream Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -414,6 +700,78 @@
           "type"
         ],
         "title": "ValidationError"
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "title": "ErrorResponse",
+        "properties": {
+          "error": {
+            "type": "string",
+            "title": "Error"
+          }
+        },
+        "required": [
+          "error"
+        ]
+      },
+      "QuoteResponse": {
+        "type": "object",
+        "title": "QuoteResponse",
+        "properties": {
+          "from": {
+            "type": "string",
+            "title": "From Token"
+          },
+          "to": {
+            "type": "string",
+            "title": "To Token"
+          },
+          "amount": {
+            "type": "number",
+            "title": "Input Amount"
+          },
+          "output_amount": {
+            "type": "number",
+            "title": "Output Amount"
+          },
+          "block": {
+            "type": "integer",
+            "title": "Block Number"
+          },
+          "chain": {
+            "type": "string",
+            "title": "Chain"
+          },
+          "block_timestamp": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Block Timestamp"
+          },
+          "route": {
+            "type": "string",
+            "enum": [
+              "divide",
+              "identity"
+            ],
+            "title": "Route Strategy"
+          }
+        },
+        "required": [
+          "from",
+          "to",
+          "amount",
+          "output_amount",
+          "block",
+          "chain",
+          "block_timestamp",
+          "route"
+        ]
       }
     }
   }
