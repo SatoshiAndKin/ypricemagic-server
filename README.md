@@ -262,6 +262,10 @@ Per-chain health check (externally reached as `GET /<chain>/health`, for example
 
 The root path (`/`) serves an interactive browser UI for all API endpoints.
 
+### Quote UI screenshot (latest block)
+
+![Latest-block USDC→crvUSD quote result with price age in seconds](docs/readme-quote-latest-block.png)
+
 ### Theme toggle (light / dark / system)
 
 The header includes a theme toggle with three modes: `system` (default), `light`, and `dark`. The selected mode is persisted in local storage. Quote/result sections, tokenlist modal, and related chart-friendly historical views are styled for both light and dark mode.
