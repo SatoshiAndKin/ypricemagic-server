@@ -666,6 +666,9 @@ class TokenAutocomplete {
     // Restore adjacent field values (in case form framework resets them)
     if (currentBlock) currentBlock.value = blockValue;
     if (currentAmount) currentAmount.value = amountValue;
+
+    // Dispatch change event to trigger custom pair save
+    this.input.dispatchEvent(new Event('change', { bubbles: true }));
   }
 
   destroy() {
