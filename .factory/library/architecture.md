@@ -63,6 +63,15 @@ All tokenlist state lives in browser localStorage:
 - `static/tokenlists/uniswap-default.json` is gitignored (to avoid Droid-Shield false positives) and may be absent in clean checkouts.
 - Tests handle this via `src/tests/conftest.py`: an autouse fixture writes a minimal valid tokenlist fixture only when the file is missing.
 
+## OpenAPI Documentation Convention
+
+`openapi.json` is a **hand-authored static file** — it is NOT auto-generated from FastAPI's `/openapi.json` endpoint. Workers adding or changing endpoints must update `openapi.json` manually to match the actual implementation.
+
+Key differences from FastAPI auto-gen:
+- Parameters have explicit descriptions and `required: true` even for `str | None` query params
+- Error responses document `ErrorResponse` schema (`{"error": "..."}`) rather than FastAPI's `HTTPValidationError` for 422s (because a custom `validation_exception_handler` overrides all 422 responses project-wide)
+- Both `GET /quote` (backend-local path) and `GET /{chain}/quote` (nginx-routed public path) are documented separately
+
 ## Deploy Architecture
 
 Single VPS. Docker Compose with nginx as reverse proxy. Rolling deploy: one chain at a time, health check gating, graceful drain.

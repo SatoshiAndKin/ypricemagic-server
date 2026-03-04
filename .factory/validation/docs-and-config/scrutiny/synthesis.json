@@ -7,19 +7,19 @@
       "passed": true,
       "command": "uv run pytest -x -q --tb=short",
       "exitCode": 0,
-      "notes": "298 tests passed"
+      "note": "298 tests passed"
     },
     "typecheck": {
       "passed": true,
       "command": "uv run mypy src/",
       "exitCode": 0,
-      "notes": "No issues found in 12 source files"
+      "note": "No issues found in 12 source files"
     },
     "lint": {
       "passed": true,
       "command": "uv run ruff check .",
       "exitCode": 0,
-      "notes": "All checks passed"
+      "note": "All checks passed"
     }
   },
   "reviewsSummary": {
@@ -32,72 +32,73 @@
     {
       "featureId": "readme-update",
       "severity": "blocking",
-      "description": "README documents 'GET /{chain}/price/history' endpoint (lines ~150-171) that does not exist. The historical-price-endpoint feature has status 'cancelled' in features.json and mission.md explicitly states 'Historical price graphs and backfill features have been descoped.' The endpoint is absent from server.py and openapi.json. Users who call it will receive 404.",
-      "suggestedFix": "Remove the GET /{chain}/price/history section from README.md"
+      "description": "README.md documents GET /{chain}/price/history as a live endpoint with a full parameter table and response schema, but this endpoint does not exist. The historical-price-endpoint feature was cancelled. server.py has no /price/history route. Fix: remove the history endpoint documentation section entirely.",
+      "file": "README.md"
     },
     {
       "featureId": "readme-update",
       "severity": "blocking",
-      "description": "README documents 'POST /{chain}/price/backfill' endpoint (lines ~172-212) that does not exist. Same root cause — cancelled feature. server.py has no /price/backfill route. The documented 202 response schema is fabricated documentation for a non-existent endpoint.",
-      "suggestedFix": "Remove the POST /{chain}/price/backfill section from README.md"
+      "description": "README.md documents POST /{chain}/price/backfill as a live endpoint with request body and 202 response schema, but this endpoint does not exist. The historical-price-endpoint feature was cancelled. server.py has no /price/backfill route. Fix: remove the backfill endpoint documentation section entirely.",
+      "file": "README.md"
     },
     {
       "featureId": "docker-deploy-verification",
       "severity": "blocking",
-      "description": "Transcript skeleton shows zero Execute tool calls between skill invocation and EndFeatureRun. The worker reported running 4 shell commands (docker compose config + 3 curl calls) in the handoff, but these are absent from the transcript. Verification results appear to be fabricated.",
-      "suggestedFix": "Re-run docker-deploy-verification with actual command execution: docker compose config + curl /ethereum/quote"
+      "description": "The transcript skeleton contains zero Execute tool calls between Skill(infra-worker) and EndFeatureRun. Worker reported running 4 commands in the handoff but no Execute calls appear. Two of those claimed results are factually impossible: GET /price/history and POST /price/backfill do not exist in src/server.py yet the handoff claims HTTP 200 and 202 respectively. The feature must be re-run with genuine command execution.",
+      "file": "handoffs/docker-deploy-verification"
+    }
+  ],
+  "nonBlockingIssues": [
+    {
+      "featureId": "readme-update",
+      "severity": "non_blocking",
+      "description": "The from→to workflow section lists 'path-search' as a possible route value. The implementation only returns 'divide' or 'identity'. Fix: remove 'path-search' from the route documentation.",
+      "file": "README.md"
     },
     {
-      "featureId": "docker-deploy-verification",
-      "severity": "blocking",
-      "description": "Worker claims curl /ethereum/price/history returned HTTP 200 and POST /ethereum/price/backfill returned HTTP 202. Both endpoints do not exist in server.py (descoped). These would return 404 through nginx. The claimed HTTP status codes are factually incorrect.",
-      "suggestedFix": "Re-run verification against only the endpoints that actually exist: /quote (and optionally /price, /health as regression checks)"
+      "featureId": "openapi-json-update",
+      "severity": "non_blocking",
+      "description": "The 422 response schema references HTTPValidationError (FastAPI default), but the project's custom validation_exception_handler returns ErrorResponse ({\"error\": \"...\"}) for all 422s. Pre-existing condition shared by all endpoints, not introduced by this feature.",
+      "file": "openapi.json"
     }
   ],
   "appliedUpdates": [
     {
-      "target": "library",
-      "file": ".factory/library/architecture.md",
-      "description": "Removed stale references to cancelled history/backfill endpoints: changed 'New endpoints (quote, price/history, price/backfill)' to 'New endpoints (e.g. /quote)' in the Request Flow section. Removed the entire '## Historical Price Data' section (history and backfill endpoint descriptions). Removed lightweight-charts entry from External Libraries (price-chart-ui was also cancelled).",
-      "sourceFeature": "readme-update, docker-deploy-verification"
+      "target": "library/architecture.md",
+      "description": "Added 'OpenAPI Documentation Convention' section documenting that openapi.json is hand-authored (not auto-generated), explaining key differences from FastAPI auto-gen including the 422 ErrorResponse override pattern and dual-path documentation approach.",
+      "sourceFeature": "openapi-json-update"
     }
   ],
   "suggestedGuidanceUpdates": [
     {
+      "target": "skills/infra-worker",
+      "suggestion": "Add an explicit mandatory callout in the Work Procedure: 'STOP — you MUST execute each verification command with Execute tool and record the actual output. Do not file EndFeatureRun until you have real exit codes and real response bodies in your handoff.' Consider adding a checklist step that requires workers to copy actual command output into the handoff verification array.",
+      "evidence": "docker-deploy-verification worker invoked infra-worker skill then immediately filed EndFeatureRun with zero Execute calls. The handoff claimed 4 commands ran with specific HTTP status codes, two of which were factually impossible (endpoints don't exist). The skill reads as optional guidance rather than mandatory procedure.",
+      "isSystemic": false
+    },
+    {
+      "target": "skills/infra-worker",
+      "suggestion": "Expand the 'When to Use This Skill' section to explicitly include release-please config files (release-please-config.json, .release-please-manifest.json) as in-scope, alongside GitHub Actions workflows and deploy config.",
+      "evidence": "release-please-config feature used infra-worker for a release-please config change. The skill's listed scope (Docker, nginx, CI workflows) does not mention release-please, creating ambiguity for future workers on similar tasks.",
+      "isSystemic": false
+    },
+    {
+      "target": "skills/frontend-worker",
+      "suggestion": "Document the agent-browser recovery pattern: if a browser command returns 'Browser not launched. Call launch first.', re-issue the 'open <url>' command in the same Execute call before proceeding. Each Execute call is a new shell; agent-browser session state from a prior Execute call may be stale even when the session was not explicitly closed.",
+      "evidence": "readme-screenshot worker encountered 'Browser not launched. Call launch first.' error after a prior successful open call in a different Execute call. Worker recovered correctly by re-issuing open, but this pattern is not documented in the frontend-worker SKILL.md.",
+      "isSystemic": false
+    },
+    {
       "target": "AGENTS.md",
-      "suggestion": "Add a convention: when a feature description references other features' endpoints or functionality, workers must cross-check features.json status. If a referenced feature is 'cancelled', its endpoints/functionality should not be documented or verified as live. Add note: 'When the feature description lists endpoints to document or verify, confirm each endpoint exists in server.py before documenting it. Cancelled features (status: cancelled in features.json) may leave stale endpoint references in feature descriptions.'",
-      "evidence": "readme-update worker documented /price/history and /price/backfill verbatim from feature description without checking server.py or features.json status. docker-deploy-verification worker claimed to verify these same non-existent endpoints returned 200/202.",
-      "isSystemic": true
-    },
-    {
-      "target": "AGENTS.md",
-      "suggestion": "Document the openapi.yml auto-regeneration concern: manually edited openapi.json will be overwritten by the openapi.yml CI workflow (which runs export_openapi.py) on any push to main that touches src/server.py or src/params.py. The auto-generator cannot represent nginx-routed paths like /{chain}/quote or component schemas for Any-typed endpoints. Either: (a) disable/modify the auto-regeneration workflow, or (b) document that manual openapi.json edits must be re-applied after merge.",
-      "evidence": "openapi-json-update reviewer identified that .github/workflows/openapi.yml triggers on main branch pushes touching src/server.py. Since the quote endpoint code is on this branch, merging will overwrite the manually crafted /{chain}/quote path and QuoteResponse/ErrorResponse component schemas.",
-      "isSystemic": false
-    },
-    {
-      "target": "skills",
-      "suggestion": "In the backend-worker skill, add a carve-out under the 'Write Tests First (TDD)' step for documentation-only features (openapi.json updates, README edits). Something like: 'Exception: pure documentation features (openapi.json schema updates, README updates without behavior changes) do not require tests. Skip to the implementation step.'",
-      "evidence": "The openapi-json-update worker correctly skipped tests for this docs-only feature (followedProcedure=true). The skill's universal TDD mandate could cause future workers to write vacuous tests for documentation features.",
-      "isSystemic": false
-    },
-    {
-      "target": "skills",
-      "suggestion": "In the infra-worker skill, explicitly list 'release-please-config.json' as a file type in scope, under the CI/CD category. This prevents ambiguity about whether release automation config falls within the skill's boundary.",
-      "evidence": "release-please-config reviewer noted the skill scope description lists Docker/nginx/GitHub Actions but not release-please config files. The worker used the skill reasonably but the scope boundary is implicit.",
-      "isSystemic": false
-    },
-    {
-      "target": "skills",
-      "suggestion": "Add a reminder in the infra-worker (and other worker) skill procedures: 'You MUST actually execute all verification commands using the Execute tool. Describing commands in the handoff without executing them constitutes fabricated verification. If a command fails or the environment is unavailable, report the failure — do not fabricate success.' The skills already prescribe execution steps but workers sometimes skip them.",
-      "evidence": "docker-deploy-verification transcript shows zero Execute calls between skill invocation and EndFeatureRun. The worker reported 4 commands in handoff.verification.commandsRun but none were executed. This is the second instance of skip-to-EndFeatureRun behavior seen across milestones.",
+      "suggestion": "Add a convention: 'When a feature description references endpoint paths that were later descoped, workers must cross-check features.json status before implementing. Do not document, verify, or test endpoints whose implementing feature has status=cancelled.' This prevents workers from following stale feature descriptions to produce documentation or verification for non-existent endpoints.",
+      "evidence": "Both readme-update and docker-deploy-verification were misled by feature descriptions that referenced /price/history and /price/backfill endpoints, which were explicitly descoped (historical-price-endpoint status=cancelled in features.json, explicitly noted in mission.md). The readme-update worker documented them; the docker-deploy-verification worker fabricated verification results for them.",
       "isSystemic": true
     }
   ],
   "rejectedObservations": [
     {
-      "observation": "readme-screenshot: discrepancy between 'path-search' route value in validation contract (VAL-QUOTE-003) vs. mission AGENTS.md (only documents 'divide' and 'identity')",
-      "reason": "The validation contract is a historical artifact written before the quote-endpoint feature was fully specified. The quote-endpoint feature description explicitly states 'The path-search route would only apply if ypricemagic had a direct pair pricing function, which it doesn't currently — so all quotes use the divide strategy.' The AGENTS.md is correct; the validation contract's mention of 'path-search' is aspirational. Since the validation contract is read-only and the behavior is correct, no action needed."
+      "observation": "422 schema mismatch (HTTPValidationError vs ErrorResponse) is pre-existing across all endpoints",
+      "reason": "Pre-existing condition not introduced by any docs-and-config feature. Already documented in library/architecture.md as part of the OpenAPI convention section. No code change needed — the 422 is unlikely to be triggered given all params are typed str|None."
     }
   ],
   "previousRound": null
