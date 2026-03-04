@@ -1349,21 +1349,7 @@ function countAllEnabledTokens() {
   return total;
 }
 
-function renderTokenlistSummary() {
-  // Update the gear badge
-  const badgeEl = document.getElementById('gear-badge');
-  if (!badgeEl) return;
 
-  const enabledLists = tokenlists.filter(l => l.enabled).length;
-  const totalTokens = countAllEnabledTokens();
-
-  if (enabledLists > 0) {
-    badgeEl.textContent = enabledLists;
-    badgeEl.style.display = 'flex';
-  } else {
-    badgeEl.style.display = 'none';
-  }
-}
 
 // Get the source label for a tokenlist
 function getTokenlistSourceLabel(list) {
@@ -1441,8 +1427,6 @@ function renderTokenlistPanel() {
       showDeleteConfirmation(listName, index);
     });
   });
-
-  renderTokenlistSummary();
 }
 
 function toggleTokenlist(index) {
@@ -1833,9 +1817,6 @@ function setupTokenlistModal() {
   if (exportBtn) {
     exportBtn.addEventListener('click', exportLocalTokenlist);
   }
-
-  // Initial render of summary
-  renderTokenlistSummary();
 }
 
 loadTokenlists().then(() => {
