@@ -65,6 +65,15 @@ Each browser session gets fresh localStorage. Use incognito/private windows if n
 - Capture clear evidence for each assertion: UI snapshot/screenshot plus matching network or terminal proof where specified.
 - If session instability occurs, prefer fewer larger automation steps (instead of many small calls) and include explicit waits before snapshots.
 
+## Flow Validator Guidance: docs
+
+- Use terminal/file validation only (`grep`, `jq`, `cat`, `curl`) for docs assertions.
+- Stay within `/Users/bryan/code/ypricemagic-server/` for file checks.
+- For API-based assertions (VAL-DOCS-016), use `curl http://localhost:8000` with `jq` for comparison.
+- For visual assertions (VAL-DOCS-015), read the screenshot file embedded in README; use the Read tool.
+- Do NOT modify any files; only read, grep, and verify.
+- Keep docker service access read-only: `docker compose config`, `docker compose ps`.
+
 ## Flow Validator Guidance: deploy-cli
 
 - Use terminal-based validation (docker compose, docker stack config, grep/curl, and docker logs) for deploy assertions.

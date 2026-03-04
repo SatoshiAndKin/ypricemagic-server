@@ -1,0 +1,73 @@
+{
+  "groupId": "openapi-deploy",
+  "testedAt": "2026-03-03T00:00:00Z",
+  "credentials": {
+    "account": "none",
+    "namespace": "none"
+  },
+  "toolsUsed": ["terminal", "curl", "Read"],
+  "assertions": [
+    {
+      "id": "VAL-DOCS-009",
+      "title": "openapi.json includes /quote endpoint",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "Read openapi.json and inspect .paths keys",
+          "expected": "/{chain}/quote path present with from, to, amount, block, timestamp parameters and QuoteResponse schema",
+          "observed": "/{chain}/quote path found under .paths with all 5 parameters (from, to, amount as required; block, timestamp as optional) and response 200 referencing QuoteResponse component schema. QuoteResponse defines all required fields: from, to, amount, output_amount, block, chain, block_timestamp, route."
+        }
+      ],
+      "evidence": {
+        "screenshots": [],
+        "consoleErrors": "n/a",
+        "terminal": "openapi.json paths include /quote (no chain prefix) and /{chain}/quote (with chain enum: ethereum, arbitrum, optimism, base). Parameters: from (required), to (required), amount (required), block (optional), timestamp (optional). Response schema QuoteResponse is fully defined."
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-DOCS-014",
+      "title": "Docker Swarm deploy works with new features",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "Run docker compose config in repo root",
+          "expected": "Renders without errors, exit code 0",
+          "observed": "Exit code 0, no errors in output. Full config rendered including all services, networks (ypricemagic-server_default), and volumes."
+        },
+        {
+          "action": "curl http://localhost:8000/ethereum/quote?from=0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48&to=0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2&amount=100",
+          "expected": "HTTP 200 with JSON quote response",
+          "observed": "HTTP 200. Response: {from, to, amount: 100.0, output_amount: 0.05054827949579305, block: 24582517, chain: 'ethereum', block_timestamp: 1772608331, route: 'divide'}"
+        }
+      ],
+      "evidence": {
+        "screenshots": [],
+        "consoleErrors": "n/a",
+        "terminal": "docker compose config exit code 0, no errors. curl /ethereum/quote HTTP 200. No new services or ports needed — endpoint routed through existing nginx chain-path routing."
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-DOCS-016",
+      "title": "openapi.json schemas match actual API responses",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "Compare actual /ethernet/quote response keys against openapi.json QuoteResponse schema",
+          "expected": "All actual response fields documented in schema, no extras, types match",
+          "observed": "Actual response keys: [from, to, amount, output_amount, block, chain, block_timestamp, route]. OpenAPI QuoteResponse required fields: [from, to, amount, output_amount, block, chain, block_timestamp, route]. Exact match — no extra fields, no missing fields. Types verified: from/to/chain/route are strings, amount/output_amount are numbers, block/block_timestamp are integers. route value 'divide' is in the enum ['divide', 'identity']."
+        }
+      ],
+      "evidence": {
+        "screenshots": [],
+        "consoleErrors": "n/a",
+        "terminal": "curl response: {from: string, to: string, amount: 100.0 (number), output_amount: 0.050... (number), block: 24582517 (integer), chain: 'ethereum' (string), block_timestamp: 1772608331 (integer), route: 'divide' (string enum)}. openapi.json QuoteResponse schema specifies same 8 fields all required. 100% match."
+      },
+      "issues": null
+    }
+  ],
+  "frictions": [],
+  "blockers": [],
+  "summary": "Tested 3 assertions: all 3 passed. VAL-DOCS-009: /{chain}/quote path is present in openapi.json with all required parameters and QuoteResponse schema. VAL-DOCS-014: docker compose config renders cleanly and /ethereum/quote returns HTTP 200 through nginx routing. VAL-DOCS-016: Actual API response fields exactly match openapi.json QuoteResponse schema (8 fields, correct types, route enum value valid)."
+}
