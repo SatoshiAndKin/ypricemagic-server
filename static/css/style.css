@@ -5,7 +5,7 @@
   --bg-tertiary: #f0f0f0;
   --text-primary: #333333;
   --text-secondary: #555555;
-  --text-muted: #888888;
+  --text-muted: #999999;
   --text-dim: #666666;
   --border-color: #dddddd;
   --border-secondary: #cccccc;
@@ -17,10 +17,10 @@
   --card-bg-alt: #eeeeee;
   --card-text: #333333;
   --card-border: #e0e0e0;
-  --result-bg: #1e1e1e;
-  --result-text: #d4d4d4;
-  --result-header: #888888;
-  --result-border: #333333;
+  --result-bg: #f8f8f8;
+  --result-text: #333333;
+  --result-header: #666666;
+  --result-border: #dddddd;
   --accent: #0066cc;
   --accent-hover: #0052a3;
   --accent-text: #ffffff;

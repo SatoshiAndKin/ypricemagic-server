@@ -988,9 +988,18 @@ function showQuoteResult(data, chain, fromPriceData, toPriceData) {
 }
 
 // Amount warning handler
+function updateAmountWarning() {
+  const value = quoteAmountInput.value.trim();
+  if (value) {
+    quoteAmountWarning.style.display = 'block';
+  } else {
+    quoteAmountWarning.style.display = 'none';
+  }
+}
+
 quoteAmountInput.addEventListener('input', function() {
   const value = this.value.trim();
-  if (value && parseFloat(value) > 0) {
+  if (value) {
     quoteAmountWarning.style.display = 'block';
   } else {
     quoteAmountWarning.style.display = 'none';
@@ -1360,19 +1369,6 @@ function countTokensForChain(list, chainId) {
   return list.tokens.filter(t => t.chainId === chainId).length;
 }
 
-function countAllEnabledTokens() {
-  let total = 0;
-  const chainId = getChainId();
-  for (const list of tokenlists) {
-    if (list.enabled) {
-      total += countTokensForChain(list, chainId);
-    }
-  }
-  return total;
-}
-
-
-
 // Get the source label for a tokenlist
 function getTokenlistSourceLabel(list) {
   if (list.isDefault) {
@@ -1478,8 +1474,29 @@ function deleteTokenlist(index) {
   const list = tokenlists[index];
   if (list.isDefault) return; // Cannot delete default
 
-  // Get the list name before deletion for cascade check
+  // Get the list name before deletion
   const deletedListName = list.name;
+
+  // BEFORE deletion: check if current default tokens came from this list
+  // We need to look up provenance before rebuilding the index
+  const chain = getChain();
+  const chainId = getChainId();
+  const customPairs = getCustomPairs();
+  let fromSourceList = null;
+  let toSourceList = null;
+
+  if (customPairs[chain]) {
+    const currentFrom = customPairs[chain].from.toLowerCase();
+    const currentTo = customPairs[chain].to.toLowerCase();
+    const chainMap = tokenIndex.get(chainId);
+
+    if (chainMap) {
+      const fromToken = chainMap.get(currentFrom);
+      const toToken = chainMap.get(currentTo);
+      fromSourceList = fromToken ? fromToken.sourceList : null;
+      toSourceList = toToken ? toToken.sourceList : null;
+    }
+  }
 
   // Remove from array
   tokenlists.splice(index, 1);
@@ -1492,43 +1509,15 @@ function deleteTokenlist(index) {
   rebuildTokenIndex();
 
   // Check if current default pair tokens came from the deleted list
-  // and revert to factory defaults if needed
-  checkAndRevertDefaultsForDeletedList(deletedListName);
-
-  // Re-render panel
-  renderTokenlistPanel();
-}
-
-// Check if current default pair tokens came from a deleted list and revert if needed
-function checkAndRevertDefaultsForDeletedList(deletedListName) {
-  const chain = getChain();
-  const chainId = getChainId();
-  const customPairs = getCustomPairs();
-
-  // If no custom pair for this chain, nothing to check
-  if (!customPairs[chain]) return;
-
-  const currentFrom = customPairs[chain].from.toLowerCase();
-  const currentTo = customPairs[chain].to.toLowerCase();
-
-  // Check if the current from/to tokens were sourced from the deleted list
-  const chainMap = tokenIndex.get(chainId);
+  // Only revert if the DELETED list was actually the source of the current defaults
   let needsRevert = false;
-
-  if (chainMap) {
-    const fromToken = chainMap.get(currentFrom);
-    const toToken = chainMap.get(currentTo);
-
-    // If either token's source list matches the deleted list, need to revert
-    // Note: After rebuildTokenIndex(), tokens from deleted list are no longer in index
-    // So we check if the token is no longer found OR if it was from the deleted list
-    if (!fromToken || fromToken.sourceList === deletedListName ||
-        !toToken || toToken.sourceList === deletedListName) {
+  if (customPairs[chain]) {
+    // Only revert if the deleted list was the proven source
+    if (fromSourceList === deletedListName || toSourceList === deletedListName) {
       needsRevert = true;
     }
-  } else {
-    // No tokens in index for this chain, definitely need to revert
-    needsRevert = true;
+    // Note: We do NOT revert if fromSourceList/toSourceList are null
+    // (token was not in any list) - that's not evidence the deleted list provided it
   }
 
   if (needsRevert) {
@@ -1944,7 +1933,10 @@ if (params.get('timestamp')) {
     quoteHint.textContent = 'Block number, or type "/" for a date picker. Defaults to latest block.';
   });
 }
-if (params.get('amount')) quoteAmountInput.value = params.get('amount');
+if (params.get('amount')) {
+  quoteAmountInput.value = params.get('amount');
+  updateAmountWarning(); // Re-compute warning after URL prefill
+}
 if (params.get('tokens')) {
   const savedTokens = params.get('tokens').split(',');
   const savedAmounts = params.get('amounts') ? params.get('amounts').split(',') : [];
