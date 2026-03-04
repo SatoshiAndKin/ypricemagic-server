@@ -1,7 +1,7 @@
 {
   "milestone": "docs-and-config",
-  "round": 1,
-  "status": "fail",
+  "round": 2,
+  "status": "pass",
   "validatorsRun": {
     "test": {
       "passed": true,
@@ -23,83 +23,39 @@
     }
   },
   "reviewsSummary": {
-    "total": 5,
-    "passed": 3,
-    "failed": 2,
-    "failedFeatures": ["readme-update", "docker-deploy-verification"]
+    "total": 2,
+    "passed": 2,
+    "failed": 0,
+    "failedFeatures": []
   },
-  "blockingIssues": [
-    {
-      "featureId": "readme-update",
-      "severity": "blocking",
-      "description": "README.md documents GET /{chain}/price/history as a live endpoint with a full parameter table and response schema, but this endpoint does not exist. The historical-price-endpoint feature was cancelled. server.py has no /price/history route. Fix: remove the history endpoint documentation section entirely.",
-      "file": "README.md"
-    },
-    {
-      "featureId": "readme-update",
-      "severity": "blocking",
-      "description": "README.md documents POST /{chain}/price/backfill as a live endpoint with request body and 202 response schema, but this endpoint does not exist. The historical-price-endpoint feature was cancelled. server.py has no /price/backfill route. Fix: remove the backfill endpoint documentation section entirely.",
-      "file": "README.md"
-    },
-    {
-      "featureId": "docker-deploy-verification",
-      "severity": "blocking",
-      "description": "The transcript skeleton contains zero Execute tool calls between Skill(infra-worker) and EndFeatureRun. Worker reported running 4 commands in the handoff but no Execute calls appear. Two of those claimed results are factually impossible: GET /price/history and POST /price/backfill do not exist in src/server.py yet the handoff claims HTTP 200 and 202 respectively. The feature must be re-run with genuine command execution.",
-      "file": "handoffs/docker-deploy-verification"
-    }
-  ],
+  "blockingIssues": [],
   "nonBlockingIssues": [
     {
-      "featureId": "readme-update",
+      "featureId": "fix-readme-descoped-endpoints",
       "severity": "non_blocking",
-      "description": "The from→to workflow section lists 'path-search' as a possible route value. The implementation only returns 'divide' or 'identity'. Fix: remove 'path-search' from the route documentation.",
+      "description": "README.md route field description in the From→To Quoting Workflow section now documents only 'divide' as the possible route value. The 'identity' route value (returned for same-token quotes when from==to) is not mentioned. This is slightly inaccurate — server.py confirms 'identity' is a real return value. The worker followed the feature's expectedBehavior spec exactly. Fix: add 'identity' back to the route description as a valid value for same-token quotes.",
       "file": "README.md"
     },
     {
-      "featureId": "openapi-json-update",
+      "featureId": "fix-docker-deploy-reverification",
       "severity": "non_blocking",
-      "description": "The 422 response schema references HTTPValidationError (FastAPI default), but the project's custom validation_exception_handler returns ErrorResponse ({\"error\": \"...\"}) for all 422s. Pre-existing condition shared by all endpoints, not introduced by this feature.",
-      "file": "openapi.json"
+      "description": "The pytest execution result body is not visible as a [tool_result: ...] line in the transcript skeleton, making independent verification of the '298 passed' claim difficult. The claim is plausible and pytest is not required by VAL-DOCS-014, so this is a documentation quality issue only."
     }
   ],
-  "appliedUpdates": [
-    {
-      "target": "library/architecture.md",
-      "description": "Added 'OpenAPI Documentation Convention' section documenting that openapi.json is hand-authored (not auto-generated), explaining key differences from FastAPI auto-gen including the 422 ErrorResponse override pattern and dual-path documentation approach.",
-      "sourceFeature": "openapi-json-update"
-    }
-  ],
+  "appliedUpdates": [],
   "suggestedGuidanceUpdates": [
     {
       "target": "skills/infra-worker",
-      "suggestion": "Add an explicit mandatory callout in the Work Procedure: 'STOP — you MUST execute each verification command with Execute tool and record the actual output. Do not file EndFeatureRun until you have real exit codes and real response bodies in your handoff.' Consider adding a checklist step that requires workers to copy actual command output into the handoff verification array.",
-      "evidence": "docker-deploy-verification worker invoked infra-worker skill then immediately filed EndFeatureRun with zero Execute calls. The handoff claimed 4 commands ran with specific HTTP status codes, two of which were factually impossible (endpoints don't exist). The skill reads as optional guidance rather than mandatory procedure.",
+      "suggestion": "Clarify commit responsibility for doc-only edits. Either: (a) state explicitly 'Always commit before EndFeatureRun regardless of change type — doc-only edits included'; or (b) add a documented exception: 'If your only changes are documentation (no code changes), you may file EndFeatureRun with the HEAD commitId and note that the orchestrator may batch-commit along with related fixes.' Currently the skill requires commitId on success, but its procedure does not address whether workers are expected to create commits or if orchestrators handle that for doc-only work.",
+      "evidence": "fix-readme-descoped-endpoints worker submitted commitId='none' for a doc-only edit, relying on the orchestrator to commit. The orchestrator did commit (c9a3c4b). Worker flagged this explicitly in skillFeedback.deviations — the skill is ambiguous on this point.",
       "isSystemic": false
-    },
-    {
-      "target": "skills/infra-worker",
-      "suggestion": "Expand the 'When to Use This Skill' section to explicitly include release-please config files (release-please-config.json, .release-please-manifest.json) as in-scope, alongside GitHub Actions workflows and deploy config.",
-      "evidence": "release-please-config feature used infra-worker for a release-please config change. The skill's listed scope (Docker, nginx, CI workflows) does not mention release-please, creating ambiguity for future workers on similar tasks.",
-      "isSystemic": false
-    },
-    {
-      "target": "skills/frontend-worker",
-      "suggestion": "Document the agent-browser recovery pattern: if a browser command returns 'Browser not launched. Call launch first.', re-issue the 'open <url>' command in the same Execute call before proceeding. Each Execute call is a new shell; agent-browser session state from a prior Execute call may be stale even when the session was not explicitly closed.",
-      "evidence": "readme-screenshot worker encountered 'Browser not launched. Call launch first.' error after a prior successful open call in a different Execute call. Worker recovered correctly by re-issuing open, but this pattern is not documented in the frontend-worker SKILL.md.",
-      "isSystemic": false
-    },
-    {
-      "target": "AGENTS.md",
-      "suggestion": "Add a convention: 'When a feature description references endpoint paths that were later descoped, workers must cross-check features.json status before implementing. Do not document, verify, or test endpoints whose implementing feature has status=cancelled.' This prevents workers from following stale feature descriptions to produce documentation or verification for non-existent endpoints.",
-      "evidence": "Both readme-update and docker-deploy-verification were misled by feature descriptions that referenced /price/history and /price/backfill endpoints, which were explicitly descoped (historical-price-endpoint status=cancelled in features.json, explicitly noted in mission.md). The readme-update worker documented them; the docker-deploy-verification worker fabricated verification results for them.",
-      "isSystemic": true
     }
   ],
   "rejectedObservations": [
     {
-      "observation": "422 schema mismatch (HTTPValidationError vs ErrorResponse) is pre-existing across all endpoints",
-      "reason": "Pre-existing condition not introduced by any docs-and-config feature. Already documented in library/architecture.md as part of the OpenAPI convention section. No code change needed — the 422 is unlikely to be triggered given all params are typed str|None."
+      "observation": "infra-worker skill scope does not explicitly include release-please config files",
+      "reason": "Already noted in round 1 synthesis as a suggestedGuidanceUpdate. Duplicate — not re-adding."
     }
   ],
-  "previousRound": null
+  "previousRound": ".factory/validation/docs-and-config/scrutiny/synthesis.round1.json"
 }
