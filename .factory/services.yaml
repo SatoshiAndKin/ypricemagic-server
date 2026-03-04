@@ -1,8 +1,9 @@
 commands:
-  test: uv run pytest
+  test: uv run pytest -x -q --tb=short
   test-coverage: uv run pytest --cov=src --cov-report=term-missing
   lint: uv run ruff check .
   format: uv run ruff format .
+  format-check: uv run ruff format --check .
   typecheck: uv run mypy src/
   sync: uv sync --extra dev
 

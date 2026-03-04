@@ -1,0 +1,61 @@
+{
+  "milestone": "docs-and-config",
+  "round": 2,
+  "status": "pass",
+  "validatorsRun": {
+    "test": {
+      "passed": true,
+      "command": "uv run pytest -x -q --tb=short",
+      "exitCode": 0,
+      "note": "298 tests passed"
+    },
+    "typecheck": {
+      "passed": true,
+      "command": "uv run mypy src/",
+      "exitCode": 0,
+      "note": "No issues found in 12 source files"
+    },
+    "lint": {
+      "passed": true,
+      "command": "uv run ruff check .",
+      "exitCode": 0,
+      "note": "All checks passed"
+    }
+  },
+  "reviewsSummary": {
+    "total": 2,
+    "passed": 2,
+    "failed": 0,
+    "failedFeatures": []
+  },
+  "blockingIssues": [],
+  "nonBlockingIssues": [
+    {
+      "featureId": "fix-readme-descoped-endpoints",
+      "severity": "non_blocking",
+      "description": "README.md route field description in the From→To Quoting Workflow section now documents only 'divide' as the possible route value. The 'identity' route value (returned for same-token quotes when from==to) is not mentioned. This is slightly inaccurate — server.py confirms 'identity' is a real return value. The worker followed the feature's expectedBehavior spec exactly. Fix: add 'identity' back to the route description as a valid value for same-token quotes.",
+      "file": "README.md"
+    },
+    {
+      "featureId": "fix-docker-deploy-reverification",
+      "severity": "non_blocking",
+      "description": "The pytest execution result body is not visible as a [tool_result: ...] line in the transcript skeleton, making independent verification of the '298 passed' claim difficult. The claim is plausible and pytest is not required by VAL-DOCS-014, so this is a documentation quality issue only."
+    }
+  ],
+  "appliedUpdates": [],
+  "suggestedGuidanceUpdates": [
+    {
+      "target": "skills/infra-worker",
+      "suggestion": "Clarify commit responsibility for doc-only edits. Either: (a) state explicitly 'Always commit before EndFeatureRun regardless of change type — doc-only edits included'; or (b) add a documented exception: 'If your only changes are documentation (no code changes), you may file EndFeatureRun with the HEAD commitId and note that the orchestrator may batch-commit along with related fixes.' Currently the skill requires commitId on success, but its procedure does not address whether workers are expected to create commits or if orchestrators handle that for doc-only work.",
+      "evidence": "fix-readme-descoped-endpoints worker submitted commitId='none' for a doc-only edit, relying on the orchestrator to commit. The orchestrator did commit (c9a3c4b). Worker flagged this explicitly in skillFeedback.deviations — the skill is ambiguous on this point.",
+      "isSystemic": false
+    }
+  ],
+  "rejectedObservations": [
+    {
+      "observation": "infra-worker skill scope does not explicitly include release-please config files",
+      "reason": "Already noted in round 1 synthesis as a suggestedGuidanceUpdate. Duplicate — not re-adding."
+    }
+  ],
+  "previousRound": ".factory/validation/docs-and-config/scrutiny/synthesis.round1.json"
+}

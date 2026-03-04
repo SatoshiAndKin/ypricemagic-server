@@ -1,0 +1,33 @@
+{
+  "featureId": "existing-endpoints-regression",
+  "reviewedAt": "2026-03-03T19:30:00.000Z",
+  "commitId": "3c20731",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "pass",
+  "codeReview": {
+    "summary": "Added 11 well-structured regression tests in TestEndpointSchemaRegression verifying /price, /prices, /health, and /check_bucket endpoint schemas remain unchanged after /quote was added. Tests verify exact field sets, field types, presence of block_timestamp (VAL-QUOTE-007), absence of extra fields, and the optional amount field on /price. No changes to existing endpoint code. All tests pass, lint and format are clean. The mocking patterns correctly follow existing test conventions (mock_y_module fixture, AsyncMock, patch). The test coverage addresses all items in expectedBehavior.",
+    "issues": [
+      {
+        "file": "src/tests/test_server.py",
+        "line": 2674,
+        "severity": "non_blocking",
+        "description": "test_health_endpoint_schema_fields and test_health_endpoint_no_extra_fields call the health() function directly instead of via TestClient, unlike the other tests. This tests the return dict but skips FastAPI serialization. Since health() returns a plain dict (not a Pydantic model), the dict IS the JSON schema, so this is functionally correct. However, using TestClient would be more consistent and would also cover FastAPI middleware/serialization behavior."
+      }
+    ]
+  },
+  "sharedStateObservations": [
+    {
+      "area": "skills",
+      "observation": "Worker reported 'The backend-worker skill was not found in the available skills list' and had to proceed without it, despite the skill existing at .factory/skills/backend-worker/SKILL.md. The skill may not have been registered in the worker's available skills configuration. skillFeedback.followedProcedure was true, but the worker couldn't reference the skill's procedure since it wasn't loaded.",
+      "evidence": "Handoff skillFeedback.suggestedChanges: 'The backend-worker skill was not found in the available skills list - had to proceed without it'. Skill file confirmed present at .factory/skills/backend-worker/SKILL.md."
+    },
+    {
+      "area": "conventions",
+      "observation": "Worker initially navigated to the wrong repo (ypricemagic instead of ypricemagic-server), wasting several tool calls before realizing the error. The mission AGENTS.md and feature description don't explicitly state the repo root path.",
+      "evidence": "Transcript skeleton shows LS calls to /Users/bryan/code/ypricemagic before discovering /Users/bryan/code/ypricemagic-server. Worker spent ~6 tool calls exploring the wrong repo."
+    }
+  ],
+  "addressesFailureFrom": null,
+  "summary": "PASS. The feature adds 11 thorough regression tests covering all 4 existing endpoints (/price, /prices, /health, /check_bucket) with exact schema field checks, type assertions, block_timestamp presence validation (VAL-QUOTE-007), and extra-field guards. No existing endpoint code was modified. All 295 tests pass (284 pre-existing + 11 new). One minor non-blocking observation: two health tests call the function directly instead of via TestClient, which is functionally correct but inconsistent with the other tests."
+}

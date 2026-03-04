@@ -1,0 +1,14 @@
+{
+  "groupId": "group-0",
+  "milestone": "misc-postquote-1",
+  "testedAt": "2026-03-03T20:56:00Z",
+  "credentials": {
+    "account": "none",
+    "namespace": "none"
+  },
+  "toolsUsed": [],
+  "assertionResults": [],
+  "frictions": [],
+  "blockers": [],
+  "summary": "No assertions were assigned for milestone misc-postquote-1. Empty fulfills mapping resulted in zero pending assertions. No testing performed."
+}

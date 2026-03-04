@@ -1,0 +1,21 @@
+{
+  "featureId": "existing-forms-regression",
+  "reviewedAt": "2026-03-03T21:30:00.000Z",
+  "commitId": "27f37dd",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "pass",
+  "codeReview": {
+    "summary": "This is a verification-only feature with no code changes. The commit (27f37dd) adds only three regression verification screenshots (val-regression-batch-result.png, val-regression-bucket-result.png, val-regression-full-page.png). The worker confirmed both Batch Token Pricing and Token Classification forms remain present in static/index.html and are fully functional via live browser testing against the running Docker stack. Batch form tested with 2 tokens (USDC + DAI) producing a results table with correct columns. Bucket form tested with USDC returning 'stable usd' classification. All 298 existing tests pass, lint/format/type checks clean. No regressions introduced.",
+    "issues": []
+  },
+  "sharedStateObservations": [
+    {
+      "area": "conventions",
+      "observation": "Verification screenshots are committed to the repo root alongside source files (val-regression-*.png). The repo already has ~30+ screenshot PNGs in the root directory. There is no .gitignore rule or documented convention about where validation artifacts should live. A dedicated directory or gitignore pattern would reduce root clutter.",
+      "evidence": "git show 27f37dd --stat shows 3 new PNGs in repo root. ls of repo root shows 20+ existing val-*.png and ui-*.png files."
+    }
+  ],
+  "addressesFailureFrom": null,
+  "summary": "Pass. Verification-only feature — no code changes needed. Worker thoroughly confirmed both Batch Token Pricing and Token Classification forms remain present and functional after the quote form integration. Batch form tested with 2 tokens (add row, fill addresses, submit, results table rendered). Bucket form tested with USDC (classification result 'stable usd' displayed). All validators (298 tests, ruff, mypy) pass. The commit only adds verification screenshots as evidence."
+}

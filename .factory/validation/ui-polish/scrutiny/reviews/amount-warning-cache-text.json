@@ -1,0 +1,34 @@
+{
+  "featureId": "amount-warning-cache-text",
+  "reviewedAt": "2026-03-04T03:09:44Z",
+  "commitId": "81afbc6",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "fail",
+  "codeReview": {
+    "summary": "The reviewed commit only adds a verification screenshot and does not adjust warning behavior. The warning text does include 'cached', but visibility logic still misses valid non-empty states.",
+    "issues": [
+      {
+        "file": "static/js/app.js",
+        "line": 1947,
+        "severity": "blocking",
+        "description": "When `amount` is prefilled from URL params (`if (params.get('amount')) quoteAmountInput.value = params.get('amount');`), the warning visibility is not recomputed, so a non-empty amount can render with the warning hidden. This violates the expected behavior that warning is visible when amount is non-empty."
+      },
+      {
+        "file": "static/js/app.js",
+        "line": 991,
+        "severity": "blocking",
+        "description": "The input handler only shows the warning when `parseFloat(value) > 0`, not for all non-empty values. Feature requirements specify visibility by non-empty amount state, so the current condition is narrower than required."
+      }
+    ]
+  },
+  "sharedStateObservations": [
+    {
+      "area": "skills",
+      "observation": "`frontend-worker` procedure says to always read `src/server.py`, `nginx.conf`, `.factory/library/tokenlist-format.md`, and `.factory/library/architecture.md` before implementing, but this session only read static UI files and still reported `followedProcedure: true`. The skill steps appear stricter than actual practice for small UI-only verification tasks.",
+      "evidence": ".factory/skills/frontend-worker/SKILL.md step 2 lists required reads; transcript skeleton for workerSessionId 8c9430af-bb37-4158-a1ee-a97edafaacbd shows reads of static/js/app.js, static/index.html, static/css/style.css, and .factory/services.yaml only."
+    }
+  ],
+  "addressesFailureFrom": null,
+  "summary": "Review failed: commit 81afbc6 only adds evidence, while warning visibility logic still misses non-empty cases (notably URL-prefilled amount)."
+}

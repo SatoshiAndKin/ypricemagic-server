@@ -4,15 +4,34 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>ypricemagic API</title>
+  <!-- Theme script BEFORE CSS to prevent flash of wrong theme -->
+  <script>
+    (function() {
+      var theme = localStorage.getItem('theme');
+      if (theme === 'light' || theme === 'dark') {
+        document.documentElement.setAttribute('data-theme', theme);
+      } else {
+        // System default - check prefers-color-scheme
+        var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        document.documentElement.setAttribute('data-theme', prefersDark ? 'dark' : 'light');
+      }
+    })();
+  </script>
   <link rel="stylesheet" href="/static/css/style.css">
 </head>
 <body>
   <div class="page-header">
     <h1>ypricemagic Price Lookup</h1>
-    <button type="button" id="tokenlist-gear-btn" class="gear-btn" title="Token Lists Settings">
-      <span class="gear-icon">⚙</span>
-      <span class="gear-badge" id="gear-badge"></span>
-    </button>
+    <div class="header-actions">
+      <button type="button" id="theme-toggle" class="theme-toggle" title="Toggle theme (light/dark/system)">
+        <span class="theme-icon theme-icon-light">☀</span>
+        <span class="theme-icon theme-icon-dark">☾</span>
+        <span class="theme-icon theme-icon-system">◐</span>
+      </button>
+      <button type="button" id="tokenlist-gear-btn" class="gear-btn" title="Token Lists Settings">
+        <span class="gear-icon">⚙</span>
+      </button>
+    </div>
   </div>
 
   <!-- Tokenlist Management Modal -->
@@ -52,30 +71,37 @@
     </select>
   </div>
 
-  <!-- Single Price Form -->
-  <h2>Single Token Price</h2>
-  <form id="price-form">
-    <div class="form-group">
-      <label for="price-token">Token Address</label>
-      <input type="text" id="price-token" placeholder="0x..." value="0x6B175474E89094C44Da98b954EedeAC495271d0F">
+  <!-- Quote Form -->
+  <h2>Token Quote</h2>
+  <form id="quote-form">
+    <div class="form-row">
+      <div class="form-group">
+        <label for="quote-from">From Token</label>
+        <input type="text" id="quote-from" placeholder="0x...">
+      </div>
+      <div class="form-group">
+        <label for="quote-to">To Token</label>
+        <input type="text" id="quote-to" placeholder="0x...">
+      </div>
     </div>
-    <div class="form-group">
-      <label for="price-block">Block / Date (optional)</label>
-      <input type="text" id="price-block" placeholder="defaults to latest">
-      <div class="hint" id="price-block-hint">Block number, or type "/" for a date picker. Defaults to latest block.</div>
+    <div class="form-row">
+      <div class="form-group">
+        <label for="quote-amount">Amount</label>
+        <input type="text" id="quote-amount" placeholder="e.g. 1000">
+        <div class="hint warning" id="quote-amount-warning" style="display:none;">Results with amount set are likely not cached and may take longer.</div>
+      </div>
+      <div class="form-group">
+        <label for="quote-block">Block / Date (optional)</label>
+        <input type="text" id="quote-block" placeholder="defaults to latest">
+        <div class="hint" id="quote-block-hint">Block number, or type "/" for a date picker. Defaults to latest block.</div>
+      </div>
     </div>
-    <div class="form-group">
-      <label for="price-amount">Amount (optional, token units for price impact)</label>
-      <input type="text" id="price-amount" placeholder="e.g. 1">
+    <div class="form-actions">
+      <button type="submit" id="quote-submit">Get Quote</button>
+      <button type="button" id="reset-defaults-btn" class="btn-secondary btn-small" title="Reset to factory default tokens for this chain">Reset Defaults</button>
     </div>
-
-    <div class="form-group">
-      <label for="price-ignore-pools">Ignore Pools (optional, comma-separated addresses)</label>
-      <input type="text" id="price-ignore-pools" placeholder="0xabc...,0xdef...">
-    </div>
-    <button type="submit" id="price-submit">Get Price</button>
   </form>
-  <div id="price-result" class="result"></div>
+  <div id="quote-result" class="result"></div>
 
   <!-- Batch Pricing Form -->
   <h2>Batch Token Pricing</h2>

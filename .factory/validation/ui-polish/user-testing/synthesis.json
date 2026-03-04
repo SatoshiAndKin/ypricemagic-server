@@ -1,0 +1,35 @@
+{
+  "milestone": "ui-polish",
+  "round": 4,
+  "status": "pass",
+  "assertionsSummary": {
+    "total": 1,
+    "passed": 1,
+    "failed": 0,
+    "blocked": 0
+  },
+  "passedAssertions": ["VAL-POLISH-006"],
+  "failedAssertions": [],
+  "blockedAssertions": [],
+  "appliedUpdates": [
+    {
+      "target": "user-testing.md",
+      "description": "No new knowledge; existing Docker rebuild note covers the fix flow. nginx stale DNS after docker compose up -d requires restarting the nginx container separately (docker compose restart nginx).",
+      "source": "setup"
+    }
+  ],
+  "previousRound": ".factory/validation/ui-polish/user-testing/synthesis.round3.json",
+  "toolsUsed": ["agent-browser", "curl"],
+  "frictions": [
+    {
+      "description": "After docker compose build && up -d, nginx had stale DNS entries for ypm-ethereum and ypm-base (IPs swapped after container recreation). Required an explicit 'docker compose restart nginx' to resolve.",
+      "resolved": true,
+      "resolution": "Restarted nginx container after rebuilding chain containers.",
+      "affectedAssertions": []
+    }
+  ],
+  "blockers": [],
+  "reports": [
+    ".factory/validation/ui-polish/user-testing/flows/r4-group-a.json"
+  ]
+}

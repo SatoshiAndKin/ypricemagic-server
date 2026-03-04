@@ -4,11 +4,13 @@ from src.params import (
     BatchParseSuccess,
     ParseError,
     ParseSuccess,
+    QuoteParseSuccess,
     is_valid_address,
     parse_batch_params,
     parse_bool_param,
     parse_ignore_pools,
     parse_price_params,
+    parse_quote_params,
     parse_timestamp,
 )
 
@@ -779,3 +781,142 @@ class TestParseBatchParamsCombined:
         assert result.data.timestamp == 1700000000
         assert result.data.amounts == (1000.0, 500.0)
         assert result.data.block is None
+
+
+class TestParseQuoteParams:
+    """Tests for parse_quote_params function."""
+
+    def test_valid_params(self) -> None:
+        """All valid params return QuoteParseSuccess."""
+        result = parse_quote_params(DAI, USDC, "1000")
+        assert isinstance(result, QuoteParseSuccess)
+        assert result.data.from_token == DAI
+        assert result.data.to_token == USDC
+        assert result.data.amount == 1000.0
+        assert result.data.block is None
+        assert result.data.timestamp is None
+
+    def test_valid_with_block(self) -> None:
+        """Block param is parsed correctly."""
+        result = parse_quote_params(DAI, USDC, "1000", block="18000000")
+        assert isinstance(result, QuoteParseSuccess)
+        assert result.data.block == 18000000
+
+    def test_valid_with_timestamp(self) -> None:
+        """Timestamp param is parsed correctly."""
+        result = parse_quote_params(DAI, USDC, "1000", timestamp="1700000000")
+        assert isinstance(result, QuoteParseSuccess)
+        assert result.data.timestamp == 1700000000
+        assert result.data.block is None
+
+    def test_missing_from_token(self) -> None:
+        """Missing from_token returns error."""
+        result = parse_quote_params(None, USDC, "1000")
+        assert isinstance(result, ParseError)
+        assert "from" in result.error.lower()
+
+    def test_empty_from_token(self) -> None:
+        """Empty from_token returns error."""
+        result = parse_quote_params("", USDC, "1000")
+        assert isinstance(result, ParseError)
+        assert "from" in result.error.lower()
+
+    def test_missing_to_token(self) -> None:
+        """Missing to_token returns error."""
+        result = parse_quote_params(DAI, None, "1000")
+        assert isinstance(result, ParseError)
+        assert "to" in result.error.lower()
+
+    def test_empty_to_token(self) -> None:
+        """Empty to_token returns error."""
+        result = parse_quote_params(DAI, "", "1000")
+        assert isinstance(result, ParseError)
+        assert "to" in result.error.lower()
+
+    def test_invalid_from_token_address(self) -> None:
+        """Invalid from_token address returns error."""
+        result = parse_quote_params("notanaddress", USDC, "1000")
+        assert isinstance(result, ParseError)
+        assert "from" in result.error.lower()
+
+    def test_invalid_to_token_address(self) -> None:
+        """Invalid to_token address returns error."""
+        result = parse_quote_params(DAI, "notanaddress", "1000")
+        assert isinstance(result, ParseError)
+        assert "to" in result.error.lower()
+
+    def test_missing_amount(self) -> None:
+        """Missing amount returns error."""
+        result = parse_quote_params(DAI, USDC, None)
+        assert isinstance(result, ParseError)
+        assert "amount" in result.error.lower()
+
+    def test_empty_amount(self) -> None:
+        """Empty amount returns error."""
+        result = parse_quote_params(DAI, USDC, "")
+        assert isinstance(result, ParseError)
+        assert "amount" in result.error.lower()
+
+    def test_invalid_amount_non_numeric(self) -> None:
+        """Non-numeric amount returns error."""
+        result = parse_quote_params(DAI, USDC, "abc")
+        assert isinstance(result, ParseError)
+        assert "amount" in result.error.lower()
+
+    def test_invalid_amount_negative(self) -> None:
+        """Negative amount returns error."""
+        result = parse_quote_params(DAI, USDC, "-100")
+        assert isinstance(result, ParseError)
+        assert "amount" in result.error.lower()
+
+    def test_invalid_amount_zero(self) -> None:
+        """Zero amount returns error."""
+        result = parse_quote_params(DAI, USDC, "0")
+        assert isinstance(result, ParseError)
+        assert "amount" in result.error.lower()
+
+    def test_valid_amount_decimal(self) -> None:
+        """Decimal amount is parsed correctly."""
+        result = parse_quote_params(DAI, USDC, "0.5")
+        assert isinstance(result, QuoteParseSuccess)
+        assert result.data.amount == 0.5
+
+    def test_timestamp_and_block_mutually_exclusive(self) -> None:
+        """Both timestamp and block returns error."""
+        result = parse_quote_params(DAI, USDC, "1000", block="18000000", timestamp="1700000000")
+        assert isinstance(result, ParseError)
+        assert "mutually exclusive" in result.error.lower()
+
+    def test_invalid_block(self) -> None:
+        """Invalid block returns error."""
+        result = parse_quote_params(DAI, USDC, "1000", block="abc")
+        assert isinstance(result, ParseError)
+        assert "block" in result.error.lower()
+
+    def test_invalid_timestamp(self) -> None:
+        """Invalid timestamp returns error."""
+        result = parse_quote_params(DAI, USDC, "1000", timestamp="invalid")
+        assert isinstance(result, ParseError)
+        assert "timestamp" in result.error.lower()
+
+    def test_future_timestamp(self) -> None:
+        """Future timestamp returns error."""
+        result = parse_quote_params(DAI, USDC, "1000", timestamp="9999999999")
+        assert isinstance(result, ParseError)
+        assert "future" in result.error.lower()
+
+    def test_same_from_and_to_token(self) -> None:
+        """Same from and to token is valid (handled by endpoint, not parser)."""
+        result = parse_quote_params(DAI, DAI, "1000")
+        assert isinstance(result, QuoteParseSuccess)
+        assert result.data.from_token == DAI
+        assert result.data.to_token == DAI
+
+    def test_all_params_combined(self) -> None:
+        """All params work together."""
+        result = parse_quote_params(DAI, USDC, "1000", block="18000000")
+        assert isinstance(result, QuoteParseSuccess)
+        assert result.data.from_token == DAI
+        assert result.data.to_token == USDC
+        assert result.data.amount == 1000.0
+        assert result.data.block == 18000000

@@ -1,6 +1,6 @@
 # ypricemagic-server
 
-A multi-chain token price API backed by [ypricemagic](https://github.com/BobTheBuidler/ypricemagic). One container runs per chain; an nginx reverse proxy routes requests by `?chain=` parameter.
+A multi-chain token price API backed by [ypricemagic](https://github.com/BobTheBuidler/ypricemagic). One container runs per chain; an nginx reverse proxy routes requests by chain-prefixed paths (`/<chain>/...`).
 
 ## Architecture
 
@@ -38,69 +38,57 @@ The API is available at `http://localhost:8000` (or `$PORT`). A browser UI is se
 
 All requests go through nginx on port 8000. An interactive browser UI is served at `/`.
 
-### `GET /price`
+### `GET /{chain}/price`
 
-Fetch the USD price for a single token.
+Fetch the USD price for a single token on a specific chain.
 
-| Parameter      | Required | Description |
-|----------------|----------|-------------|
-| `chain`        | yes      | `ethereum`, `arbitrum`, `optimism`, or `base` |
-| `token`        | yes      | ERC-20 token address (`0x...`) |
-| `block`        | no       | Block number; defaults to latest. Mutually exclusive with `timestamp`. |
-| `timestamp`    | no       | Unix epoch (e.g. `1700000000`) or ISO 8601 (e.g. `2023-11-14T22:13:20Z`). Resolves to a block via `get_block_at_timestamp`. Mutually exclusive with `block`. |
-| `amount`       | no       | Human-readable token units for price-impact-aware pricing. |
-| `skip_cache`   | no       | `true` to bypass the disk cache. |
-| `ignore_pools` | no       | Comma-separated pool addresses to exclude from routing. |
-| `silent`       | no       | `true` to suppress verbose upstream logging. |
+| Parameter | In | Required | Description |
+|-----------|----|----------|-------------|
+| `chain` | path | yes | `ethereum`, `arbitrum`, `optimism`, or `base` |
+| `token` | query | yes | ERC-20 token address (`0x...`) |
+| `block` | query | no | Block number; mutually exclusive with `timestamp` |
+| `timestamp` | query | no | Unix epoch or ISO-8601 timestamp; resolves to a block |
+| `amount` | query | no | Human-readable token amount for amount-aware pricing |
+| `skip_cache` | query | no | `true` to bypass disk cache |
+| `ignore_pools` | query | no | Comma-separated pool addresses to exclude |
+| `silent` | query | no | `true` to suppress verbose upstream logging |
 
-**Example:**
-```bash
-curl "http://localhost:8000/price?chain=ethereum&token=<TOKEN_ADDR>"
-```
+**Response schema (`200`):**
 
-**Response:**
 ```json
 {
   "chain": "ethereum",
-  "token": "<TOKEN_ADDR>",
+  "token": "0x...",
   "block": 21900000,
   "price": 1.0,
   "cached": false,
-  "block_timestamp": 1740000000
+  "block_timestamp": 1740000000,
+  "amount": 1000.0
 }
 ```
 
-### `GET /prices`
+`amount` is only present when provided in the request.
 
-Batch pricing — fetch USD prices for multiple tokens in one request.
+### `GET /{chain}/prices`
 
-| Parameter    | Required | Description |
-|--------------|----------|-------------|
-| `chain`      | yes      | Chain name |
-| `tokens`     | yes      | Comma-separated ERC-20 token addresses |
-| `block`      | no       | Block number; defaults to latest. Mutually exclusive with `timestamp`. |
-| `timestamp`  | no       | Unix epoch or ISO 8601; resolves to a block. Mutually exclusive with `block`. |
-| `amounts`    | no       | Comma-separated amounts (must match token order) |
-| `skip_cache` | no       | `true` to bypass cache |
-| `silent`     | no       | `true` to suppress verbose logging |
+Batch USD pricing for multiple tokens.
 
-**Example:**
-```bash
-curl "http://localhost:8000/prices?chain=ethereum&tokens=<DAI_ADDR>,<USDC_ADDR>"
-```
+| Parameter | In | Required | Description |
+|-----------|----|----------|-------------|
+| `chain` | path | yes | `ethereum`, `arbitrum`, `optimism`, or `base` |
+| `tokens` | query | yes | Comma-separated ERC-20 token addresses |
+| `block` | query | no | Block number; mutually exclusive with `timestamp` |
+| `timestamp` | query | no | Unix epoch or ISO-8601 timestamp; resolves to a block |
+| `amounts` | query | no | Comma-separated amounts aligned with `tokens` order |
+| `skip_cache` | query | no | `true` to bypass disk cache |
+| `silent` | query | no | `true` to suppress verbose upstream logging |
 
-**Response:**
+**Response schema (`200`):**
+
 ```json
 [
   {
-    "token": "<DAI_ADDR>",
-    "block": 21900000,
-    "price": 1.0,
-    "block_timestamp": 1740000000,
-    "cached": false
-  },
-  {
-    "token": "<USDC_ADDR>",
+    "token": "0x...",
     "block": 21900000,
     "price": 1.0,
     "block_timestamp": 1740000000,
@@ -109,26 +97,70 @@ curl "http://localhost:8000/prices?chain=ethereum&tokens=<DAI_ADDR>,<USDC_ADDR>"
 ]
 ```
 
-Tokens that fail to price return `null` for `price` (HTTP 200 is still returned).
+Tokens that fail pricing return `"price": null` while the endpoint still returns `200`.
 
-### `GET /check_bucket`
+### `GET /{chain}/quote`
 
-Returns the pricing bucket classification for a token (e.g. `"atoken"`, `"curve lp"`).
+From→to token quoting endpoint for swap-style quote flows.
 
-| Parameter | Required | Description |
-|-----------|----------|-------------|
-| `chain`   | yes      | Chain name |
-| `token`   | yes      | ERC-20 token address |
+| Parameter | In | Required | Description |
+|-----------|----|----------|-------------|
+| `chain` | path | yes | `ethereum`, `arbitrum`, `optimism`, or `base` |
+| `from` | query | yes | Input token address |
+| `to` | query | yes | Output token address |
+| `amount` | query | yes | Input token amount |
+| `block` | query | no | Historical block number |
+| `timestamp` | query | no | Historical Unix epoch timestamp (resolved to block) |
 
-**Example:**
-```bash
-curl "http://localhost:8000/check_bucket?chain=ethereum&token=<TOKEN_ADDR>"
-```
+**Response schema (`200`):**
 
-**Response:**
 ```json
 {
-  "token": "<TOKEN_ADDR>",
+  "from": "0x...",
+  "to": "0x...",
+  "amount": 1000.0,
+  "output_amount": 0.357,
+  "block": 21900000,
+  "chain": "ethereum",
+  "block_timestamp": 1740000000,
+  "route": "divide"
+}
+```
+
+#### `curl` examples for `/quote`
+
+**Basic quote:**
+
+```bash
+curl "http://localhost:8000/ethereum/quote?from=0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48&to=0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2&amount=1000"
+```
+
+**Historical quote at a block:**
+
+```bash
+curl "http://localhost:8000/ethereum/quote?from=0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48&to=0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2&amount=1000&block=18000000"
+```
+
+**Historical quote at a timestamp:**
+
+```bash
+curl "http://localhost:8000/ethereum/quote?from=0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48&to=0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2&amount=1000&timestamp=1693526400"
+```
+
+### `GET /{chain}/check_bucket`
+
+Returns the ypricemagic pricing bucket classification for a token (for example `"stable"`, `"curve lp"`, `"atoken"`).
+
+| Parameter | In | Required | Description |
+|-----------|----|----------|-------------|
+| `chain` | path | yes | `ethereum`, `arbitrum`, `optimism`, or `base` |
+| `token` | query | yes | ERC-20 token address |
+
+**Response schema (`200`):**
+
+```json
+{
+  "token": "0x...",
   "chain": "ethereum",
   "bucket": "stable"
 }
@@ -136,25 +168,58 @@ curl "http://localhost:8000/check_bucket?chain=ethereum&token=<TOKEN_ADDR>"
 
 ### `GET /health`
 
-Returns health of the ethereum backend (representative aggregate check). Includes a `synced` field indicating node sync status (`true`, `false`, or `null` if unknown).
+Aggregate health check (proxied to ethereum backend).
+
+| Parameter | In | Required | Description |
+|-----------|----|----------|-------------|
+| _none_ | — | — | No parameters |
+
+**Response schema (`200`):**
 
 ```json
-{"status": "ok", "chain": "ethereum", "block": 21900000, "synced": true}
+{
+  "status": "ok",
+  "chain": "ethereum",
+  "block": 21900000,
+  "synced": true
+}
 ```
 
-### `GET /health/{chain}`
+### `GET /health/<chain>`
 
-Returns health of a specific chain backend (same response shape as `/health`).
+Per-chain health check (externally reached as `GET /<chain>/health`, for example `/arbitrum/health`).
+
+| Parameter | In | Required | Description |
+|-----------|----|----------|-------------|
+| `chain` | path | yes | `ethereum`, `arbitrum`, `optimism`, or `base` |
+
+**Response schema (`200`):** same schema as `GET /health`.
+
+### From→to quoting workflow
+
+1. Resolve a target block (`latest`, explicit `block`, or block resolved from `timestamp`).
+2. Attempt direct route/path pricing when available.
+3. Fall back to divide strategy (`output_amount = amount × (price_from / price_to)`) when no direct route is available.
+4. Return `route` to indicate strategy (`divide`) plus `block_timestamp` for price age displays.
+5. When `amount` is set, quotes are more likely to be uncached and may take longer.
 
 ## Browser UI
 
 The root path (`/`) serves an interactive browser UI for all API endpoints.
 
+### Quote UI screenshot (latest block)
+
+![Latest-block USDC→crvUSD quote result with price age in seconds](docs/readme-quote-latest-block.png)
+
+### Theme toggle (light / dark / system)
+
+The header includes a theme toggle with three modes: `system` (default), `light`, and `dark`. The selected mode is persisted in local storage. Quote/result sections, tokenlist modal, and related chart-friendly historical views are styled for both light and dark mode.
+
 ### Token autocomplete
 
 All token address inputs support autocomplete. Type a symbol, name, or address to search across loaded tokenlists. Results are filtered by the currently selected chain. If you submit an address that isn't in any enabled tokenlist, a warning modal lets you proceed anyway or add the token to your local list.
 
-Autocomplete works in the single price, batch, and bucket forms.
+Autocomplete works in the quote, batch, and bucket forms.
 
 ### Tokenlist management
 

@@ -1,0 +1,28 @@
+{
+  "featureId": "tokenlist-url-display",
+  "reviewedAt": "2026-03-04T03:09:56Z",
+  "commitId": "f4dd487",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "pass",
+  "codeReview": {
+    "summary": "Implementation covers the required source-label behavior in the tokenlist modal: Built-in, Saved locally, Imported from file, and URL label with truncation and escaping. The label is rendered below the list name with smaller muted styling, and the fallback logic avoids undefined/blank output.",
+    "issues": [
+      {
+        "file": "static/css/style.css",
+        "line": 8,
+        "severity": "non_blocking",
+        "description": "Feature description specifies muted color #999 in light mode and #888 in dark mode for the source label. The new `.tokenlist-item-source` uses `var(--text-muted)`, but light mode currently defines `--text-muted: #888888` (same as dark), so the light-mode color does not match the stated #999 target."
+      }
+    ]
+  },
+  "sharedStateObservations": [
+    {
+      "area": "skills",
+      "observation": "The frontend-worker skill's step 2 is overly rigid for small JS/CSS-only UI features: it lists several files as required reads (including server/nginx/library docs), but this worker completed the feature without reading all of them and still marked `followedProcedure: true`. The skill could distinguish required vs conditional reads to better match real execution.",
+      "evidence": "Skill file `.factory/skills/frontend-worker/SKILL.md` step 2 lists `src/server.py`, `nginx.conf`, `.factory/library/tokenlist-format.md`, and `.factory/library/architecture.md`. Transcript skeleton for session `7a2cc30a-6ff5-4743-a092-fe9a61642c70` shows reads of mission docs and static UI files, but not those additional files, while handoff reports `skillFeedback.followedProcedure: true`."
+    }
+  ],
+  "addressesFailureFrom": null,
+  "summary": "Pass with one non-blocking styling mismatch. Functional tokenlist source-label behavior and truncation are correctly implemented for all required list types, but the light-mode muted color resolves to #888 instead of the feature description's #999."
+}
