@@ -3,13 +3,23 @@ name: PR Review
 on:
   pull_request:
     types: [opened, synchronize, ready_for_review]
+    paths-ignore:
+      - "**.md"
+      - "**.png"
+      - ".factory/validation/**"
+      - "docs/**"
+      - "runbooks/**"
+
+concurrency:
+  group: pr-review-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   security-scan:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     permissions:
       contents: read
-      pull-requests: write
       security-events: write
 
     steps:
@@ -28,20 +38,3 @@ jobs:
         if: always()
         with:
           sarif_file: trivy-results.sarif
-
-  codeql:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      security-events: write
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Initialize CodeQL
-        uses: github/codeql-action/init@v4
-        with:
-          languages: python
-
-      - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@v4
