@@ -4,15 +4,35 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>ypricemagic API</title>
+  <!-- Theme script BEFORE CSS to prevent flash of wrong theme -->
+  <script>
+    (function() {
+      var theme = localStorage.getItem('theme');
+      if (theme === 'light' || theme === 'dark') {
+        document.documentElement.setAttribute('data-theme', theme);
+      } else {
+        // System default - check prefers-color-scheme
+        var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        document.documentElement.setAttribute('data-theme', prefersDark ? 'dark' : 'light');
+      }
+    })();
+  </script>
   <link rel="stylesheet" href="/static/css/style.css">
 </head>
 <body>
   <div class="page-header">
     <h1>ypricemagic Price Lookup</h1>
-    <button type="button" id="tokenlist-gear-btn" class="gear-btn" title="Token Lists Settings">
-      <span class="gear-icon">⚙</span>
-      <span class="gear-badge" id="gear-badge"></span>
-    </button>
+    <div class="header-actions">
+      <button type="button" id="theme-toggle" class="theme-toggle" title="Toggle theme (light/dark/system)">
+        <span class="theme-icon theme-icon-light">☀</span>
+        <span class="theme-icon theme-icon-dark">☾</span>
+        <span class="theme-icon theme-icon-system">◐</span>
+      </button>
+      <button type="button" id="tokenlist-gear-btn" class="gear-btn" title="Token Lists Settings">
+        <span class="gear-icon">⚙</span>
+        <span class="gear-badge" id="gear-badge"></span>
+      </button>
+    </div>
   </div>
 
   <!-- Tokenlist Management Modal -->

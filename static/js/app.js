@@ -1,3 +1,79 @@
+// Theme management
+function initTheme() {
+  const themeToggle = document.getElementById('theme-toggle');
+  if (!themeToggle) return;
+
+  // Get current theme from localStorage or default to 'system'
+  const storedTheme = localStorage.getItem('theme');
+
+  // Set initial button state
+  updateThemeButtonState(storedTheme || 'system');
+
+  // Listen for OS theme changes when in system mode
+  const prefersDark = window.matchMedia('(prefers-color-scheme: dark)');
+  prefersDark.addEventListener('change', function(e) {
+    const currentTheme = localStorage.getItem('theme');
+    if (!currentTheme || currentTheme === 'system') {
+      // No stored preference or system mode - update to match OS
+      document.documentElement.setAttribute('data-theme', e.matches ? 'dark' : 'light');
+      updateThemeButtonState('system');
+    }
+  });
+
+  // Toggle click handler
+  themeToggle.addEventListener('click', function() {
+    cycleTheme();
+  });
+
+  // Keyboard accessibility
+  themeToggle.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      cycleTheme();
+    }
+  });
+}
+
+function cycleTheme() {
+  const storedTheme = localStorage.getItem('theme');
+  let newTheme;
+
+  // Cycle: system -> light -> dark -> system
+  if (!storedTheme || storedTheme === 'system') {
+    newTheme = 'light';
+  } else if (storedTheme === 'light') {
+    newTheme = 'dark';
+  } else {
+    newTheme = 'system';
+  }
+
+  applyTheme(newTheme);
+}
+
+function applyTheme(theme) {
+  if (theme === 'system') {
+    // Remove stored preference and use OS preference
+    localStorage.removeItem('theme');
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    document.documentElement.setAttribute('data-theme', prefersDark ? 'dark' : 'light');
+  } else {
+    // Store and apply specific theme
+    localStorage.setItem('theme', theme);
+    document.documentElement.setAttribute('data-theme', theme);
+  }
+
+  updateThemeButtonState(theme);
+}
+
+function updateThemeButtonState(theme) {
+  // The CSS handles showing the correct icon based on data-theme attribute
+  // This function can be used for accessibility announcements if needed
+  const themeToggle = document.getElementById('theme-toggle');
+  if (themeToggle) {
+    themeToggle.setAttribute('aria-label', 'Theme: ' + theme);
+  }
+}
+
 // Utility functions
 function getChain() {
   return document.getElementById('chain').value;
@@ -1666,6 +1742,7 @@ loadTokenlists().then(() => {
   initAutocompletes();
   setDefaultPair();
   setupTokenlistModal();
+  initTheme(); // Initialize theme toggle
 });
 
 // Load URL params to restore form state
