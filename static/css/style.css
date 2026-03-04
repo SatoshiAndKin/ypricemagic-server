@@ -5,7 +5,7 @@
   --bg-tertiary: #f0f0f0;
   --text-primary: #333333;
   --text-secondary: #555555;
-  --text-muted: #999999;
+  --text-muted: #767676;
   --text-dim: #666666;
   --border-color: #dddddd;
   --border-secondary: #cccccc;
@@ -44,9 +44,9 @@
   --modal-overlay: rgba(0, 0, 0, 0.5);
   --toggle-bg: #cccccc;
   --toggle-knob: #ffffff;
-  --link-color: #58a6ff;
-  --field-value-number: #b5cea8;
-  --field-value-teal: #4ec9b0;
+  --link-color: #2672c1;
+  --field-value-number: #4d7a36;
+  --field-value-teal: #0f7d65;
   --autocomplete-item-border: #e0e0e0;
 }
 
@@ -57,7 +57,7 @@
   --bg-tertiary: #2d2d2d;
   --text-primary: #e0e0e0;
   --text-secondary: #c0c0c0;
-  --text-muted: #888888;
+  --text-muted: #a5a5a5;
   --text-dim: #999999;
   --border-color: #333333;
   --border-secondary: #444444;
@@ -110,7 +110,7 @@
     --bg-tertiary: #2d2d2d;
     --text-primary: #e0e0e0;
     --text-secondary: #c0c0c0;
-    --text-muted: #888888;
+    --text-muted: #a5a5a5;
     --text-dim: #999999;
     --border-color: #333333;
     --border-secondary: #444444;
