@@ -1,0 +1,130 @@
+# Production: all 4 chains via docker stack deploy
+services:
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "${PORT:-8000}:8000"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    deploy:
+      update_config:
+        order: start-first
+        failure_action: rollback
+      rollback_config:
+        parallelism: 0
+        order: stop-first
+    stop_grace_period: 30s
+
+  ypm-ethereum:
+    image: ghcr.io/satoshiandkin/ypricemagic-server:latest
+    init: true
+    environment:
+      CHAIN_NAME: ethereum
+      CHAIN_ID: 1
+      RPC_URL: ${RPC_URL_ETHEREUM}
+      ETHERSCAN_TOKEN: ${ETHERSCAN_TOKEN}
+    volumes:
+      - cache-ethereum:/data/cache
+      - brownie-ethereum:/root/.brownie
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:8001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    deploy:
+      update_config:
+        order: start-first
+        failure_action: rollback
+      rollback_config:
+        parallelism: 0
+        order: stop-first
+    stop_grace_period: 30s
+
+  ypm-arbitrum:
+    image: ghcr.io/satoshiandkin/ypricemagic-server:latest
+    init: true
+    environment:
+      CHAIN_NAME: arbitrum
+      CHAIN_ID: 42161
+      RPC_URL: ${RPC_URL_ARBITRUM}
+      ETHERSCAN_TOKEN: ${ETHERSCAN_TOKEN}
+    volumes:
+      - cache-arbitrum:/data/cache
+      - brownie-arbitrum:/root/.brownie
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:8001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    deploy:
+      update_config:
+        order: start-first
+        failure_action: rollback
+      rollback_config:
+        parallelism: 0
+        order: stop-first
+    stop_grace_period: 30s
+
+  ypm-optimism:
+    image: ghcr.io/satoshiandkin/ypricemagic-server:latest
+    init: true
+    environment:
+      CHAIN_NAME: optimism
+      CHAIN_ID: 10
+      RPC_URL: ${RPC_URL_OPTIMISM}
+      ETHERSCAN_TOKEN: ${ETHERSCAN_TOKEN}
+    volumes:
+      - cache-optimism:/data/cache
+      - brownie-optimism:/root/.brownie
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:8001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    deploy:
+      update_config:
+        order: start-first
+        failure_action: rollback
+      rollback_config:
+        parallelism: 0
+        order: stop-first
+    stop_grace_period: 30s
+
+  ypm-base:
+    image: ghcr.io/satoshiandkin/ypricemagic-server:latest
+    init: true
+    environment:
+      CHAIN_NAME: base
+      CHAIN_ID: 8453
+      RPC_URL: ${RPC_URL_BASE}
+      ETHERSCAN_TOKEN: ${ETHERSCAN_TOKEN}
+    volumes:
+      - cache-base:/data/cache
+      - brownie-base:/root/.brownie
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:8001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    deploy:
+      update_config:
+        order: start-first
+        failure_action: rollback
+      rollback_config:
+        parallelism: 0
+        order: stop-first
+    stop_grace_period: 30s
+
+volumes:
+  cache-ethereum:
+  cache-arbitrum:
+  cache-optimism:
+  cache-base:
+  brownie-ethereum:
+  brownie-arbitrum:
+  brownie-optimism:
+  brownie-base:
