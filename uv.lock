@@ -219,6 +219,28 @@ wheels = [
 ]
 
 [[package]]
+name = "cachebox"
+version = "5.2.2"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/ab/04/0a0e6517ce0b4805dbd4a2a07ab679fb862938f841ea365403c7e51298dc/cachebox-5.2.2.tar.gz", hash = "sha256:a140ea693faf2c9aa9fccdf80bed9912f8f3eba6dfb74f921a34877fcb93a902", size = 61716, upload-time = "2026-01-27T15:05:16.341Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/5b/ea/f7c214049f87ca43f9022ba64d90063b64af3ece2f80df95880700544249/cachebox-5.2.2-cp312-cp312-macosx_10_12_x86_64.whl", hash = "sha256:8f52a2d7902ca65a5c2c824a038a09c924a4322d2792d87178d5c49aec857598", size = 372901, upload-time = "2026-01-27T15:04:07.834Z" },
+    { url = "https://files.pythonhosted.org/packages/97/3e/77505237cc325a1ab6a058be8b4444716e48e0a89ac57eab4f521ef80f04/cachebox-5.2.2-cp312-cp312-macosx_11_0_arm64.whl", hash = "sha256:0e419dc10599f65e9f6115319fd66517e639e6bd6bf40cdfd0190ac3360663ed", size = 353395, upload-time = "2026-01-27T15:03:55.835Z" },
+    { url = "https://files.pythonhosted.org/packages/0c/b2/99792ee9bdf2a3eeb85d30e7257a1b69a0f852b2b437979b70d582f31c92/cachebox-5.2.2-cp312-cp312-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:803be9146e51d904dbbd8ca104fe366754c77d7f0bb60012d332c194fad7173e", size = 392588, upload-time = "2026-01-27T15:02:37.38Z" },
+    { url = "https://files.pythonhosted.org/packages/41/e8/9d61183e9286bbe8bfa7a9b40432384bda7e3696f74e1d658cfba111c33a/cachebox-5.2.2-cp312-cp312-manylinux_2_17_armv7l.manylinux2014_armv7l.whl", hash = "sha256:33157e5c132f3919495071c506f574d66d96f8a21456f998f60be10c2f92e25f", size = 346963, upload-time = "2026-01-27T15:02:49.672Z" },
+    { url = "https://files.pythonhosted.org/packages/cd/90/c5aff2efa8b5df445f79b8589e22221de5a5fce1c5e7f475346f3c27e271/cachebox-5.2.2-cp312-cp312-manylinux_2_17_ppc64le.manylinux2014_ppc64le.whl", hash = "sha256:05ea02d6745223c33b04f48d801aec449118f085f77f615b8f0a7fb00c121c2d", size = 374259, upload-time = "2026-01-27T15:03:02.283Z" },
+    { url = "https://files.pythonhosted.org/packages/a7/03/2727f6b383d0838704460cbcf964bec69311acbbe8f6b90344872b61474b/cachebox-5.2.2-cp312-cp312-manylinux_2_17_s390x.manylinux2014_s390x.whl", hash = "sha256:ecacc803639c4bc38ccde3983b1b021ca11eb472271b45187e310c7e363b482f", size = 400941, upload-time = "2026-01-27T15:03:14.653Z" },
+    { url = "https://files.pythonhosted.org/packages/bf/ca/37a9cc44981d0e810af69562f432eee2ac2bdcb4a33d9a2484cb755ce0a7/cachebox-5.2.2-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:6ad685fb02bd63aa09d031af8507cee3bb308d6c7486c7fa8b4e28b310be6555", size = 411260, upload-time = "2026-01-27T15:03:41.579Z" },
+    { url = "https://files.pythonhosted.org/packages/f7/67/ec6e4a32caf1aef79aa976edc5104c354411e33aa8699e53bb40f7c6a607/cachebox-5.2.2-cp312-cp312-manylinux_2_5_i686.manylinux1_i686.whl", hash = "sha256:7a95936bedace3878a200700c00d5a7c0f0afdbc85d1ecc7d1fb47da6d7617bc", size = 433700, upload-time = "2026-01-27T15:03:28.445Z" },
+    { url = "https://files.pythonhosted.org/packages/e8/ad/96c259366eed4108cc72bde38f5cff24fcc85b6dca2eb1f2d294918237ff/cachebox-5.2.2-cp312-cp312-musllinux_1_2_aarch64.whl", hash = "sha256:715eb907d8d595bc83a62250b84aa21e8794a9644b92c9eb254a7a50a56e3d5e", size = 569585, upload-time = "2026-01-27T15:04:22.271Z" },
+    { url = "https://files.pythonhosted.org/packages/61/90/98c1cf839e3ab3ed97f83da87b2041eaa8b912068c0bd000306687b7d26b/cachebox-5.2.2-cp312-cp312-musllinux_1_2_armv7l.whl", hash = "sha256:17b54f13b55e72e67aa531e0c805b2cc9a42ac746937c2df22bcdef21d0704b6", size = 657216, upload-time = "2026-01-27T15:04:37.226Z" },
+    { url = "https://files.pythonhosted.org/packages/df/29/c31c6b9e76068b3aede93a5270bcb6e285a62dbd9a8ce1f6fe8f36761d97/cachebox-5.2.2-cp312-cp312-musllinux_1_2_i686.whl", hash = "sha256:d2870529575fdf0989ad081cd585e01b2e9e30177a14696fdb6f32a7edfeae07", size = 650096, upload-time = "2026-01-27T15:04:50.683Z" },
+    { url = "https://files.pythonhosted.org/packages/d7/da/f1e48ebfd1ebe336d3ab7a50f4b4f18e2854311d4cdd2c8c5da1ce13f866/cachebox-5.2.2-cp312-cp312-musllinux_1_2_x86_64.whl", hash = "sha256:678f7963400981cd62973b3f8d7231b77eaae88ebee11e06d02659f565d46bc4", size = 625769, upload-time = "2026-01-27T15:05:05.08Z" },
+    { url = "https://files.pythonhosted.org/packages/22/d8/05b50b50dcb7bd1cea1561f0a2a3c74cacebf129e366e268e3dfa8b12c71/cachebox-5.2.2-cp312-cp312-win32.whl", hash = "sha256:809cc6459e947951a074e4af32ad60bc6beb615e2d4a7fd76f43c157343a3be4", size = 287661, upload-time = "2026-01-27T15:05:34.466Z" },
+    { url = "https://files.pythonhosted.org/packages/07/34/5ed62f3c328f4f5c6320944b23481e4650e81cc56ec7b48f3fa347b918be/cachebox-5.2.2-cp312-cp312-win_amd64.whl", hash = "sha256:9029c9ec274c594215931171ead7ecfbc61771a2db6ec5cce02b51e4fb182792", size = 301548, upload-time = "2026-01-27T15:05:21.465Z" },
+]
+
+[[package]]
 name = "cachetools"
 version = "6.2.6"
 source = { registry = "https://pypi.org/simple" }
@@ -2208,12 +2230,13 @@ wheels = [
 
 [[package]]
 name = "ypricemagic"
-version = "0.0.1.dev1461"
-source = { git = "https://github.com/SatoshiAndKin/ypricemagic.git?rev=master#3c1584c1bf2acecea3caef6bfce07eae48b55296" }
+version = "0.0.1.dev1484"
+source = { git = "https://github.com/SatoshiAndKin/ypricemagic.git?rev=master#c9a82d08df2d81884344cfb18f1f42470adc901a" }
 dependencies = [
     { name = "aiosqlite" },
     { name = "asyncpg" },
     { name = "bobs-lazy-logging" },
+    { name = "cachebox" },
     { name = "cchecksum" },
     { name = "checksum-dict" },
     { name = "dank-mids" },

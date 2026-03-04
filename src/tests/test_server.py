@@ -340,7 +340,7 @@ class TestFetchPriceRetry:
         )
         with patch("y.get_price", mock_get_price):
             result = await _fetch_price(DAI, 18000000)
-            assert result == 1.0
+            assert result == (1.0, None)
             assert mock_get_price.call_count == 2
 
     @pytest.mark.asyncio
@@ -356,7 +356,7 @@ class TestFetchPriceRetry:
         )
         with patch("y.get_price", mock_get_price):
             result = await _fetch_price(DAI, 18000000)
-            assert result == 2.0
+            assert result == (2.0, None)
             assert mock_get_price.call_count == 2
 
     @pytest.mark.asyncio
@@ -372,7 +372,7 @@ class TestFetchPriceRetry:
         )
         with patch("y.get_price", mock_get_price):
             result = await _fetch_price(DAI, 18000000)
-            assert result == 3.0
+            assert result == (3.0, None)
             assert mock_get_price.call_count == 2
 
     @pytest.mark.asyncio
@@ -408,14 +408,17 @@ class TestFetchPriceSuccess:
 
     @pytest.mark.asyncio
     async def test_valid_price_returned(self, mock_y_module: None) -> None:
-        """Valid price is returned as float."""
+        """Valid price is returned as (float, trade_path) tuple."""
         from src.server import _fetch_price
 
         mock_get_price = AsyncMock(return_value=1.0)
         with patch("y.get_price", mock_get_price):
             result = await _fetch_price(DAI, 18000000)
-            assert result == 1.0
-            assert isinstance(result, float)
+            assert result is not None
+            price_val, trade_path = result
+            assert price_val == 1.0
+            assert isinstance(price_val, float)
+            assert trade_path is None
 
     @pytest.mark.asyncio
     async def test_valid_price_with_amount(self, mock_y_module: None) -> None:
@@ -425,7 +428,7 @@ class TestFetchPriceSuccess:
         mock_get_price = AsyncMock(return_value=0.99)
         with patch("y.get_price", mock_get_price):
             result = await _fetch_price(DAI, 18000000, amount=1000.0)
-            assert result == 0.99
+            assert result == (0.99, None)
             mock_get_price.assert_called_once_with(
                 DAI, 18000000, amount=1000.0, fail_to_None=True, sync=False
             )
@@ -438,7 +441,7 @@ class TestFetchPriceSuccess:
         mock_get_price = AsyncMock(return_value=0.0)
         with patch("y.get_price", mock_get_price):
             result = await _fetch_price(DAI, 18000000)
-            assert result == 0.0
+            assert result == (0.0, None)
 
 
 class TestFetchPriceNewParams:
@@ -452,7 +455,7 @@ class TestFetchPriceNewParams:
         mock_get_price = AsyncMock(return_value=1.0)
         with patch("y.get_price", mock_get_price):
             result = await _fetch_price(DAI, 18000000, skip_cache=True)
-            assert result == 1.0
+            assert result == (1.0, None)
             mock_get_price.assert_called_once_with(
                 DAI, 18000000, fail_to_None=True, sync=False, skip_cache=True
             )
@@ -466,7 +469,7 @@ class TestFetchPriceNewParams:
         ignore_pools = (USDC, WETH)
         with patch("y.get_price", mock_get_price):
             result = await _fetch_price(DAI, 18000000, ignore_pools=ignore_pools)
-            assert result == 1.0
+            assert result == (1.0, None)
             mock_get_price.assert_called_once_with(
                 DAI, 18000000, fail_to_None=True, sync=False, ignore_pools=ignore_pools
             )
@@ -479,7 +482,7 @@ class TestFetchPriceNewParams:
         mock_get_price = AsyncMock(return_value=1.0)
         with patch("y.get_price", mock_get_price):
             result = await _fetch_price(DAI, 18000000, silent=True)
-            assert result == 1.0
+            assert result == (1.0, None)
             mock_get_price.assert_called_once_with(
                 DAI, 18000000, fail_to_None=True, sync=False, silent=True
             )
@@ -500,7 +503,7 @@ class TestFetchPriceNewParams:
                 ignore_pools=ignore_pools,
                 silent=True,
             )
-            assert result == 1.0
+            assert result == (1.0, None)
             mock_get_price.assert_called_once_with(
                 DAI,
                 18000000,
@@ -2060,6 +2063,8 @@ class TestQuoteEndpoint:
             assert "chain" in data
             assert "block_timestamp" in data
             assert "route" in data
+            assert "from_trade_path" in data
+            assert "to_trade_path" in data
             # Verify values
             assert data["from"] == USDC
             assert data["to"] == WETH
@@ -2471,6 +2476,8 @@ class TestQuoteEndpoint:
                 "chain",
                 "block_timestamp",
                 "route",
+                "from_trade_path",
+                "to_trade_path",
             }
             assert set(data.keys()) == expected_keys
 
@@ -2667,7 +2674,15 @@ class TestEndpointSchemaRegression:
             data = response.json()
 
             # Expected fields for /price endpoint
-            expected_fields = {"chain", "token", "block", "price", "cached", "block_timestamp"}
+            expected_fields = {
+                "chain",
+                "token",
+                "block",
+                "price",
+                "cached",
+                "block_timestamp",
+                "trade_path",
+            }
             actual_fields = set(data.keys())
 
             # Verify all expected fields present
@@ -2683,6 +2698,8 @@ class TestEndpointSchemaRegression:
             assert isinstance(data["cached"], bool)
             # block_timestamp can be int or None
             assert data["block_timestamp"] is None or isinstance(data["block_timestamp"], int)
+            # trade_path can be list or None
+            assert data["trade_path"] is None or isinstance(data["trade_path"], list)
 
     @pytest.mark.asyncio
     async def test_price_endpoint_includes_block_timestamp(self, mock_y_module: None) -> None:
@@ -2738,7 +2755,7 @@ class TestEndpointSchemaRegression:
             assert len(data) == 2
 
             # Expected fields for each element in /prices response
-            expected_fields = {"token", "block", "price", "block_timestamp", "cached"}
+            expected_fields = {"token", "block", "price", "block_timestamp", "cached", "trade_path"}
 
             for item in data:
                 actual_fields = set(item.keys())
@@ -2864,7 +2881,7 @@ class TestEndpointSchemaRegression:
             data = response.json()
 
             # Exact field count (no more, no less)
-            assert len(data) == 6, f"Expected 6 fields, got {len(data)}: {list(data.keys())}"
+            assert len(data) == 7, f"Expected 7 fields, got {len(data)}: {list(data.keys())}"
 
     @pytest.mark.asyncio
     async def test_health_endpoint_no_extra_fields(self, mock_y_module: None) -> None:
@@ -2945,16 +2962,16 @@ class TestEndpointSchemaRegression:
         ):
             client = TestClient(app)
 
-            # Without amount: 6 fields
+            # Without amount: 7 fields
             response = client.get("/price", params={"token": DAI})
             assert response.status_code == 200
             data_no_amount = response.json()
-            assert len(data_no_amount) == 6
+            assert len(data_no_amount) == 7
 
-            # With amount: 7 fields (includes 'amount')
+            # With amount: 8 fields (includes 'amount')
             response = client.get("/price", params={"token": DAI, "amount": "1000"})
             assert response.status_code == 200
             data_with_amount = response.json()
-            assert len(data_with_amount) == 7
+            assert len(data_with_amount) == 8
             assert "amount" in data_with_amount
             assert isinstance(data_with_amount["amount"], int | float)
