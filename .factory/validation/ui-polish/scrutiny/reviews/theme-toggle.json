@@ -1,0 +1,34 @@
+{
+  "featureId": "theme-toggle",
+  "reviewedAt": "2026-03-04T03:10:17.751042Z",
+  "commitId": "4e6a047",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "fail",
+  "codeReview": {
+    "summary": "The feature adds a header theme toggle, early head script, and broad CSS variable migration, but it misses a core requirement: light mode quote/batch/bucket result cards remain dark because the light theme still defines dark result card variables.",
+    "issues": [
+      {
+        "file": "static/css/style.css",
+        "line": 20,
+        "severity": "blocking",
+        "description": "In the light theme token set (`:root, [data-theme=\"light\"]`), `--result-bg`, `--result-text`, and related result vars are still dark (`#1e1e1e`/`#d4d4d4`). `.result` consumes these vars, so light mode keeps dark result cards, violating the requirement that result cards use a light card style in light mode and that all UI areas are correctly themed."
+      },
+      {
+        "file": "static/css/style.css",
+        "line": 502,
+        "severity": "non_blocking",
+        "description": "Several colors remain hardcoded (`color: white;`, e.g., lines 502, 518, 643, 661, 828) instead of custom properties, which does not fully satisfy the explicit requirement to implement theming via CSS custom properties for all colors in `style.css`."
+      }
+    ]
+  },
+  "sharedStateObservations": [
+    {
+      "area": "conventions",
+      "observation": "There is no clearly documented convention for representing the 'system' theme state in DOM/localStorage (store `theme=system` vs remove key and set concrete light/dark on `<html>`). This ambiguity leaves dead CSS (`[data-theme=\"system\"]`) and can cause inconsistent implementations.",
+      "evidence": "`static/css/style.css:223` expects `[data-theme=\"system\"]`, but `static/js/app.js:54-58` removes the `theme` key for system mode and sets `data-theme` to `light`/`dark` instead."
+    }
+  ],
+  "addressesFailureFrom": null,
+  "summary": "Reviewed feature theme-toggle (worker session 614ffc8c-6b9b-4aa7-bd2f-13c96831bab3), including transcript skeleton, handoff, skill, and commit diff for 4e6a047. Marked as fail due to light-mode result cards still using dark styling variables; also noted remaining hardcoded colors and a shared-state convention gap around 'system' theme representation."
+}

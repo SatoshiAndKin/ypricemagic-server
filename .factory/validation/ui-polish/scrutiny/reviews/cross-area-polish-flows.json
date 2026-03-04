@@ -1,0 +1,33 @@
+{
+  "featureId": "cross-area-polish-flows",
+  "reviewedAt": "2026-03-04T03:09:50Z",
+  "commitId": "5fc7281",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "fail",
+  "codeReview": {
+    "summary": "The feature partially addresses reset-to-default behavior, but the deletion cascade logic is over-broad and can reset custom defaults even when the deleted list did not provide the current tokens.",
+    "issues": [
+      {
+        "file": "static/js/app.js",
+        "line": 1525,
+        "severity": "blocking",
+        "description": "checkAndRevertDefaultsForDeletedList() treats missing tokens in tokenIndex as proof they came from the deleted list (`!fromToken || !toToken`). Custom defaults can be valid hex addresses that are not present in any enabled tokenlist; deleting an unrelated list will incorrectly revert those custom defaults to factory values. This violates the expected behavior to revert only when the deleted list actually supplied the active default token(s)."
+      }
+    ]
+  },
+  "sharedStateObservations": [
+    {
+      "area": "skills",
+      "observation": "The frontend-worker procedure requires agent-browser verification, but does not document command-level differences for browser eval/actions; the worker repeatedly used unsupported agent-browser commands and then switched tools mid-flow.",
+      "evidence": "worker-transcripts.jsonl entry for session f8918313-9b97-4a2e-a2b9-9d5d968c1c84 includes `Unknown command: evaluate`, `Unknown command: run-code`, then fallback to Playwright with noted browser conflicts."
+    },
+    {
+      "area": "knowledge",
+      "observation": "Shared testing guidance captures session instability quirks but not a concise agent-browser command cheat sheet (e.g., `eval` vs `evaluate`), which caused avoidable trial-and-error during UI validation.",
+      "evidence": ".factory/library/user-testing.md lists runtime quirks but does not define supported command patterns; transcript shows command discovery attempts via `agent-browser --help` after failures."
+    }
+  ],
+  "addressesFailureFrom": null,
+  "summary": "Review failed due to a blocking logic flaw in deletion cascade handling: unrelated tokenlist deletions can reset custom defaults. Transcript and diff were reviewed, and shared-state gaps were noted around browser-tool procedure clarity."
+}
