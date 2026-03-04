@@ -10,7 +10,7 @@ Architectural decisions, patterns discovered.
 client -> nginx:8000 -> /<chain>/endpoint -> ypm-<chain>:8001/endpoint
 ```
 
-nginx routes by chain prefix. Each chain runs its own FastAPI container with brownie connected to that chain's RPC. New endpoints (quote, price/history, price/backfill) are automatically routed by existing nginx chain location blocks.
+nginx routes by chain prefix. Each chain runs its own FastAPI container with brownie connected to that chain's RPC. New endpoints (e.g. /quote) are automatically routed by existing nginx chain location blocks.
 
 ## UI Architecture
 
@@ -27,9 +27,6 @@ The UI is vanilla JS served as static files. No build step, no framework.
 - `static/js/app.js` — all JavaScript logic
 - `static/css/style.css` — all styles, CSS custom properties for theming
 
-### External Libraries
-- lightweight-charts (TradingView): loaded from CDN via `<script>` tag in index.html. ~45KB. Provides `LightweightCharts` global.
-
 ## Quote Architecture
 
 The quote endpoint computes from→to pricing by:
@@ -43,11 +40,6 @@ There is no direct pair pricing in ypricemagic — all quotes use the divide str
 
 - `src/server.py::_handle_price_error()` is currently coupled to `price_requests_total` (hardcoded increment).
 - Reusing this helper from non-`/price` endpoints (e.g., `/quote`) can silently misattribute error metrics unless the helper is made metric-agnostic or endpoint-specific handling is used.
-
-## Historical Price Data
-
-- **History endpoint**: Reads from diskcache. Scans cached entries for a token within the requested time range, returning them at the appropriate granularity (hourly for ≤7d, daily for >7d).
-- **Backfill endpoint**: Populates cache by fetching prices at regular block intervals using `asyncio.create_task()` (non-blocking). Returns 202 immediately.
 
 ## Tokenlist Storage
 

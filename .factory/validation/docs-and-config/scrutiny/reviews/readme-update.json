@@ -1,0 +1,45 @@
+{
+  "featureId": "readme-update",
+  "reviewedAt": "2026-03-04T07:00:00.000Z",
+  "commitId": "18f63fd",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "fail",
+  "codeReview": {
+    "summary": "The README update is well-structured and accurately documents the existing and new `/quote` endpoint. However, it documents two endpoints — `GET /{chain}/price/history` and `POST /{chain}/price/backfill` — that do not exist in the codebase. The `historical-price-endpoint` feature was explicitly cancelled (status: 'cancelled' in features.json) and mission.md states 'Historical price graphs and backfill features have been descoped.' The worker followed the feature description literally without cross-checking the actual feature state or verifying the endpoints exist in server.py. Additionally, the from→to workflow section lists 'path-search' as a possible `route` value when the implementation only ever returns 'divide' or 'identity'.",
+    "issues": [
+      {
+        "file": "README.md",
+        "line": 150,
+        "severity": "blocking",
+        "description": "Documents `GET /{chain}/price/history` endpoint that does not exist. The `historical-price-endpoint` feature has status 'cancelled' in features.json and was explicitly descoped per mission.md. The endpoint is absent from server.py and openapi.json. Users who call this endpoint will receive a 404. Documenting non-existent endpoints as if they are live is factually incorrect and misleads API consumers."
+      },
+      {
+        "file": "README.md",
+        "line": 172,
+        "severity": "blocking",
+        "description": "Documents `POST /{chain}/price/backfill` endpoint that does not exist. Same root cause as the history endpoint — this was part of the cancelled `historical-price-endpoint` feature. server.py has no `/price/backfill` route. The 202 response schema shown is fabricated documentation for a non-existent endpoint."
+      },
+      {
+        "file": "README.md",
+        "line": 245,
+        "severity": "non_blocking",
+        "description": "The from→to quoting workflow section (step 4) lists 'path-search' as a possible `route` value: 'Return `route` to indicate strategy (`identity`, `path-search`, or `divide`)'. The actual implementation in server.py only ever returns 'divide' (normal pairs) or 'identity' (same-token). The `quote-endpoint` feature description explicitly noted: 'The path-search route would only apply if ypricemagic had a direct pair pricing function, which it doesn't currently — so all quotes use the divide strategy.' The 'path-search' mention is aspirational/future documentation and should be removed or clearly marked as not yet implemented."
+      }
+    ]
+  },
+  "sharedStateObservations": [
+    {
+      "area": "knowledge",
+      "observation": ".factory/library/architecture.md still documents the cancelled history and backfill endpoints as if they are live: '## Historical Price Data — History endpoint: Reads from diskcache...' and 'New endpoints (quote, price/history, price/backfill) are automatically routed by existing nginx chain location blocks.' This stale library content could cause future workers to reference non-existent functionality. The library should be updated to remove or strike-through these references since the features were cancelled.",
+      "evidence": ".factory/library/architecture.md — 'New endpoints (quote, price/history, price/backfill)' and the '## Historical Price Data' section. features.json shows historical-price-endpoint status='cancelled'."
+    },
+    {
+      "area": "conventions",
+      "observation": "The feature description for readme-update was written before the `historical-price-endpoint` and `price-chart-ui` features were cancelled, and still lists '/price/history, /price/backfill' as endpoints to document. When a dependent feature gets cancelled, the descriptions of other features that reference it are not automatically updated. Workers following stale feature descriptions can produce incorrect output. A convention for cross-checking feature.json status when documenting endpoint surfaces would prevent this class of error.",
+      "evidence": "features.json: historical-price-endpoint status='cancelled'; readme-update description explicitly says 'new (/quote, /price/history, /price/backfill)'. mission.md states 'Historical price graphs and backfill features have been descoped.'"
+    }
+  ],
+  "addressesFailureFrom": null,
+  "summary": "FAIL. The README update correctly documents all live endpoints (/price, /prices, /quote, /check_bucket, /health, /health/<chain>) and fulfills the curl, workflow, and theme requirements. However, it contains blocking inaccuracies: it fully documents `GET /{chain}/price/history` and `POST /{chain}/price/backfill` with parameter tables, request/response schemas, and HTTP status codes — but these endpoints were cancelled and don't exist in server.py or openapi.json. Any user who attempts to call them will receive an error. The worker followed the feature description literally without verifying that referenced endpoints are actually implemented. The fix is to remove or clearly mark the history and backfill endpoint documentation."
+}
