@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ypricemagic API</title>
+  <title>ypricemagic · Multi-Chain Token Prices</title>
   <!-- Theme script BEFORE CSS to prevent flash of wrong theme -->
   <script>
     (function() {
@@ -21,7 +21,10 @@
 </head>
 <body>
   <div class="page-header">
-    <h1>ypricemagic Price Lookup</h1>
+    <div class="header-brand">
+      <h1><span class="brand-y">y</span>pricemagic</h1>
+      <p class="header-tagline">Multi-chain ERC-20 token price API</p>
+    </div>
     <div class="header-actions">
       <button type="button" id="theme-toggle" class="theme-toggle" title="Toggle theme (light/dark/system)">
         <span class="theme-icon theme-icon-light">☀</span>
@@ -43,12 +46,14 @@
         <button type="button" id="tokenlist-modal-close" class="modal-close-btn" title="Close">×</button>
       </div>
       <div class="tokenlist-modal-body">
+        <div class="tokenlist-trust-warning">⚠️ Only load tokenlists from trusted sources. Malicious lists can show fake tokens designed to steal funds.</div>
         <div class="tokenlist-lists" id="tokenlist-lists"></div>
         <div class="tokenlist-actions">
           <div class="tokenlist-action-row">
             <input type="text" id="tokenlist-url-input" placeholder="Add list by URL (https://...)" class="tokenlist-url-input">
             <button type="button" id="tokenlist-add-url" class="btn-small">Add</button>
           </div>
+          <div id="tokenlist-message" class="tokenlist-message"></div>
           <div class="tokenlist-action-row">
             <input type="file" id="tokenlist-file-input" accept=".json" style="display:none">
             <button type="button" id="tokenlist-import-btn" class="btn-small">Import File</button>
@@ -77,11 +82,17 @@
     <div class="form-row">
       <div class="form-group">
         <label for="quote-from">From Token</label>
-        <input type="text" id="quote-from" placeholder="0x...">
+        <div class="token-input-wrapper no-icon" id="quote-from-wrapper">
+          <img class="token-input-icon" id="quote-from-icon" alt="">
+          <input type="text" id="quote-from" placeholder="0x...">
+        </div>
       </div>
       <div class="form-group">
         <label for="quote-to">To Token</label>
-        <input type="text" id="quote-to" placeholder="0x...">
+        <div class="token-input-wrapper no-icon" id="quote-to-wrapper">
+          <img class="token-input-icon" id="quote-to-icon" alt="">
+          <input type="text" id="quote-to" placeholder="0x...">
+        </div>
       </div>
     </div>
     <div class="form-row">
@@ -126,7 +137,10 @@
   <form id="bucket-form">
     <div class="form-group">
       <label for="bucket-token">Token Address</label>
-      <input type="text" id="bucket-token" placeholder="0x...">
+      <div class="token-input-wrapper no-icon" id="bucket-token-wrapper">
+        <img class="token-input-icon" id="bucket-token-icon" alt="">
+        <input type="text" id="bucket-token" placeholder="0x...">
+      </div>
     </div>
     <button type="submit" id="bucket-submit">Check Bucket</button>
   </form>

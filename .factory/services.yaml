@@ -9,7 +9,7 @@ commands:
 
 services:
   docker-compose:
-    start: cd /Users/bryan/code/ypricemagic-server && docker compose up -d
+    start: cd /Users/bryan/code/ypricemagic-server && docker compose up -d --build
     stop: cd /Users/bryan/code/ypricemagic-server && docker compose down
     healthcheck: curl -sf http://localhost:8000/ethereum/health
     port: 8000

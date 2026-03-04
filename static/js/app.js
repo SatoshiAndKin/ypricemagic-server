@@ -154,8 +154,8 @@ function resetToFactoryDefaults() {
   const chain = getChain();
   resetCustomPairs(chain);
   const factoryPair = DEFAULT_PAIRS[chain] || { from: '', to: '' };
-  quoteFromInput.value = factoryPair.from;
-  quoteToInput.value = factoryPair.to;
+  setTokenInputFromAddress(quoteFromInput, factoryPair.from);
+  setTokenInputFromAddress(quoteToInput, factoryPair.to);
 }
 
 function escapeHtml(str) {
@@ -163,6 +163,97 @@ function escapeHtml(str) {
   return String(str).replace(/[&<>"']/g, function(c) {
     return {'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;'}[c];
   });
+}
+
+// Format token for display: 'SYMBOL (0xFullAddress)' - NEVER truncate
+function formatTokenDisplay(symbol, address) {
+  const sym = String(symbol || '').trim();
+  const addr = String(address || '').trim();
+  if (!addr) return sym || '';
+  return sym ? sym + ' (' + addr + ')' : addr;
+}
+
+// Extract address from input: check dataset.address first, then parse display value
+function extractAddressFromInput(input) {
+  const dataAddr = input.dataset ? input.dataset.address : undefined;
+  if (dataAddr && /^0x[a-fA-F0-9]{40}$/.test(dataAddr)) {
+    return dataAddr;
+  }
+  const value = String(input.value || '').trim();
+  if (/^0x[a-fA-F0-9]{40}$/.test(value)) {
+    return value;
+  }
+  // Try to extract from display format: SYMBOL (0xAddr)
+  const match = value.match(/\(0x([a-fA-F0-9]{40})\)/);
+  if (match) {
+    return '0x' + match[1];
+  }
+  return value;
+}
+
+// Update token input icon based on token data
+function updateTokenInputIcon(input, token) {
+  const wrapper = input.closest('.token-input-wrapper');
+  const icon = wrapper ? wrapper.querySelector('.token-input-icon') : null;
+  if (!wrapper || !icon) return;
+
+  if (token && typeof token.logoURI === 'string' && token.logoURI) {
+    icon.src = token.logoURI;
+    icon.alt = (token.symbol || 'token') + ' logo';
+    wrapper.classList.remove('no-icon');
+    icon.onerror = function() {
+      wrapper.classList.add('no-icon');
+      icon.removeAttribute('src');
+    };
+  } else {
+    wrapper.classList.add('no-icon');
+    icon.removeAttribute('src');
+    icon.alt = '';
+  }
+}
+
+// Clear token input icon
+function clearTokenInputIcon(input) {
+  const wrapper = input.closest('.token-input-wrapper');
+  const icon = wrapper ? wrapper.querySelector('.token-input-icon') : null;
+  if (!wrapper || !icon) return;
+  wrapper.classList.add('no-icon');
+  icon.removeAttribute('src');
+  icon.alt = '';
+}
+
+// Set a token input from a raw address, resolving symbol and icon from tokenIndex
+function setTokenInputFromAddress(input, address) {
+  if (!address) {
+    input.value = '';
+    if (input.dataset) input.dataset.address = '';
+    clearTokenInputIcon(input);
+    return;
+  }
+  var chainId = getChainId();
+  var chainMap = tokenIndex.get(chainId);
+  var token = chainMap ? chainMap.get(address.toLowerCase()) : null;
+
+  if (token) {
+    input.value = formatTokenDisplay(token.symbol, token.address);
+    input.dataset.address = token.address;
+    updateTokenInputIcon(input, token);
+  } else {
+    input.value = address;
+    input.dataset.address = address;
+    clearTokenInputIcon(input);
+  }
+}
+
+// Render a result token icon HTML string
+function renderResultTokenIcon(address) {
+  var chainId = getChainId();
+  var chainMap = tokenIndex.get(chainId);
+  if (!chainMap) return '';
+  var token = chainMap.get((address || '').toLowerCase());
+  if (!token || typeof token.logoURI !== 'string' || !token.logoURI) return '';
+  var alt = escapeHtml((token.symbol || 'token') + ' logo');
+  return '<img class="result-token-icon" src="' + escapeHtml(token.logoURI) + '" alt="' + alt + '" onerror="this.style.display=\'none\'">';
 }
 
 function showError(resultEl, msg) {
@@ -455,6 +546,9 @@ class TokenAutocomplete {
     // Input handler with debounce
     this.input.addEventListener('input', () => {
       this.wasUserEdited = true;
+      // Clear stale dataset.address and icon when user edits
+      this.input.dataset.address = '';
+      clearTokenInputIcon(this.input);
       this.scheduleSearch();
     });
 
@@ -544,6 +638,13 @@ class TokenAutocomplete {
       return;
     }
 
+    // Track symbol counts across ALL tokens for disambiguation
+    const symbolCounts = new Map();
+    for (const [, tok] of chainMap) {
+      const sym = (tok.symbol || '').toLowerCase();
+      symbolCounts.set(sym, (symbolCounts.get(sym) || 0) + 1);
+    }
+
     // Search by symbol, name, or address prefix
     this.matches = [];
     for (const [addr, token] of chainMap) {
@@ -555,7 +656,10 @@ class TokenAutocomplete {
           symbol.includes(query) ||
           name.includes(query) ||
           address.startsWith(query)) {
-        this.matches.push(token);
+        this.matches.push({
+          ...token,
+          _needsDisambiguation: (symbolCounts.get(symbol) || 0) > 1
+        });
       }
 
       if (this.matches.length >= 20) break; // Limit results
@@ -589,18 +693,64 @@ class TokenAutocomplete {
   }
 
   renderDropdown() {
-    let html = '';
+    const fragment = document.createDocumentFragment();
     for (let i = 0; i < this.matches.length; i++) {
       const token = this.matches[i];
-      const addrShort = token.address.slice(0, 6) + '...' + token.address.slice(-4);
 
-      html += '<div class="autocomplete-item" data-index="' + i + '">' +
-        '<div class="autocomplete-main">' + escapeHtml(token.symbol) + ' — ' + escapeHtml(token.name) + ' <span class="autocomplete-addr">(' + escapeHtml(addrShort) + ')</span></div>' +
-        '<div class="autocomplete-source">' + escapeHtml(token.sourceList) + '</div>' +
-      '</div>';
+      const item = document.createElement('div');
+      item.className = 'autocomplete-item';
+      item.dataset.index = i;
+
+      // Logo
+      if (typeof token.logoURI === 'string' && token.logoURI) {
+        const logo = document.createElement('img');
+        logo.className = 'autocomplete-logo';
+        logo.alt = (token.symbol || 'token') + ' logo';
+        logo.loading = 'lazy';
+        logo.src = token.logoURI;
+        logo.onerror = function() { logo.style.display = 'none'; };
+        item.appendChild(logo);
+      }
+
+      // Meta container
+      const meta = document.createElement('div');
+      meta.className = 'autocomplete-meta';
+
+      // Title row: symbol + name + optional source badge
+      const title = document.createElement('div');
+      title.className = 'autocomplete-title';
+
+      const symbolSpan = document.createElement('span');
+      symbolSpan.className = 'autocomplete-symbol';
+      symbolSpan.textContent = token.symbol || '';
+      title.appendChild(symbolSpan);
+
+      const nameSpan = document.createElement('span');
+      nameSpan.className = 'autocomplete-name';
+      nameSpan.textContent = token.name || '';
+      title.appendChild(nameSpan);
+
+      if (token._needsDisambiguation && token.sourceList) {
+        const sourceBadge = document.createElement('span');
+        sourceBadge.className = 'autocomplete-source';
+        sourceBadge.textContent = token.sourceList;
+        title.appendChild(sourceBadge);
+      }
+
+      meta.appendChild(title);
+
+      // Address row
+      const addrDiv = document.createElement('div');
+      addrDiv.className = 'autocomplete-addr';
+      addrDiv.textContent = token.address || '';
+      meta.appendChild(addrDiv);
+
+      item.appendChild(meta);
+      fragment.appendChild(item);
     }
 
-    this.dropdown.innerHTML = html;
+    this.dropdown.innerHTML = '';
+    this.dropdown.appendChild(fragment);
 
     // Attach click handlers to items
     const items = this.dropdown.querySelectorAll('.autocomplete-item');
@@ -659,8 +809,12 @@ class TokenAutocomplete {
     const blockValue = currentBlock ? currentBlock.value : '';
     const amountValue = currentAmount ? currentAmount.value : '';
 
-    // Update token address
-    this.input.value = token.address;
+    // Set display value: SYMBOL (0xFullAddress) - NEVER truncated
+    this.input.value = formatTokenDisplay(token.symbol, token.address);
+    // Store raw address for API calls
+    this.input.dataset.address = token.address;
+    // Update icon
+    updateTokenInputIcon(this.input, token);
     this.hideDropdown();
 
     // Restore adjacent field values (in case form framework resets them)
@@ -792,16 +946,16 @@ function destroyAutocomplete(inputEl) {
 
 // Form submission with unknown token check
 function checkUnknownToken(input, proceedCallback) {
-  const value = input.value.trim();
+  const address = extractAddressFromInput(input);
 
   // Skip check if value is empty
-  if (!value) {
+  if (!address) {
     proceedCallback(true);
     return;
   }
 
   // Skip check if not a valid hex address
-  if (!isValidHexAddress(value)) {
+  if (!isValidHexAddress(address)) {
     proceedCallback(true);
     return;
   }
@@ -819,14 +973,14 @@ function checkUnknownToken(input, proceedCallback) {
   const chainId = getChainId();
 
   // Check if token is in lists
-  if (isTokenInLists(value, chainId)) {
+  if (isTokenInLists(address, chainId)) {
     proceedCallback(true);
     return;
   }
 
   // Show modal
   const chain = getChain();
-  showModal(value, chain, chainId, (shouldProceed, action) => {
+  showModal(address, chain, chainId, (shouldProceed, action) => {
     if (shouldProceed) {
       proceedCallback(true);
     } else {
@@ -955,8 +1109,10 @@ function showQuoteResult(data, chain, fromPriceData, toPriceData) {
   const fromToken = chainMap ? chainMap.get(data.from.toLowerCase()) : null;
   const toToken = chainMap ? chainMap.get(data.to.toLowerCase()) : null;
 
-  const fromSymbol = fromToken ? escapeHtml(fromToken.symbol) : escapeHtml(data.from.slice(0, 10) + '...');
-  const toSymbol = toToken ? escapeHtml(toToken.symbol) : escapeHtml(data.to.slice(0, 10) + '...');
+  const fromIconHtml = renderResultTokenIcon(data.from);
+  const toIconHtml = renderResultTokenIcon(data.to);
+  const fromSymbol = fromIconHtml + (fromToken ? escapeHtml(fromToken.symbol) : escapeHtml(data.from.slice(0, 10) + '...'));
+  const toSymbol = toIconHtml + (toToken ? escapeHtml(toToken.symbol) : escapeHtml(data.to.slice(0, 10) + '...'));
 
   // Conversion rate display
   const conversionRate = data.output_amount / data.amount;
@@ -1011,8 +1167,8 @@ quoteAmountInput.addEventListener('input', function() {
 
 // BUG 1 FIX: Persist custom pair on input change/blur
 function trySaveCustomPair() {
-  const from = quoteFromInput.value.trim();
-  const to = quoteToInput.value.trim();
+  const from = extractAddressFromInput(quoteFromInput);
+  const to = extractAddressFromInput(quoteToInput);
   const chain = getChain();
 
   // Only save if both are valid hex addresses
@@ -1041,8 +1197,8 @@ quoteForm.addEventListener('submit', async (e) => {
       if (!proceedTo) return;
 
       const chain = getChain();
-      const fromToken = quoteFromInput.value.trim();
-      const toToken = quoteToInput.value.trim();
+      const fromToken = extractAddressFromInput(quoteFromInput);
+      const toToken = extractAddressFromInput(quoteToInput);
       const amount = quoteAmountInput.value.trim() || '1';
       const blockInput = document.getElementById('quote-block');
       const blockVal = blockInput.value.trim();
@@ -1138,7 +1294,10 @@ const batchTokenRows = document.getElementById('batch-token-rows');
 function addTokenRow(token, amount) {
   const row = document.createElement('div');
   row.className = 'token-row';
-  row.innerHTML = '<input type="text" class="token-addr" placeholder="0x..." value="' + escapeHtml(token || '') + '">' +
+  row.innerHTML = '<div class="token-input-wrapper no-icon">' +
+    '<img class="token-input-icon" alt="">' +
+    '<input type="text" class="token-addr" placeholder="0x..." value="' + escapeHtml(token || '') + '">' +
+    '</div>' +
     '<input type="text" class="token-amt" placeholder="Amount (opt)" value="' + escapeHtml(amount || '') + '">' +
     '<button type="button" class="btn-remove" title="Remove">&times;</button>';
 
@@ -1170,11 +1329,12 @@ function showBatchResult(data) {
 
   let rows = '';
   for (const item of data) {
+    const tokenIconHtml = renderResultTokenIcon(item.token);
     const priceDisplay = item.price !== null ? escapeHtml(item.price) : '<span class="null">null</span>';
     const cachedDisplay = item.cached ? 'yes' : 'no';
     const tsDisplay = item.block_timestamp !== null ? escapeHtml(item.block_timestamp) : '-';
     rows += '<tr>' +
-      '<td>' + escapeHtml(item.token) + '</td>' +
+      '<td>' + tokenIconHtml + escapeHtml(item.token) + '</td>' +
       '<td>' + escapeHtml(item.block) + '</td>' +
       '<td>' + priceDisplay + '</td>' +
       '<td>' + tsDisplay + '</td>' +
@@ -1199,7 +1359,8 @@ batchForm.addEventListener('submit', async (e) => {
   const amountList = [];
   let hasAnyAmount = false;
   for (const row of rows) {
-    const t = row.querySelector('.token-addr').value.trim();
+    const tokenInput = row.querySelector('.token-addr');
+    const t = extractAddressFromInput(tokenInput);
     const a = row.querySelector('.token-amt').value.trim();
     if (t) {
       tokenList.push(t);
@@ -1257,9 +1418,10 @@ function showBucketResult(data, chain) {
   bucketResult.className = 'result show';
   const mismatch = chainMismatchWarning(chain, data.chain);
   const bucketDisplay = data.bucket !== null ? escapeHtml(data.bucket) : '<span class="null">null</span>';
+  const bucketTokenIcon = renderResultTokenIcon(data.token);
   bucketResult.innerHTML =
     '<div class="result-header">Classification Result</div>' + mismatch +
-    '<div class="field"><div class="field-label">Token</div><div class="field-value"><span class="dim">' + escapeHtml(data.token) + '</span></div></div>' +
+    '<div class="field"><div class="field-label">Token</div><div class="field-value"><span class="dim">' + bucketTokenIcon + escapeHtml(data.token) + '</span></div></div>' +
     '<div class="field"><div class="field-label">Chain</div><div class="field-value">' + escapeHtml(data.chain) + '</div></div>' +
     '<div class="field"><div class="field-label">Bucket</div><div class="field-value">' + bucketDisplay + '</div></div>';
 }
@@ -1272,7 +1434,7 @@ bucketForm.addEventListener('submit', async (e) => {
     if (!proceed) return;
 
     const chain = getChain();
-    const token = document.getElementById('bucket-token').value.trim();
+    const token = extractAddressFromInput(document.getElementById('bucket-token'));
 
     if (!token) {
       showError(bucketResult, 'Token address is required');
@@ -1307,8 +1469,8 @@ document.getElementById('chain').addEventListener('change', () => {
 
   // Update From/To to chain's effective pair (custom if set, else factory default)
   const pair = getEffectivePair(chain);
-  quoteFromInput.value = pair.from;
-  quoteToInput.value = pair.to;
+  setTokenInputFromAddress(quoteFromInput, pair.from);
+  setTokenInputFromAddress(quoteToInput, pair.to);
 
   // Reset suppressModal flags for the autocomplete instances
   const fromAc = autocompleteInstances.get(quoteFromInput);
@@ -1350,8 +1512,8 @@ function initAutocompletes() {
 function setDefaultPair() {
   const chain = getChain();
   const pair = getEffectivePair(chain);
-  quoteFromInput.value = pair.from;
-  quoteToInput.value = pair.to;
+  setTokenInputFromAddress(quoteFromInput, pair.from);
+  setTokenInputFromAddress(quoteToInput, pair.to);
 
   // Mark as suppressModal so the unknown token modal doesn't appear
   const fromAc = autocompleteInstances.get(quoteFromInput);
@@ -1401,34 +1563,65 @@ function renderTokenlistPanel() {
   for (let i = 0; i < tokenlists.length; i++) {
     const list = tokenlists[i];
     const chainId = getChainId();
+    const chainName = getChain();
     const tokenCount = countTokensForChain(list, chainId);
     const sourceLabel = getTokenlistSourceLabel(list);
+    const hasError = !!list.error;
 
     const itemEl = document.createElement('div');
-    itemEl.className = 'tokenlist-item' + (list.enabled ? '' : ' disabled');
+    let itemClass = 'tokenlist-item';
+    if (!list.enabled) itemClass += ' disabled';
+    if (hasError) itemClass += ' error-state';
+    itemEl.className = itemClass;
 
-    // Toggle switch
-    const toggleHtml =
-      '<div class="tokenlist-toggle ' + (list.enabled ? 'enabled' : '') + '" data-index="' + i + '">' +
-        '<div class="tokenlist-toggle-knob"></div>' +
-      '</div>';
+    if (hasError) {
+      // Error state: show error message + retry button
+      let deleteHtml = '';
+      if (!list.isDefault) {
+        deleteHtml = '<button type="button" class="tokenlist-delete-x" data-index="' + i + '" data-name="' + escapeHtml(list.name || list.url || 'Unknown') + '" title="Delete list">×</button>';
+      }
 
-    // Delete button: only show × for non-default lists, no button for default lists
-    let deleteHtml = '';
-    if (!list.isDefault) {
-      deleteHtml = '<button type="button" class="tokenlist-delete-x" data-index="' + i + '" data-name="' + escapeHtml(list.name) + '" title="Delete list">×</button>';
+      itemEl.innerHTML =
+        '<div class="tokenlist-item-info">' +
+          '<div class="tokenlist-item-name">' + escapeHtml(list.name || list.url || 'Unknown') + '</div>' +
+          '<div class="tokenlist-item-source">' + escapeHtml(sourceLabel) + '</div>' +
+          '<div class="tokenlist-item-error">' + escapeHtml(list.error) + '</div>' +
+        '</div>' +
+        '<div class="tokenlist-item-actions">' +
+          '<button type="button" class="tokenlist-retry-btn" data-index="' + i + '">Retry</button>' +
+          deleteHtml +
+        '</div>';
+    } else {
+      // Normal state: toggle, count, delete
+      const toggleHtml =
+        '<div class="tokenlist-toggle ' + (list.enabled ? 'enabled' : '') + '" data-index="' + i + '">' +
+          '<div class="tokenlist-toggle-knob"></div>' +
+        '</div>';
+
+      let deleteHtml = '';
+      if (!list.isDefault) {
+        deleteHtml = '<button type="button" class="tokenlist-delete-x" data-index="' + i + '" data-name="' + escapeHtml(list.name) + '" title="Delete list">×</button>';
+      }
+
+      // Chain-aware count with zero-token warning
+      let countHtml;
+      if (tokenCount === 0) {
+        countHtml = '<div class="tokenlist-item-chain-warning">0 tokens on ' + escapeHtml(chainName) + ' ⚠</div>';
+      } else {
+        countHtml = '<div class="tokenlist-item-count">' + tokenCount + ' tokens on ' + escapeHtml(chainName) + '</div>';
+      }
+
+      itemEl.innerHTML =
+        '<div class="tokenlist-item-info">' +
+          '<div class="tokenlist-item-name">' + escapeHtml(list.name) + '</div>' +
+          '<div class="tokenlist-item-source">' + escapeHtml(sourceLabel) + '</div>' +
+          countHtml +
+        '</div>' +
+        '<div class="tokenlist-item-actions">' +
+          toggleHtml +
+          deleteHtml +
+        '</div>';
     }
-
-    itemEl.innerHTML =
-      '<div class="tokenlist-item-info">' +
-        '<div class="tokenlist-item-name">' + escapeHtml(list.name) + '</div>' +
-        '<div class="tokenlist-item-source">' + escapeHtml(sourceLabel) + '</div>' +
-        '<div class="tokenlist-item-count">' + tokenCount + ' tokens on ' + getChain() + '</div>' +
-      '</div>' +
-      '<div class="tokenlist-item-actions">' +
-        toggleHtml +
-        deleteHtml +
-      '</div>';
 
     listsEl.appendChild(itemEl);
   }
@@ -1446,6 +1639,13 @@ function renderTokenlistPanel() {
       const index = parseInt(this.dataset.index, 10);
       const listName = this.dataset.name;
       showDeleteConfirmation(listName, index);
+    });
+  });
+
+  listsEl.querySelectorAll('.tokenlist-retry-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+      const index = parseInt(this.dataset.index, 10);
+      retryTokenlist(index);
     });
   });
 }
@@ -1527,8 +1727,8 @@ function deleteTokenlist(index) {
     // Revert to factory defaults for this chain
     resetCustomPairs(chain);
     const factoryPair = DEFAULT_PAIRS[chain] || { from: '', to: '' };
-    quoteFromInput.value = factoryPair.from;
-    quoteToInput.value = factoryPair.to;
+    setTokenInputFromAddress(quoteFromInput, factoryPair.from);
+    setTokenInputFromAddress(quoteToInput, factoryPair.to);
   }
 }
 
@@ -1627,12 +1827,37 @@ function clearTokenlistError() {
   }
 }
 
+// Inline status message helpers
+function showTokenlistMessage(text, type) {
+  const msgEl = document.getElementById('tokenlist-message');
+  if (!msgEl) return;
+  msgEl.className = 'tokenlist-message ' + type;
+  msgEl.textContent = text;
+
+  // Auto-clear success messages after 5 seconds
+  if (type === 'success') {
+    setTimeout(() => {
+      if (msgEl.textContent === text) {
+        clearTokenlistMessage();
+      }
+    }, 5000);
+  }
+}
+
+function clearTokenlistMessage() {
+  const msgEl = document.getElementById('tokenlist-message');
+  if (!msgEl) return;
+  msgEl.className = 'tokenlist-message';
+  msgEl.textContent = '';
+}
+
 async function addTokenlistByUrl(url) {
   clearTokenlistError();
+  clearTokenlistMessage();
 
   // Validate URL scheme
   if (!url.startsWith('https://')) {
-    showTokenlistError('Only https:// URLs are allowed');
+    showTokenlistMessage('Only https:// URLs are allowed', 'error');
     return false;
   }
 
@@ -1640,11 +1865,11 @@ async function addTokenlistByUrl(url) {
   try {
     const parsed = new URL(url);
     if (parsed.protocol !== 'https:') {
-      showTokenlistError('Only https:// URLs are allowed');
+      showTokenlistMessage('Only https:// URLs are allowed', 'error');
       return false;
     }
   } catch (e) {
-    showTokenlistError('Invalid URL format');
+    showTokenlistMessage('Invalid URL format', 'error');
     return false;
   }
 
@@ -1654,16 +1879,20 @@ async function addTokenlistByUrl(url) {
   // Show loading state
   addBtn.disabled = true;
   addBtn.innerHTML = '<span class="tokenlist-loading"></span>Loading...';
+  showTokenlistMessage('Loading...', 'loading');
 
   try {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000);
+    const timeoutId = setTimeout(() => controller.abort(), 30000);
 
-    const res = await fetch(url, { signal: controller.signal });
+    // Route through server-side proxy to avoid CORS issues
+    const res = await fetch('/tokenlist/proxy?url=' + encodeURIComponent(url), { signal: controller.signal });
     clearTimeout(timeoutId);
 
     if (!res.ok) {
-      showTokenlistError('Failed to fetch: HTTP ' + res.status);
+      const errBody = await res.json().catch(() => null);
+      const errMsg = (errBody && errBody.detail) ? errBody.detail : 'HTTP ' + res.status;
+      showTokenlistMessage('Failed to fetch: ' + errMsg, 'error');
       return false;
     }
 
@@ -1671,7 +1900,7 @@ async function addTokenlistByUrl(url) {
 
     // Validate tokenlist structure
     if (!data.name || !Array.isArray(data.tokens)) {
-      showTokenlistError('Invalid tokenlist: must have name and tokens array');
+      showTokenlistMessage('Invalid tokenlist: must have name and tokens array', 'error');
       return false;
     }
 
@@ -1680,7 +1909,7 @@ async function addTokenlistByUrl(url) {
       l.url === url || (l.name === data.name && !l.isDefault && !l.isLocal)
     );
     if (exists) {
-      showTokenlistError('Tokenlist already added');
+      showTokenlistMessage('Tokenlist already added', 'error');
       return false;
     }
 
@@ -1701,20 +1930,88 @@ async function addTokenlistByUrl(url) {
     // Re-render panel
     renderTokenlistPanel();
 
+    // Show success message with chain-aware count
+    const chainId = getChainId();
+    const chainName = getChain();
+    const chainCount = countTokensForChain(data, chainId);
+    showTokenlistMessage('Added: ' + data.name + ' — ' + chainCount + ' tokens on ' + chainName, 'success');
+
     // Clear input
     urlInput.value = '';
 
     return true;
   } catch (e) {
     if (e.name === 'AbortError') {
-      showTokenlistError('Request timed out (10s)');
+      showTokenlistMessage('Request timed out', 'error');
     } else {
-      showTokenlistError('Failed to fetch: ' + e.message);
+      showTokenlistMessage('Failed to fetch: ' + e.message, 'error');
     }
     return false;
   } finally {
     addBtn.disabled = false;
     addBtn.textContent = 'Add';
+  }
+}
+
+// Retry loading a failed tokenlist entry
+async function retryTokenlist(index) {
+  if (index < 0 || index >= tokenlists.length) return;
+
+  const list = tokenlists[index];
+  if (!list.url || !list.error) return;
+
+  // Clear error, show loading
+  list.error = null;
+  list.loaded = false;
+  renderTokenlistPanel();
+
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000);
+
+    const res = await fetch('/tokenlist/proxy?url=' + encodeURIComponent(list.url), { signal: controller.signal });
+    clearTimeout(timeoutId);
+
+    if (!res.ok) {
+      const errBody = await res.json().catch(() => null);
+      const errMsg = (errBody && errBody.detail) ? errBody.detail : 'HTTP ' + res.status;
+      list.error = 'Failed to fetch: ' + errMsg;
+      list.loaded = false;
+      renderTokenlistPanel();
+      return;
+    }
+
+    const data = await res.json();
+
+    if (!data.name || !Array.isArray(data.tokens)) {
+      list.error = 'Invalid tokenlist: must have name and tokens array';
+      list.loaded = false;
+      renderTokenlistPanel();
+      return;
+    }
+
+    // Success - update the list data in place
+    list.name = data.name;
+    list.tokens = data.tokens;
+    list.error = null;
+    list.loaded = true;
+
+    // Save to localStorage
+    saveUserTokenlists();
+
+    // Rebuild token index
+    rebuildTokenIndex();
+
+    // Re-render panel
+    renderTokenlistPanel();
+  } catch (e) {
+    if (e.name === 'AbortError') {
+      list.error = 'Request timed out';
+    } else {
+      list.error = 'Failed to fetch: ' + e.message;
+    }
+    list.loaded = false;
+    renderTokenlistPanel();
   }
 }
 
@@ -1904,7 +2201,7 @@ const params = new URLSearchParams(window.location.search);
 if (params.get('chain')) document.getElementById('chain').value = params.get('chain');
 if (params.get('from') || params.get('token')) {
   const fromToken = params.get('from') || params.get('token');
-  quoteFromInput.value = fromToken;
+  setTokenInputFromAddress(quoteFromInput, fromToken);
   const ac = autocompleteInstances.get(quoteFromInput);
   if (ac) {
     ac.suppressModal = true;
@@ -1913,7 +2210,7 @@ if (params.get('from') || params.get('token')) {
 }
 if (params.get('to') || params.get('to_token')) {
   const toToken = params.get('to') || params.get('to_token');
-  quoteToInput.value = toToken;
+  setTokenInputFromAddress(quoteToInput, toToken);
   const ac = autocompleteInstances.get(quoteToInput);
   if (ac) {
     ac.suppressModal = true;
@@ -1949,7 +2246,7 @@ if (params.get('tokens')) {
   });
 }
 if (params.get('bucket_token')) {
-  bucketTokenInput.value = params.get('bucket_token');
+  setTokenInputFromAddress(bucketTokenInput, params.get('bucket_token'));
   // Mark as suppressModal for URL param
   const ac = autocompleteInstances.get(bucketTokenInput);
   if (ac) {

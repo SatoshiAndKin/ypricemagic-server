@@ -1,7 +1,7 @@
 [project]
 name = "ypricemagic-server"
 version = "0.5.1"
-requires-python = ">=3.12,<3.13"
+requires-python = ">=3.12,<3.14"
 dependencies = [
     "ypricemagic @ git+https://github.com/SatoshiAndKin/ypricemagic.git@master",
     "fastapi",
@@ -34,7 +34,7 @@ build-constraint-dependencies = ["cchecksum==0.3.7.dev0"]
 
 [tool.ruff]
 line-length = 100
-target-version = "py312"
+target-version = "py313"
 
 [tool.ruff.lint]
 select = [
@@ -62,7 +62,7 @@ quote-style = "double"
 indent-style = "space"
 
 [tool.mypy]
-python_version = "3.12"
+python_version = "3.13"
 strict = true
 warn_return_any = true
 warn_unused_configs = true

@@ -1,7 +1,9 @@
 """Tests for server._fetch_price behavior."""
 
+import socket
 from unittest.mock import AsyncMock, patch
 
+import httpx
 import pytest
 
 DAI = "0x6B175474E89094C44Da98b954EedeAC495271d0F"
@@ -2641,6 +2643,169 @@ class TestQuoteEndpointConcurrent:
         assert all(amt == output_amounts[0] for amt in output_amounts)
         # Expected value: 1000 * (1 / 2000) = 0.5
         assert output_amounts[0] == 0.5
+
+
+class TestTokenlistProxy:
+    """Tests for GET /tokenlist/proxy CORS-safe tokenlist fetching."""
+
+    def test_proxy_missing_url(self, mock_y_module: None) -> None:
+        """No url param returns 400."""
+        from fastapi.testclient import TestClient
+
+        from src.server import app
+
+        client = TestClient(app)
+        response = client.get("/tokenlist/proxy")
+
+        assert response.status_code == 400
+        assert response.json()["error"] == "Missing required 'url' parameter"
+
+    def test_proxy_non_https(self, mock_y_module: None) -> None:
+        """http:// URL returns 400."""
+        from fastapi.testclient import TestClient
+
+        from src.server import app
+
+        client = TestClient(app)
+        response = client.get("/tokenlist/proxy", params={"url": "http://example.com/list.json"})
+
+        assert response.status_code == 400
+        assert response.json()["error"] == "Only HTTPS URLs are allowed"
+
+    def test_proxy_private_ip(self, mock_y_module: None) -> None:
+        """https://127.0.0.1/list.json returns 400 (SSRF protection)."""
+        from fastapi.testclient import TestClient
+
+        from src.server import app
+
+        # Mock socket.getaddrinfo to return a loopback address
+        loopback_info = [(socket.AF_INET, socket.SOCK_STREAM, 6, "", ("127.0.0.1", 0))]
+        with patch("src.server.socket.getaddrinfo", return_value=loopback_info):
+            client = TestClient(app)
+            response = client.get(
+                "/tokenlist/proxy",
+                params={"url": "https://127.0.0.1/list.json"},
+            )
+
+        assert response.status_code == 400
+        assert (
+            response.json()["error"] == "URLs pointing to private/internal networks are not allowed"
+        )
+
+    def test_proxy_success(self, mock_y_module: None) -> None:
+        """Mock httpx to return valid JSON → 200."""
+        from unittest.mock import MagicMock
+
+        from fastapi.testclient import TestClient
+
+        from src.server import app
+
+        tokenlist = {"name": "Test", "tokens": []}
+        mock_response = MagicMock()
+        mock_response.content = b'{"name": "Test", "tokens": []}'
+        mock_response.json.return_value = tokenlist
+
+        mock_client_instance = AsyncMock()
+        mock_client_instance.get.return_value = mock_response
+        mock_client_instance.__aenter__ = AsyncMock(return_value=mock_client_instance)
+        mock_client_instance.__aexit__ = AsyncMock(return_value=False)
+
+        # Also mock _is_private_ip to return False for the test URL
+        with (
+            patch("src.server.httpx.AsyncClient", return_value=mock_client_instance),
+            patch("src.server._is_private_ip", return_value=False),
+        ):
+            client = TestClient(app)
+            response = client.get(
+                "/tokenlist/proxy",
+                params={"url": "https://tokens.example.com/list.json"},
+            )
+
+        assert response.status_code == 200
+        assert response.json() == tokenlist
+
+    def test_proxy_upstream_failure(self, mock_y_module: None) -> None:
+        """Mock httpx to raise → 502."""
+        from fastapi.testclient import TestClient
+
+        from src.server import app
+
+        mock_client_instance = AsyncMock()
+        mock_client_instance.get.side_effect = httpx.ConnectError("Connection refused")
+        mock_client_instance.__aenter__ = AsyncMock(return_value=mock_client_instance)
+        mock_client_instance.__aexit__ = AsyncMock(return_value=False)
+
+        with (
+            patch("src.server.httpx.AsyncClient", return_value=mock_client_instance),
+            patch("src.server._is_private_ip", return_value=False),
+        ):
+            client = TestClient(app)
+            response = client.get(
+                "/tokenlist/proxy",
+                params={"url": "https://tokens.example.com/list.json"},
+            )
+
+        assert response.status_code == 502
+        assert "Failed to fetch tokenlist" in response.json()["error"]
+
+    def test_proxy_invalid_json(self, mock_y_module: None) -> None:
+        """Mock httpx to return non-JSON → 502."""
+        from unittest.mock import MagicMock
+
+        from fastapi.testclient import TestClient
+
+        from src.server import app
+
+        mock_response = MagicMock()
+        mock_response.content = b"<html>Not JSON</html>"
+        mock_response.json.side_effect = ValueError("No JSON")
+
+        mock_client_instance = AsyncMock()
+        mock_client_instance.get.return_value = mock_response
+        mock_client_instance.__aenter__ = AsyncMock(return_value=mock_client_instance)
+        mock_client_instance.__aexit__ = AsyncMock(return_value=False)
+
+        with (
+            patch("src.server.httpx.AsyncClient", return_value=mock_client_instance),
+            patch("src.server._is_private_ip", return_value=False),
+        ):
+            client = TestClient(app)
+            response = client.get(
+                "/tokenlist/proxy",
+                params={"url": "https://tokens.example.com/list.json"},
+            )
+
+        assert response.status_code == 502
+        assert response.json()["error"] == "Response is not valid JSON"
+
+    def test_proxy_too_large(self, mock_y_module: None) -> None:
+        """Mock httpx to return >5MB → 502."""
+        from unittest.mock import MagicMock
+
+        from fastapi.testclient import TestClient
+
+        from src.server import app
+
+        mock_response = MagicMock()
+        mock_response.content = b"x" * (5 * 1024 * 1024 + 1)
+
+        mock_client_instance = AsyncMock()
+        mock_client_instance.get.return_value = mock_response
+        mock_client_instance.__aenter__ = AsyncMock(return_value=mock_client_instance)
+        mock_client_instance.__aexit__ = AsyncMock(return_value=False)
+
+        with (
+            patch("src.server.httpx.AsyncClient", return_value=mock_client_instance),
+            patch("src.server._is_private_ip", return_value=False),
+        ):
+            client = TestClient(app)
+            response = client.get(
+                "/tokenlist/proxy",
+                params={"url": "https://tokens.example.com/list.json"},
+            )
+
+        assert response.status_code == 502
+        assert response.json()["error"] == "Response exceeds 5MB limit"
 
 
 class TestEndpointSchemaRegression:

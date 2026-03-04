@@ -76,13 +76,13 @@ jobs:
       #   - SSH_USER: The SSH user (typically 'root' or a user with docker group)
       #   - SSH_KEY: The private SSH key for authentication
 
-      - name: Copy docker-compose.yml to server
+      - name: Copy docker-stack.yml to server
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_KEY }}
-          source: "docker-compose.yml,scripts/strip_depends_on.py"
+          source: "docker-stack.yml"
           target: ~/ypm
 
       - name: Deploy to server
@@ -109,18 +109,8 @@ jobs:
             source .env
             set +a
 
-            # Render a Swarm-compatible compose file using docker compose config
-            # This strips unsupported directives like extended depends_on with condition:
-            # Swarm doesn't support depends_on with condition: service_healthy
-            docker compose config -o docker-stack.yml
-
-            # Strip extended depends_on conditions (Swarm doesn't support them)
-            # Use the Python script we copied to the server
-            docker run --rm -v "$(pwd):/work" -w /work python:3.12-alpine sh -c \
-              "pip install --quiet pyyaml && python3 scripts/strip_depends_on.py docker-stack.yml"
-
-            # Deploy the stack using the rendered Swarm-compatible file
-            # Note: docker stack deploy ignores build: sections, so we pre-pull
+            # Deploy the stack using the production stack file directly
+            # docker-stack.yml is Swarm-compatible (no extended depends_on)
             docker stack deploy -c docker-stack.yml ypm --with-registry-auth
 
             echo "Deploy initiated. Check 'docker service ls' and 'docker service logs ypm_ypm-ethereum' for status."

@@ -48,6 +48,7 @@
   --field-value-number: #4d7a36;
   --field-value-teal: #0f7d65;
   --autocomplete-item-border: #e0e0e0;
+  --icon-bg: #e0e0e0;
 }
 
 /* Dark mode */
@@ -100,6 +101,7 @@
   --field-value-number: #b5cea8;
   --field-value-teal: #4ec9b0;
   --autocomplete-item-border: #333333;
+  --icon-bg: #333333;
 }
 
 /* System preference fallback - automatically applies based on OS setting */
@@ -153,6 +155,7 @@
     --field-value-number: #b5cea8;
     --field-value-teal: #4ec9b0;
     --autocomplete-item-border: #333333;
+    --icon-bg: #333333;
   }
 }
 
@@ -174,7 +177,17 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 20px;
+  margin-bottom: 24px;
+  padding: 16px 20px;
+  background: var(--bg-secondary);
+  border-radius: 8px;
+  border-bottom: 2px solid var(--accent);
+}
+
+.header-brand {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
 
 .header-actions {
@@ -186,6 +199,21 @@ body {
 h1 {
   margin: 0;
   color: var(--text-primary);
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+}
+
+.brand-y {
+  color: var(--accent);
+}
+
+.header-tagline {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-muted);
+  font-weight: 400;
+  letter-spacing: 0.2px;
 }
 
 /* Theme Toggle Button */
@@ -491,6 +519,10 @@ td.null {
   margin-bottom: 8px;
 }
 
+.token-row .token-input-wrapper {
+  flex: 3;
+}
+
 .token-row input.token-addr {
   flex: 3;
 }
@@ -550,6 +582,9 @@ td.null {
 }
 
 .autocomplete-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
   padding: 10px 12px;
   cursor: pointer;
   border-bottom: 1px solid var(--autocomplete-item-border);
@@ -564,21 +599,54 @@ td.null {
   background: var(--dropdown-hover);
 }
 
-.autocomplete-main {
+.autocomplete-logo {
+  width: 1em;
+  height: 1em;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+  background: var(--icon-bg);
+  margin-top: 2px;
+}
+
+.autocomplete-meta {
+  flex: 1;
+  min-width: 0;
+}
+
+.autocomplete-title {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.autocomplete-symbol {
+  font-weight: 600;
   color: var(--text-primary);
-  font-family: monospace;
   font-size: 13px;
 }
 
-.autocomplete-addr {
-  color: var(--text-muted);
-  font-size: 11px;
+.autocomplete-name {
+  color: var(--text-secondary);
+  font-size: 12px;
 }
 
 .autocomplete-source {
   color: var(--text-muted);
   font-size: 10px;
-  margin-top: 2px;
+  background: var(--bg-tertiary);
+  padding: 1px 5px;
+  border-radius: 3px;
+}
+
+.autocomplete-addr {
+  color: var(--text-muted);
+  font-size: 11px;
+  font-family: monospace;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .autocomplete-no-match {
@@ -586,6 +654,49 @@ td.null {
   color: var(--text-muted);
   font-size: 13px;
   text-align: center;
+}
+
+/* Token input wrapper with icon */
+.token-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.token-input-icon {
+  position: absolute;
+  left: 0.5rem;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 1em;
+  height: 1em;
+  object-fit: cover;
+  background: var(--icon-bg);
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.token-input-wrapper input {
+  padding-left: 2rem;
+}
+
+.token-input-wrapper.no-icon .token-input-icon {
+  display: none;
+}
+
+.token-input-wrapper.no-icon input {
+  padding-left: 0.5rem;
+}
+
+/* Result token icon */
+.result-token-icon {
+  width: 1em;
+  height: 1em;
+  border-radius: 50%;
+  vertical-align: middle;
+  margin-right: 0.25rem;
+  background: var(--icon-bg);
 }
 
 /* Modal overlay */
@@ -1027,4 +1138,86 @@ td.null {
 
 .delete-confirm-delete:hover {
   background: var(--danger-hover);
+}
+
+/* Tokenlist Trust Warning */
+.tokenlist-trust-warning {
+  background: var(--warning-bg);
+  border-left: 3px solid var(--warning-border);
+  padding: 8px 12px;
+  margin-bottom: 12px;
+  font-size: 12px;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+/* Tokenlist Inline Status Message */
+.tokenlist-message {
+  font-size: 12px;
+  line-height: 1.5;
+  padding: 0;
+  margin-top: 4px;
+  margin-bottom: 4px;
+  min-height: 0;
+  transition: all 0.15s;
+}
+
+.tokenlist-message:empty {
+  display: none;
+}
+
+.tokenlist-message.loading {
+  color: var(--text-muted);
+  padding: 6px 10px;
+  background: var(--bg-tertiary);
+  border-radius: 4px;
+}
+
+.tokenlist-message.success {
+  color: var(--success);
+  padding: 6px 10px;
+  background: var(--bg-tertiary);
+  border-radius: 4px;
+}
+
+.tokenlist-message.error {
+  color: var(--error-text);
+  padding: 6px 10px;
+  background: var(--error-bg);
+  border-radius: 4px;
+}
+
+/* Tokenlist Entry Error State */
+.tokenlist-item.error-state {
+  border-left: 4px solid var(--danger);
+  opacity: 1;
+}
+
+.tokenlist-item-error {
+  color: var(--error-text);
+  font-size: 11px;
+  margin-top: 2px;
+  font-weight: 600;
+}
+
+.tokenlist-retry-btn {
+  padding: 4px 10px;
+  font-size: 11px;
+  background: var(--accent);
+  color: var(--accent-text);
+  border: none;
+  border-radius: 3px;
+  cursor: pointer;
+  min-width: auto;
+}
+
+.tokenlist-retry-btn:hover {
+  background: var(--accent-hover);
+}
+
+/* Chain warning for zero-token lists */
+.tokenlist-item-chain-warning {
+  color: var(--warning);
+  font-size: 11px;
+  margin-top: 2px;
 }
