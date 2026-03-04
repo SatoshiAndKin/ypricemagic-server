@@ -1,0 +1,33 @@
+{
+  "featureId": "openapi-json-update",
+  "reviewedAt": "2026-03-04T07:10:00.000Z",
+  "commitId": "ff65465",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "pass",
+  "codeReview": {
+    "summary": "The worker added 359 lines to openapi.json, documenting GET /quote (backend-local) and GET /{chain}/quote (nginx-routed public) with full parameter definitions and response schemas. The QuoteResponse component schema was cross-checked against server.py's actual return values: all eight fields (from, to, amount, output_amount, block, chain, block_timestamp, route) are present and typed correctly. Error response codes (400, 404, 500, 502, 422) are documented for both paths. The ErrorResponse component schema correctly captures the {\"error\": \"...\"} envelope used by all error paths. Live curl verification was performed and confirmed field/type alignment.",
+    "issues": [
+      {
+        "file": "openapi.json",
+        "line": null,
+        "severity": "non_blocking",
+        "description": "The 422 response for both /quote paths references HTTPValidationError (the standard FastAPI schema), but the project registers a custom validation_exception_handler (server.py, around line 107) that converts all 422 errors to the {\"error\": \"...\"} ErrorResponse format instead. In practice the quote endpoint is unlikely to trigger a 422 (all params are typed str|None so FastAPI never rejects them before the handler runs), but the documented schema is technically wrong for the 422 case. This is a pre-existing condition shared by all endpoints and was not introduced by this feature."
+      }
+    ]
+  },
+  "sharedStateObservations": [
+    {
+      "area": "conventions",
+      "observation": "The project keeps openapi.json as a hand-authored static file rather than auto-generating it from FastAPI's /openapi.json endpoint. This means it can drift from the live schema over time. The convention is not documented in AGENTS.md. Future workers adding or changing endpoints will not know whether to update openapi.json manually or run a generation script.",
+      "evidence": "openapi.json differs from what FastAPI would auto-generate (e.g., /quote parameters have explicit descriptions and required=true that FastAPI would not emit for str|None query params). The handoff confirms the worker updated it manually: 'I modified openapi.json to include full OpenAPI entries.'"
+    },
+    {
+      "area": "conventions",
+      "observation": "The 422 response schema mismatch (HTTPValidationError vs ErrorResponse) exists across all endpoints in openapi.json, not just the quote paths. This is caused by the project-wide custom validation_exception_handler in server.py that converts 422s to ErrorResponse format. AGENTS.md documents the '{\"error\": ...}' convention for error responses but does not mention that this overrides FastAPI's 422 schema.",
+      "evidence": "server.py lines ~107-117: custom RequestValidationError handler returning JSONResponse with {\"error\": ...}. openapi.json /price, /prices, /check_bucket all show 422 -> HTTPValidationError schema."
+    }
+  ],
+  "addressesFailureFrom": null,
+  "summary": "Pass. The openapi.json update is accurate and complete for the quote endpoint scope. QuoteResponse schema fields and types match the server.py implementation exactly. Both /quote (backend) and /{chain}/quote (nginx-routed) are documented with correct parameters (from, to, amount required; block/timestamp optional), all relevant HTTP error codes, and the ErrorResponse component. One pre-existing non-blocking schema inaccuracy: the 422 response for all endpoints documents HTTPValidationError, but the runtime returns ErrorResponse due to a custom exception handler — not introduced by this feature. The worker ran full test suite (298 passing), lint, format, typecheck, and live curl verification before committing."
+}

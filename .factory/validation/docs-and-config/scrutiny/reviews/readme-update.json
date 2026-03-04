@@ -1,0 +1,40 @@
+{
+  "featureId": "readme-update",
+  "reviewedAt": "2026-03-04T08:00:00.000Z",
+  "commitId": "18f63fd",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "fail",
+  "codeReview": {
+    "summary": "The README update is well-structured and accurately documents all live endpoints (/price, /prices, /quote, /check_bucket, /health, /health/<chain>) with method, path, parameter tables (including 'In' column distinguishing path vs query params), and response schemas. The curl examples for /quote (basic, block-historical, timestamp-historical), the from→to workflow section, and the theme-toggle documentation all fulfill their respective validation assertions. However, the README documents two endpoints — GET /{chain}/price/history and POST /{chain}/price/backfill — that do not exist. The historical-price-endpoint feature was cancelled (status: 'cancelled' in features.json), and mission.md explicitly states 'Historical price graphs and backfill features have been descoped.' Neither endpoint appears in server.py. Additionally, the from→to workflow section lists 'path-search' as a possible route value, but the implementation only ever returns 'divide' or 'identity' — the quote-endpoint feature description itself states 'The path-search route would only apply if ypricemagic had a direct pair pricing function, which it doesn't currently.'",
+    "issues": [
+      {
+        "file": "README.md",
+        "line": 150,
+        "severity": "blocking",
+        "description": "Documents GET /{chain}/price/history as a live endpoint with a full parameter table and response schema. This endpoint does not exist. The historical-price-endpoint feature has status 'cancelled' in features.json. mission.md states 'Historical price graphs and backfill features have been descoped.' server.py has no /price/history route. The worker followed the feature description literally ('new (/quote, /price/history, /price/backfill)') without verifying whether the implementing features were completed or cancelled. Users who call this endpoint will receive an error."
+      },
+      {
+        "file": "README.md",
+        "line": 172,
+        "severity": "blocking",
+        "description": "Documents POST /{chain}/price/backfill as a live endpoint with request and response schemas and a 202 status code. This endpoint does not exist — same root cause as the history endpoint. server.py has no /price/backfill route. The documented 202 response schema and request body are fabricated documentation for a non-existent endpoint."
+      },
+      {
+        "file": "README.md",
+        "line": 245,
+        "severity": "non_blocking",
+        "description": "The from→to quoting workflow section step 4 lists 'path-search' as a possible route value: 'Return `route` to indicate strategy (`identity`, `path-search`, or `divide`)'. The actual implementation in server.py only ever returns 'divide' (normal pairs) or 'identity' (same-token). The quote-endpoint feature description explicitly states: 'The path-search route would only apply if ypricemagic had a direct pair pricing function, which it doesn't currently — so all quotes use the divide strategy.' The mention of path-search is aspirational and should be removed to avoid misleading API consumers."
+      }
+    ]
+  },
+  "sharedStateObservations": [
+    {
+      "area": "conventions",
+      "observation": "The feature description for readme-update was written before the historical-price-endpoint and price-chart-ui features were cancelled, and still lists '/price/history, /price/backfill' as endpoints to document. When dependent implementation features are cancelled mid-mission, feature descriptions that reference them are not updated. This caused the worker to produce incorrect documentation by following a stale feature description. A convention of cross-checking features.json status when documenting an endpoint surface would prevent this. Alternatively, a precondition like 'verify historical-price-endpoint status before documenting history/backfill' could guard against this.",
+      "evidence": "features.json: historical-price-endpoint status='cancelled', price-chart-ui status='cancelled'. readme-update description says 'new (/quote, /price/history, /price/backfill)'. mission.md: 'Historical price graphs and backfill features have been descoped.' server.py: no /price/history or /price/backfill routes."
+    }
+  ],
+  "addressesFailureFrom": null,
+  "summary": "FAIL. The README update correctly documents all live endpoints and fulfills the curl examples, from→to workflow, and theme toggle assertions. However, it contains two blocking inaccuracies: it fully documents GET /{chain}/price/history and POST /{chain}/price/backfill (with parameter tables, schemas, and status codes) but these endpoints were cancelled and do not exist in server.py. The worker followed the feature description without cross-checking that the referenced implementation features were actually completed. The fix is to remove the history and backfill endpoint documentation sections entirely. The non-blocking 'path-search' route value mention in the workflow section should also be corrected to reflect that only 'divide' and 'identity' are valid."
+}

@@ -1,0 +1,96 @@
+{
+  "group": "r4-group-a",
+  "testedAt": "2026-03-03T20:00:00Z",
+  "credentials": {
+    "account": "N/A",
+    "namespace": "r4-group-a"
+  },
+  "toolsUsed": ["agent-browser"],
+  "assertions": {
+    "VAL-POLISH-006": {
+      "status": "pass",
+      "title": "WCAG AA contrast in both themes",
+      "steps": [
+        {
+          "action": "Navigate to http://localhost:8000 in light mode",
+          "expected": "Page loads with light theme applied",
+          "observed": "Page loaded with data-theme=light"
+        },
+        {
+          "action": "Read CSS variables via getComputedStyle in light mode",
+          "expected": "Post-fix values: --text-muted:#767676, --link-color:#2672c1, --field-value-number:#4d7a36, --field-value-teal:#0f7d65",
+          "observed": "Values confirmed: --text-muted:#767676, --link-color:#2672c1, --field-value-number:#4d7a36, --field-value-teal:#0f7d65"
+        },
+        {
+          "action": "Calculate WCAG contrast ratios for light mode key pairs",
+          "expected": "All ratios ≥ 4.5:1 for normal text",
+          "observed": "text-muted(#767676) on form-bg(#ffffff): 4.54:1 ✓; link-color(#2672c1) on #ffffff: 4.93:1 ✓; field-value-number(#4d7a36) on #ffffff: 5.06:1 ✓; field-value-teal(#0f7d65) on #ffffff: 5.07:1 ✓; body-text(#333333) on #f5f5f5: 11.59:1 ✓; label(#555555) on #ffffff: 7.46:1 ✓; input(#333333) on #ffffff: 12.63:1 ✓; btn-text(#fff) on #0066cc: 5.57:1 ✓"
+        },
+        {
+          "action": "Take screenshot in light mode",
+          "expected": "Screenshot captured",
+          "observed": "Screenshot saved to utv-ui-polish-r4-group-a-VAL-POLISH-006-contrast-check-light.png"
+        },
+        {
+          "action": "Click theme toggle twice to switch to dark mode",
+          "expected": "data-theme=dark set on html element",
+          "observed": "data-theme changed to dark; dark CSS variables active"
+        },
+        {
+          "action": "Read CSS variables via getComputedStyle in dark mode",
+          "expected": "Post-fix values: --text-muted:#a5a5a5; dark-optimized link/field-value colors",
+          "observed": "--text-muted:#a5a5a5, --link-color:#58a6ff, --field-value-number:#b5cea8, --field-value-teal:#4ec9b0; form-bg=rgb(36,36,36)=#242424, body-bg=rgb(26,26,26)=#1a1a1a"
+        },
+        {
+          "action": "Calculate WCAG contrast ratios for dark mode key pairs",
+          "expected": "All ratios ≥ 4.5:1 for normal text",
+          "observed": "text-muted(#a5a5a5) on form-bg(#242424): 6.30:1 ✓; link-color(#58a6ff) on #242424: 6.15:1 ✓; field-value-number(#b5cea8) on #242424: 9.14:1 ✓; field-value-teal(#4ec9b0) on #242424: 7.62:1 ✓; body-text(#e0e0e0) on #1a1a1a: 13.18:1 ✓; label(#c0c0c0) on #242424: 8.53:1 ✓; hint-text(#a5a5a5) on #242424: 6.30:1 ✓; btn-text(#fff) on #0066cc: 5.57:1 ✓"
+        },
+        {
+          "action": "Take screenshot in dark mode",
+          "expected": "Screenshot captured",
+          "observed": "Screenshot saved to utv-ui-polish-r4-group-a-VAL-POLISH-006-contrast-check-dark.png"
+        },
+        {
+          "action": "Check console errors",
+          "expected": "No JS runtime errors",
+          "observed": "No console errors detected"
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          "utv-ui-polish-r4-group-a-VAL-POLISH-006-contrast-check-light.png",
+          "utv-ui-polish-r4-group-a-VAL-POLISH-006-contrast-check-dark.png"
+        ],
+        "consoleErrors": "none",
+        "contrastRatios": {
+          "lightMode": {
+            "--text-muted (#767676) on form-bg (#ffffff)": "4.54:1 ✓ PASS",
+            "--link-color (#2672c1) on #ffffff": "4.93:1 ✓ PASS",
+            "--field-value-number (#4d7a36) on #ffffff": "5.06:1 ✓ PASS",
+            "--field-value-teal (#0f7d65) on #ffffff": "5.07:1 ✓ PASS",
+            "body-text (#333333) on body-bg (#f5f5f5)": "11.59:1 ✓ PASS",
+            "label-text (#555555) on form-bg (#ffffff)": "7.46:1 ✓ PASS",
+            "input-text (#333333) on input-bg (#ffffff)": "12.63:1 ✓ PASS",
+            "btn-text (#ffffff) on btn-bg (#0066cc)": "5.57:1 ✓ PASS"
+          },
+          "darkMode": {
+            "--text-muted (#a5a5a5) on form-bg (#242424)": "6.30:1 ✓ PASS",
+            "--link-color (#58a6ff) on form-bg (#242424)": "6.15:1 ✓ PASS",
+            "--field-value-number (#b5cea8) on form-bg (#242424)": "9.14:1 ✓ PASS",
+            "--field-value-teal (#4ec9b0) on form-bg (#242424)": "7.62:1 ✓ PASS",
+            "body-text (#e0e0e0) on body-bg (#1a1a1a)": "13.18:1 ✓ PASS",
+            "label-text (#c0c0c0) on form-bg (#242424)": "8.53:1 ✓ PASS",
+            "hint-text (#a5a5a5) on form-bg (#242424)": "6.30:1 ✓ PASS",
+            "btn-text (#ffffff) on btn-bg (#0066cc)": "5.57:1 ✓ PASS"
+          }
+        }
+      },
+      "issues": null,
+      "notes": "All key CSS variables (--text-muted, --link-color, --field-value-number, --field-value-teal) and core text/background pairs meet WCAG AA 4.5:1 minimum in both themes. In light mode, hint text (#767676) renders on white form backgrounds (4.54:1), not on the grey body (#f5f5f5 would be 4.17:1). Dark mode retains dark-optimized values (#b5cea8, #4ec9b0) for field-value colors which achieve high contrast ratios (9.14:1 and 7.62:1) against dark form backgrounds. Warning hint in both themes also passes on its contextual background."
+    }
+  },
+  "frictions": [],
+  "blockers": [],
+  "summary": "Tested 1 assertion: 1 passed. VAL-POLISH-006 WCAG AA contrast check passes in both light and dark themes. All key CSS variables and text/background pairs meet the 4.5:1 minimum contrast ratio requirement."
+}

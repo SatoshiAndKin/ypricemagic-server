@@ -1,0 +1,33 @@
+{
+  "featureId": "cross-area-quote-flows",
+  "reviewedAt": "2026-03-03T21:30:00.000Z",
+  "commitId": "3b66217",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "pass",
+  "codeReview": {
+    "summary": "Small, focused bug fix in the chain selector change handler (static/js/app.js). The old code wrapped From/To token updates inside `if (!customPairs[chain])`, meaning tokens were only updated when no custom override existed for the target chain. When a custom override DID exist, the tokens were left showing the previous chain's addresses — a clear bug. The fix removes the conditional guard so `getEffectivePair(chain)` is always called, which correctly returns the custom pair if saved or the factory default otherwise. The suppressModal/wasUserEdited reset logic was also correctly moved outside the conditional, since programmatic token updates should always suppress the unknown-token modal. The `getEffectivePair` function has a safe fallback (`{ from: '', to: '' }`) for unknown chains. All 6 cross-area assertions (VAL-CROSS-001, -004, -005, -006, -008, -010) were verified via browser automation with documented evidence. All CI validators passed (298 tests, ruff, mypy).",
+    "issues": [
+      {
+        "file": "val-cross-quote-flows.png",
+        "line": null,
+        "severity": "non_blocking",
+        "description": "Validation screenshot committed to repo root. This follows the existing convention (many val-*.png files already exist), but these screenshots add binary bloat to git history. Consider adding them to .gitignore or a dedicated evidence directory outside the repo."
+      }
+    ]
+  },
+  "sharedStateObservations": [
+    {
+      "area": "conventions",
+      "observation": "The chain change handler and setDefaultPair() contain near-identical code blocks (get effective pair, set input values, reset suppressModal/wasUserEdited flags). This duplicated pattern could be extracted into a shared helper. No convention exists in AGENTS.md or the skill about DRY patterns for the JS codebase.",
+      "evidence": "static/js/app.js lines 1098-1118 (chain change handler) duplicates logic in setDefaultPair() at lines ~1146-1160. Both call getEffectivePair(), set quoteFromInput/quoteToInput values, and reset suppressModal/wasUserEdited on both autocomplete instances."
+    },
+    {
+      "area": "conventions",
+      "observation": "Validation screenshots (val-*.png) accumulate in the repo root without cleanup guidance. There are 20+ screenshot files in the repo root. No .gitignore rule or AGENTS.md guidance exists for managing these artifacts.",
+      "evidence": "Repo root contains val-cross-quote-flows.png, val-dryrun-*.png, val-list-*.png, val-quote-form-*.png, val-regression-*.png, val-static-*.png, ui-*.png — all binary files tracked in git."
+    }
+  ],
+  "addressesFailureFrom": null,
+  "summary": "Pass. The fix correctly addresses the chain switch bug where From/To tokens were not updated when switching to a chain with a saved custom pair. The change is minimal (removing an incorrect conditional guard), logically sound, and thoroughly verified against all 6 cross-area assertions via browser automation. No blocking issues found. Two non-blocking observations: duplicated token-update logic and accumulating screenshot artifacts in repo root."
+}

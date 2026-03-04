@@ -8,7 +8,18 @@ Testing surface: tools, URLs, setup steps, isolation notes, known quirks.
 
 - **URL**: http://localhost:8000 (nginx proxy)
 - **Tool**: agent-browser (Playwright MCP) for UI interaction
+- **API testing**: curl against http://localhost:8000
 - **Docker**: `docker compose up -d` must be running for full integration tests
+
+## Key Endpoints for Testing
+
+- `GET /ethereum/quote?from=<addr>&to=<addr>&amount=<n>` — from→to quote
+- `GET /ethereum/price/history?token=<addr>&period=7d` — historical prices
+- `POST /ethereum/price/backfill` — trigger cache backfill (JSON body)
+- `GET /ethereum/price?token=<addr>` — single token USD price
+- `GET /ethereum/prices?tokens=<addr1>,<addr2>` — batch prices
+- `GET /ethereum/check_bucket?token=<addr>` — token classification
+- `GET /health` — health check
 
 ## Setup
 
@@ -19,6 +30,7 @@ Testing surface: tools, URLs, setup steps, isolation notes, known quirks.
 ## Known Quirks
 
 - First price fetch after container start is slow (~20-75s) due to Etherscan ABI fetching
+- Arbitrum cold-start quote requests can exceed nginx's 120s timeout and return 502 even when `/arbitrum/health` is 200; retry after warm-up or pre-warm common pairs before strict cross-chain assertions
 - Subsequent fetches are fast (<1s)
 - Platform emulation warning (amd64 on arm64) is expected on Apple Silicon
 - Etherscan rate limit (3 req/sec) can cause retry messages in container logs — this is normal
@@ -28,8 +40,16 @@ Testing surface: tools, URLs, setup steps, isolation notes, known quirks.
 - In headless runs, `Escape`/`Tab` key tests can occasionally bounce to `about:blank`; reopen `http://localhost:8000` and continue
 - Tokenlist add-by-URL error banners auto-clear after ~5 seconds; capture screenshots/evidence immediately after triggering the error
 - During longer automation runs, agent-browser sessions can also bounce to `about:blank` between separate command invocations; prefer grouped command sequences and re-check page URL before interacting
+- In some runs, `agent-browser` network capture may return empty even when requests fired; use `performance.getEntriesByType('resource')` in page eval as a fallback evidence source.
+- Some `agent-browser` builds use `eval` (not `evaluate`/`run-code`) for page script execution; if unsure, check `agent-browser --help` before scripting validators.
+- `agent-browser` screenshot filename flags are not consistent across wrappers; passing `--filename` can create a literal file named `--filename`. Prefer the wrapper's documented filename argument format for the current environment.
 - The tokenlist import UI uses a dynamically-created hidden file input; direct file-upload automation may fail, but calling the app's `importTokenlistFile()` function with a synthesized `File` object is a reliable equivalent
+- After clearing localStorage, the default quote pair can repopulate asynchronously; wait briefly before asserting first-visit defaults.
+- During quote error validations, unpriceable-token scenarios may intermittently surface as 502 timeout responses instead of clean 404s; capture the observed status and retry after warm-up when strict status coverage is required.
+- For unknown/unlisted token quote probes, the app shows a warning modal first; click **Continue** to actually dispatch the quote request before asserting response behavior.
 - If containers stop mid-run, recover with `docker compose up -d` and re-check `curl -sf http://localhost:8000/ethereum/health` before resuming
+- After static UI code changes (`static/js/*`, `static/css/*`, `static/index.html`), `docker compose up -d` may keep serving old assets from the existing image; run `docker compose build && docker compose up -d` before validation.
+- After `docker compose build && docker compose up -d`, nginx may have stale DNS for the chain containers (IPs swap after container recreation). If `/ethereum/health` returns the wrong chain name, run `docker compose restart nginx` to force DNS re-resolution.
 - `docker stack config -c docker-compose.yml` can fail when `depends_on` uses extended `condition` syntax (`service_healthy`); Swarm ignores `depends_on` at deploy time, so validate this separately from deploy section checks.
 
 ## Test Isolation
@@ -45,6 +65,15 @@ Each browser session gets fresh localStorage. Use incognito/private windows if n
 - Capture clear evidence for each assertion: UI snapshot/screenshot plus matching network or terminal proof where specified.
 - If session instability occurs, prefer fewer larger automation steps (instead of many small calls) and include explicit waits before snapshots.
 
+## Flow Validator Guidance: docs
+
+- Use terminal/file validation only (`grep`, `jq`, `cat`, `curl`) for docs assertions.
+- Stay within `/Users/bryan/code/ypricemagic-server/` for file checks.
+- For API-based assertions (VAL-DOCS-016), use `curl http://localhost:8000` with `jq` for comparison.
+- For visual assertions (VAL-DOCS-015), read the screenshot file embedded in README; use the Read tool.
+- Do NOT modify any files; only read, grep, and verify.
+- Keep docker service access read-only: `docker compose config`, `docker compose ps`.
+
 ## Flow Validator Guidance: deploy-cli
 
 - Use terminal-based validation (docker compose, docker stack config, grep/curl, and docker logs) for deploy assertions.
@@ -52,3 +81,11 @@ Each browser session gets fresh localStorage. Use incognito/private windows if n
 - Use a unique temporary evidence namespace per validator run (for example, `/tmp/utv-zero-downtime-<group>`).
 - Do not modify deployment/business logic files during validation; only read, run, and verify expected behavior.
 - If Docker services are already running, reuse them instead of resetting shared volumes unless an assertion explicitly requires restart behavior.
+
+## Flow Validator Guidance: quote-api
+
+- Use terminal/API validation only (`curl`, `jq`, lightweight shell/Python math checks); do not use UI flows for quote-backend assertions.
+- Keep traffic scoped to `http://localhost:8000/<chain>/...` and do not use off-limits ports.
+- Use the assigned namespace in artifact filenames (for example, `/tmp/<namespace>-evidence.json`) so parallel validators do not overwrite each other.
+- Do not mutate shared state beyond normal quote/price reads; avoid cache-clearing or docker restarts from subagents.
+- If an assertion needs repeated calls (concurrency/history), keep calls within your assigned assertion set and record exact command outputs.

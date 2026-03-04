@@ -1,0 +1,34 @@
+{
+  "featureId": "fix-quote-endpoint-error-handling",
+  "reviewedAt": "2026-03-03T21:05:00.000Z",
+  "commitId": "937dce1",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "pass",
+  "codeReview": {
+    "summary": "The fix correctly wraps both _fetch_price calls in /quote with try/except + _handle_price_error(), matching the /price endpoint pattern. The ZeroDivisionError guard for to_price == 0.0 is correctly placed before the divide operation and returns a descriptive 404. Three well-structured tests cover from_token error, to_token error, and to_price == 0.0 scenarios. One non-blocking metric issue found: _handle_price_error() increments price_requests_total instead of quote_requests_total when called from the /quote endpoint.",
+    "issues": [
+      {
+        "file": "src/server.py",
+        "line": 325,
+        "severity": "non_blocking",
+        "description": "_handle_price_error() increments price_requests_total (line 325), not quote_requests_total. When the /quote endpoint calls this function (lines 780, 799), it records the error under the wrong Prometheus counter. All other status transitions in /quote correctly use quote_requests_total. This should be addressed in a follow-up — either by adding a metric parameter to _handle_price_error() or by inlining the error handling in /quote."
+      },
+      {
+        "file": "src/server.py",
+        "line": 815,
+        "severity": "non_blocking",
+        "description": "No guard for from_price == 0.0. If the source token returns a zero price, output_amount will be 0.0, which is mathematically correct but semantically misleading (an unpriceable source token returning a valid-looking 0 output). The feature description only required guarding to_price == 0.0 (divide-by-zero), so this is out of scope but worth noting."
+      }
+    ]
+  },
+  "sharedStateObservations": [
+    {
+      "area": "conventions",
+      "observation": "_handle_price_error() is tightly coupled to the /price endpoint's Prometheus counter (price_requests_total). When reused from /quote, it records errors under the wrong metric. This pattern of a shared error handler silently using the wrong metric counter is not documented anywhere — future endpoint additions would hit the same trap.",
+      "evidence": "src/server.py:325 — price_requests_total.labels(chain=CHAIN_NAME, status='error').inc() is hardcoded inside _handle_price_error(). The /quote endpoint uses quote_requests_total for all other statuses (lines 723, 753, 783, 802, 815, 833) but the error path through _handle_price_error increments price_requests_total instead."
+    }
+  ],
+  "addressesFailureFrom": null,
+  "summary": "Pass. The implementation correctly addresses both issues from the feature description: _fetch_price errors are now caught and returned as JSON error envelopes, and to_price == 0.0 returns a 404 instead of propagating a ZeroDivisionError. Tests are well-structured and verify all three scenarios. One non-blocking issue: _handle_price_error increments price_requests_total instead of quote_requests_total, causing incorrect Prometheus metrics attribution for quote endpoint errors."
+}

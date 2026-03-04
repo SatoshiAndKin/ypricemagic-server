@@ -2,7 +2,7 @@
   "packages": {
     ".": {
       "release-type": "python",
-      "draft-pull-request": true
+      "draft-pull-request": false
     }
   }
 }

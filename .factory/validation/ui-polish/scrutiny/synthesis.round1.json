@@ -1,0 +1,98 @@
+{
+  "milestone": "ui-polish",
+  "round": 1,
+  "status": "fail",
+  "validatorsRun": {
+    "test": {
+      "passed": true,
+      "command": "uv run pytest -x -q --tb=short",
+      "exitCode": 0
+    },
+    "typecheck": {
+      "passed": true,
+      "command": "uv run mypy src/",
+      "exitCode": 0
+    },
+    "lint": {
+      "passed": true,
+      "command": "uv run ruff check .",
+      "exitCode": 0
+    }
+  },
+  "reviewsSummary": {
+    "total": 6,
+    "passed": 3,
+    "failed": 3,
+    "failedFeatures": [
+      "theme-toggle",
+      "amount-warning-cache-text",
+      "cross-area-polish-flows"
+    ]
+  },
+  "blockingIssues": [
+    {
+      "featureId": "theme-toggle",
+      "severity": "blocking",
+      "description": "Light theme still uses dark result card variables (`--result-bg`, `--result-text`, etc.), so quote/batch/bucket result cards do not render in a light card style."
+    },
+    {
+      "featureId": "amount-warning-cache-text",
+      "severity": "blocking",
+      "description": "Amount warning visibility is not recomputed for URL-prefilled `amount`, so non-empty amount can load with warning hidden."
+    },
+    {
+      "featureId": "amount-warning-cache-text",
+      "severity": "blocking",
+      "description": "Warning visibility uses `parseFloat(value) > 0` instead of non-empty amount logic required by the feature contract."
+    },
+    {
+      "featureId": "cross-area-polish-flows",
+      "severity": "blocking",
+      "description": "Deletion cascade logic can revert custom defaults when deleting an unrelated list because missing token index entries are treated as proof tokens came from the deleted list."
+    }
+  ],
+  "appliedUpdates": [
+    {
+      "target": "library",
+      "description": "Updated `.factory/library/user-testing.md` with agent-browser command caveats (`eval` vs `evaluate`/`run-code`, screenshot filename flag behavior) and static-asset rebuild guidance (`docker compose build && docker compose up -d`).",
+      "sourceFeature": "gear-badge-removal"
+    }
+  ],
+  "suggestedGuidanceUpdates": [
+    {
+      "target": "skills/frontend-worker",
+      "suggestion": "Clarify Docker rebuild guidance to explicitly include static asset changes (`static/js`, `static/css`, `static/index.html`) as rebuild-required before UI validation.",
+      "evidence": "delete-ux-improvement review and handoff show static-only changes required full image rebuild to validate accurately.",
+      "isSystemic": true
+    },
+    {
+      "target": "skills/frontend-worker",
+      "suggestion": "Split step-2 context reads into required vs conditional reads so small UI-only tasks do not need unrelated backend/nginx/library file reads.",
+      "evidence": "tokenlist-url-display and amount-warning-cache-text reviews both found workers completing correctly while not following the current rigid read list.",
+      "isSystemic": true
+    },
+    {
+      "target": "skills/frontend-worker",
+      "suggestion": "Add an explicit no-op/already-implemented path (what to verify, what evidence to collect, and how to report skill adherence).",
+      "evidence": "gear-badge-removal handoff reported a deviation when the feature was already complete.",
+      "isSystemic": false
+    },
+    {
+      "target": "skills/frontend-worker",
+      "suggestion": "Add a short agent-browser command compatibility note (for example, command-name differences like `eval` vs `evaluate`) before validator automation steps.",
+      "evidence": "cross-area-polish-flows transcript recorded repeated unknown-command failures before switching tooling.",
+      "isSystemic": true
+    }
+  ],
+  "rejectedObservations": [
+    {
+      "observation": "No clearly documented convention for 'system' theme representation in DOM/localStorage.",
+      "reason": "ambiguous"
+    },
+    {
+      "observation": "frontend-worker step-2 strict read requirement mismatch (duplicate report)",
+      "reason": "duplicate"
+    }
+  ],
+  "previousRound": null
+}

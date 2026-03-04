@@ -1,0 +1,33 @@
+{
+  "featureId": "fix-readme-descoped-endpoints",
+  "reviewedAt": "2026-03-04T09:30:00.000Z",
+  "commitId": "c9a3c4b",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "pass",
+  "codeReview": {
+    "summary": "The fix correctly and completely addresses all three issues identified in the prior readme-update review. The GET /{chain}/price/history section (parameter table, response schema, curl example) was fully removed. The POST /{chain}/price/backfill section (request body, response schema, curl example) was fully removed. The 'path-search' reference in step 4 of the From→To Quoting Workflow was removed, leaving only 'divide'. All preserved documentation (/quote, /price, /prices, /health, /check_bucket) remains intact. Pattern verification confirms no residual mentions of price/history, price/backfill, or path-search. Note: the worker submitted with commitId='none' in the handoff, but the changes were committed by the orchestrator as c9a3c4b ('docs: remove descoped /price/history and /price/backfill from README').",
+    "issues": [
+      {
+        "file": "README.md",
+        "line": 203,
+        "severity": "non_blocking",
+        "description": "Step 4 of the From→To Quoting Workflow now reads 'Return `route` to indicate strategy (`divide`) plus `block_timestamp`...' This drops both `path-search` (correctly) and `identity` (incidentally). server.py shows `identity` is a legitimate return value for same-token quotes (when from==to, line 772). The feature's own expectedBehavior stated 'Route value documentation mentions divide only, not path-search', so the worker followed the spec faithfully. The spec itself was slightly under-specified. This minor inaccuracy is non-blocking — omitting `identity` from the workflow description is misleading but not dangerous, and fixing it would require a separate feature-level change."
+      }
+    ]
+  },
+  "sharedStateObservations": [
+    {
+      "area": "conventions",
+      "observation": "Worker submitted EndFeatureRun with commitId='none' for a successful doc-only edit, relying on the orchestrator to commit. The orchestrator did create a commit (c9a3c4b). The infra-worker skill should clarify whether workers are expected to commit and push before EndFeatureRun or whether the orchestrator handles commits. The worker flagged this explicitly in skillFeedback.deviations, suggesting skill clarification is warranted.",
+      "evidence": "Handoff commitId: 'none'. git log shows c9a3c4b committed by Bryan Stitt (co-authored by factory-droid[bot]). skillFeedback.deviations step 3.3 and suggestedChanges confirm worker uncertainty about commit responsibility."
+    },
+    {
+      "area": "skills",
+      "observation": "The infra-worker skill procedure step 3.3 apparently requires a commitId for success, but the worker deemed committing unnecessary for a doc-only edit. The skill's procedure may not adequately distinguish between code changes (which always warrant a commit) and documentation-only changes. The worker's suggested clarification is valid: either the skill should say 'always commit before EndFeatureRun regardless of change type', or provide a documented exception for pure-doc edits handled by the orchestrator.",
+      "evidence": "skillFeedback.followedProcedure: false. Deviation: 'Reported success without creating a commit because feature scope was limited to documentation edit'. suggestedChanges: 'Clarify whether worker must always create a commit before EndFeatureRun for doc-only edits'."
+    }
+  ],
+  "addressesFailureFrom": "/Users/bryan/code/ypricemagic-server/.factory/validation/docs-and-config/scrutiny/reviews/readme-update.json",
+  "summary": "PASS. The fix fully addresses both blocking issues from the readme-update review: GET /{chain}/price/history and POST /{chain}/price/backfill sections are completely removed from README.md, and the path-search route reference is removed from the quoting workflow. All required docs (/quote, /price, /prices, /health, /check_bucket) are preserved. One minor non-blocking observation: 'identity' was also dropped from the route description along with 'path-search', but this followed the feature's expectedBehavior spec exactly. The worker's commit was handled by the orchestrator (c9a3c4b) rather than the worker, which is a skills process gap but not a code quality issue."
+}

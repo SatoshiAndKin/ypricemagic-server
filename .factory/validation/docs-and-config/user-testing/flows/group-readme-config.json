@@ -1,0 +1,70 @@
+{
+  "group": "readme-config",
+  "testedAt": "2026-03-03T00:00:00Z",
+  "credentials": {
+    "account": "none",
+    "namespace": "docs-and-config"
+  },
+  "toolsUsed": ["terminal", "Read"],
+  "assertions": [
+    {
+      "id": "VAL-DOCS-001",
+      "title": "README documents all API endpoints",
+      "status": "pass",
+      "evidence": "README.md documents all required current endpoints: GET /{chain}/price (with params+schema), GET /{chain}/prices (with params+schema), GET /{chain}/quote (with params+schema), GET /{chain}/check_bucket (with params+schema), GET /health (with schema), GET /health/<chain> (documented as GET /<chain>/health, with schema). The descoped /price/history and /price/backfill endpoints are correctly absent from the README. A prior commit (c9a3c4b: 'docs: remove descoped /price/history and /price/backfill from README') confirms the intentional removal.",
+      "notes": "Validation contract listed /price/history and /price/backfill as required, but the task explicitly overrides: 'NOTE: /price/history and /price/backfill were descoped and should NOT be in README.' Evaluated against the revised requirement."
+    },
+    {
+      "id": "VAL-DOCS-002",
+      "title": "README includes curl examples for /quote",
+      "status": "pass",
+      "evidence": "README.md section '#### curl examples for /quote' contains three curl examples: (1) basic quote with from/to/amount, (2) historical quote at a specific block (&block=18000000), (3) historical quote at a timestamp (&timestamp=1693526400). Both the simple curl example and historical block/timestamp usage requirements are satisfied.",
+      "notes": null
+    },
+    {
+      "id": "VAL-DOCS-005",
+      "title": "README documents from→to quoting workflow",
+      "status": "pass",
+      "evidence": "README.md section '### From→to quoting workflow' documents: (1) resolve target block, (2) attempt direct route/path pricing when available (path-search as primary), (3) fall back to divide strategy: output_amount = amount × (price_from / price_to), (4) return route field indicating strategy plus block_timestamp, (5) when amount is set, quotes are more likely to be uncached and may take longer. All three required elements documented: path-search primary, divide fallback, amount-affects-caching.",
+      "notes": null
+    },
+    {
+      "id": "VAL-DOCS-007",
+      "title": "README documents theme/dark mode feature",
+      "status": "pass",
+      "evidence": "README.md section '### Theme toggle (light / dark / system)' explicitly documents: three modes (system default, light, dark), mode persisted in local storage, and that quote/result sections, tokenlist modal, and related views 'are styled for both light and dark mode'. System-adaptive theme toggle and dark/light mode support are both mentioned.",
+      "notes": null
+    },
+    {
+      "id": "VAL-DOCS-012",
+      "title": "release-please config sets draft to false",
+      "status": "pass",
+      "evidence": "release-please-config.json contains: {\"packages\": {\".\": {\"release-type\": \"python\", \"draft-pull-request\": false}}}. The field 'draft-pull-request' is set to false at the package level, ensuring release PRs are created as ready-for-review (not draft) so CI runs immediately.",
+      "notes": null
+    },
+    {
+      "id": "VAL-DOCS-013",
+      "title": "CHANGELOG reflects new features",
+      "status": "fail",
+      "evidence": "CHANGELOG.md has entries through v0.5.1 (2026-03-03). No entries explicitly mention 'quote', 'theme', 'dark mode', 'chart', or 'from/to pricing'. The closest entry is v0.4.0 'ypricemagic upgrade - new endpoints, UI, and docs' which vaguely covers these features but does not name them. HOWEVER: the active branch is 'feat/quote-endpoint-charts-theme' and has not been merged to main. Release-please only populates CHANGELOG on release PRs after merge. The release-please config IS correctly set (draft-pull-request: false). The CHANGELOG will be auto-populated when this branch is merged and a release is cut.",
+      "notes": "Expected state given the feature branch is unmerged. The assertion cannot pass until the feature branch lands on main and a release is created. The release-please config prerequisite (VAL-DOCS-012) is correctly set."
+    },
+    {
+      "id": "VAL-DOCS-006",
+      "title": "README embeds a screenshot of the UI",
+      "status": "pass",
+      "evidence": "README.md contains markdown image: '![Latest-block USDC→crvUSD quote result with price age in seconds](docs/readme-quote-latest-block.png)'. The referenced file docs/readme-quote-latest-block.png exists in the repository (confirmed via Glob tool: './docs/readme-quote-latest-block.png' present). Screenshot shows the app with a live quote result.",
+      "notes": null
+    },
+    {
+      "id": "VAL-DOCS-015",
+      "title": "README screenshot shows a latest-block quote",
+      "status": "pass",
+      "evidence": "Read docs/readme-quote-latest-block.png (119.3 KB image). The screenshot shows: BLOCK=24582349 (high Ethereum block number indicating a recent block as of 2026-03-04), BLOCK TIMESTAMP=2026-03-04 06:37:59 UTC (just hours before today's date), AGE=47s ago (extremely small age, seconds not days). The CONVERSION field shows '1 USDC = 1.00143805 crvUSD' (clear from→to token conversion). INPUT shows '1000 USDC → 1001.438045 crvUSD'. All requirements met: recent block number, small price age (47 seconds), and visible from→to token conversion.",
+      "notes": null
+    }
+  ],
+  "frictions": [],
+  "blockers": [],
+  "summary": "Tested 8 assertions: 7 passed, 1 failed. VAL-DOCS-013 fails because CHANGELOG has no explicit entries for quote/theme/chart features — these are on the active unmerged branch 'feat/quote-endpoint-charts-theme'. The release-please config is correctly set (draft-pull-request: false) so CHANGELOG will be auto-populated when the branch merges and a release is cut. All other assertions pass: README fully documents all current (non-descoped) endpoints, has curl examples for /quote, documents the from→to quoting workflow, documents theme/dark-mode support, embeds a valid screenshot (docs/readme-quote-latest-block.png), and the screenshot shows a recent block (24582349) with 47s age and a clear USDC→crvUSD conversion."
+}
