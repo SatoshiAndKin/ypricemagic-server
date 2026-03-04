@@ -147,61 +147,6 @@ curl "http://localhost:8000/ethereum/quote?from=0xA0b86991c6218b36c1d19D4a2e9Eb0
 curl "http://localhost:8000/ethereum/quote?from=0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48&to=0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2&amount=1000&timestamp=1693526400"
 ```
 
-### `GET /{chain}/price/history`
-
-Historical time-series price endpoint (used for historical analysis and quote charts).
-
-| Parameter | In | Required | Description |
-|-----------|----|----------|-------------|
-| `chain` | path | yes | `ethereum`, `arbitrum`, `optimism`, or `base` |
-| `token` | query | yes | ERC-20 token address |
-| `period` | query | yes | Range window, typically `7d` or `30d` |
-
-**Response schema (`200`):**
-
-```json
-[
-  {
-    "block": 21900000,
-    "price": 1.0,
-    "block_timestamp": 1740000000
-  }
-]
-```
-
-### `POST /{chain}/price/backfill`
-
-Triggers asynchronous historical cache population for a token over a block range.
-
-| Parameter | In | Required | Description |
-|-----------|----|----------|-------------|
-| `chain` | path | yes | `ethereum`, `arbitrum`, `optimism`, or `base` |
-| `token` | body | yes | ERC-20 token address |
-| `block_start` | body | yes | Start block (inclusive) |
-| `block_end` | body | yes | End block (inclusive) |
-
-**Request body schema:**
-
-```json
-{
-  "token": "0x...",
-  "block_start": 18000000,
-  "block_end": 18100000
-}
-```
-
-**Response schema (`202`):**
-
-```json
-{
-  "status": "accepted",
-  "token": "0x...",
-  "chain": "ethereum",
-  "block_start": 18000000,
-  "block_end": 18100000
-}
-```
-
 ### `GET /{chain}/check_bucket`
 
 Returns the ypricemagic pricing bucket classification for a token (for example `"stable"`, `"curve lp"`, `"atoken"`).
@@ -255,7 +200,7 @@ Per-chain health check (externally reached as `GET /<chain>/health`, for example
 1. Resolve a target block (`latest`, explicit `block`, or block resolved from `timestamp`).
 2. Attempt direct route/path pricing when available.
 3. Fall back to divide strategy (`output_amount = amount × (price_from / price_to)`) when no direct route is available.
-4. Return `route` to indicate strategy (`identity`, `path-search`, or `divide`) plus `block_timestamp` for price age displays.
+4. Return `route` to indicate strategy (`divide`) plus `block_timestamp` for price age displays.
 5. When `amount` is set, quotes are more likely to be uncached and may take longer.
 
 ## Browser UI
