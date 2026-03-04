@@ -1,4 +1,4 @@
-FROM --platform=linux/amd64 ghcr.io/astral-sh/uv:python3.12-trixie-slim
+FROM --platform=linux/amd64 ghcr.io/astral-sh/uv:python3.13-trixie-slim
 
 WORKDIR /app
 

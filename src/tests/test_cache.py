@@ -8,7 +8,7 @@ from src.cache import get_cached_price, make_key, set_cached_price
 
 
 @pytest.fixture(autouse=True)
-def isolated_cache(tmp_path: Path) -> Generator[None, None, None]:
+def isolated_cache(tmp_path: Path) -> Generator[None]:
     """Each test gets a fresh cache in a temp directory."""
     with patch("src.cache.CACHE_DIR", str(tmp_path)), patch("src.cache._cache", None):
         yield
