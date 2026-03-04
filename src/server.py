@@ -93,6 +93,26 @@ async def lifespan(app: FastAPI) -> Any:
             network.connect(network_id)  # type: ignore[attr-defined]
         logger.info("brownie_connected", network_id=network_id)
 
+        # Workaround: dank_mids sets concurrent.futures.process.EXTRA_QUEUED_CALLS
+        # to 50,000 at import time. On macOS, SEM_VALUE_MAX is 32,767, so any
+        # ProcessPoolExecutor queue exceeding that limit fails with EINVAL.
+        # Pre-import dank_mids (triggers the monkey-patch), then cap the value.
+        import sys
+
+        if sys.platform == "darwin":
+            import concurrent.futures.process as _cfp
+
+            import dank_mids  # noqa: F401 — triggers EXTRA_QUEUED_CALLS = 50000
+
+            _sem_value_max: int = getattr(
+                __import__("multiprocessing.synchronize", fromlist=["SEM_VALUE_MAX"]),
+                "SEM_VALUE_MAX",
+                32767,
+            )
+            _cfp.EXTRA_QUEUED_CALLS = min(  # type: ignore[misc]
+                _cfp.EXTRA_QUEUED_CALLS, _sem_value_max - 1
+            )
+
         from dank_mids.helpers import setup_dank_w3_from_sync
 
         setup_dank_w3_from_sync(network.web3)
