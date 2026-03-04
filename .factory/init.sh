@@ -13,12 +13,12 @@ if [ ! -f static/tokenlists/uniswap-default.json ]; then
   echo "Downloaded Uniswap tokenlist"
 fi
 
-# Ensure docker compose is running
+# Build and start docker compose (dev, ETH only)
 if ! curl -sf http://localhost:8000/ethereum/health > /dev/null 2>&1; then
-  echo "Docker compose not running or unhealthy. Starting..."
-  docker compose up -d
-  echo "Waiting for containers to be healthy (up to 90s)..."
-  for i in $(seq 1 18); do
+  echo "Docker compose not running or unhealthy. Building and starting..."
+  docker compose up -d --build
+  echo "Waiting for containers to be healthy (up to 120s)..."
+  for i in $(seq 1 24); do
     if curl -sf http://localhost:8000/ethereum/health > /dev/null 2>&1; then
       echo "Containers healthy."
       break
