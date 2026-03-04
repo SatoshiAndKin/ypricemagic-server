@@ -801,12 +801,12 @@ async def quote(
 
     # Fetch USD price for from_token
     try:
-        from_price = await _fetch_price(params.from_token, actual_block)
+        from_result = await _fetch_price(params.from_token, actual_block)
     except Exception as e:
         duration_ms = int((time.monotonic() - start) * 1000)
         return _handle_price_error(e, params.from_token, actual_block, duration_ms)
 
-    if from_price is None:
+    if from_result is None:
         quote_requests_total.labels(chain=CHAIN_NAME, status="not_found").inc()
         logger.warning(
             "quote_from_token_not_found",
@@ -818,14 +818,16 @@ async def quote(
             f"No price found for from token {params.from_token} at block {actual_block} on {CHAIN_NAME}",
         )
 
+    from_price, from_trade_path = from_result
+
     # Fetch USD price for to_token
     try:
-        to_price = await _fetch_price(params.to_token, actual_block)
+        to_result = await _fetch_price(params.to_token, actual_block)
     except Exception as e:
         duration_ms = int((time.monotonic() - start) * 1000)
         return _handle_price_error(e, params.to_token, actual_block, duration_ms)
 
-    if to_price is None:
+    if to_result is None:
         quote_requests_total.labels(chain=CHAIN_NAME, status="not_found").inc()
         logger.warning(
             "quote_to_token_not_found",
@@ -836,6 +838,8 @@ async def quote(
             404,
             f"No price found for to token {params.to_token} at block {actual_block} on {CHAIN_NAME}",
         )
+
+    to_price, to_trade_path = to_result
 
     # Guard against ZeroDivisionError: to_price == 0.0 means unpriceable destination
     if to_price == 0.0:
