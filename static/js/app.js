@@ -1365,6 +1365,26 @@ function renderTokenlistSummary() {
   }
 }
 
+// Get the source label for a tokenlist
+function getTokenlistSourceLabel(list) {
+  if (list.isDefault) {
+    return 'Built-in';
+  }
+  if (list.isLocal) {
+    return 'Saved locally';
+  }
+  if (list.url) {
+    // Truncate URL to ~50 chars
+    const maxLen = 50;
+    if (list.url.length > maxLen) {
+      return list.url.slice(0, maxLen - 1) + '…';
+    }
+    return list.url;
+  }
+  // File import (no url, not default, not local)
+  return 'Imported from file';
+}
+
 function renderTokenlistPanel() {
   const listsEl = document.getElementById('tokenlist-lists');
   if (!listsEl) return;
@@ -1375,6 +1395,7 @@ function renderTokenlistPanel() {
     const list = tokenlists[i];
     const chainId = getChainId();
     const tokenCount = countTokensForChain(list, chainId);
+    const sourceLabel = getTokenlistSourceLabel(list);
 
     const itemEl = document.createElement('div');
     itemEl.className = 'tokenlist-item' + (list.enabled ? '' : ' disabled');
@@ -1394,6 +1415,7 @@ function renderTokenlistPanel() {
     itemEl.innerHTML =
       '<div class="tokenlist-item-info">' +
         '<div class="tokenlist-item-name">' + escapeHtml(list.name) + '</div>' +
+        '<div class="tokenlist-item-source">' + escapeHtml(sourceLabel) + '</div>' +
         '<div class="tokenlist-item-count">' + tokenCount + ' tokens on ' + getChain() + '</div>' +
       '</div>' +
       '<div class="tokenlist-item-actions">' +
