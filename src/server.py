@@ -175,6 +175,23 @@ async def health() -> dict[str, Any]:
     return {"status": "ok", "chain": CHAIN_NAME, "block": height, "synced": synced}
 
 
+def _serialize_trade_path(result: Any) -> list[dict[str, Any]] | None:
+    """Extract and serialize the trade path from a PriceResult."""
+    path = getattr(result, "path", None)
+    if not path:
+        return None
+    return [
+        {
+            "source": step.source,
+            "input_token": step.input_token,
+            "output_token": step.output_token,
+            "pool": step.pool,
+            "price": step.price,
+        }
+        for step in path
+    ]
+
+
 @retry(
     stop=stop_after_attempt(2),
     wait=wait_exponential(multiplier=1, min=1, max=4),
@@ -187,7 +204,8 @@ async def _fetch_price(
     skip_cache: bool = False,
     ignore_pools: tuple[str, ...] = (),
     silent: bool = False,
-) -> float | None:
+) -> tuple[float, list[dict[str, Any]] | None] | None:
+    """Fetch a single token price. Returns (price, trade_path) or None."""
     from y import get_price
 
     kwargs: dict[str, Any] = {
@@ -211,7 +229,8 @@ async def _fetch_price(
         raise ValueError(f"Invalid price value {p} for {token} at block {block}")
     if price_float < 0:
         raise ValueError(f"Negative price {price_float} for {token} at block {block}")
-    return price_float
+    trade_path = _serialize_trade_path(p)
+    return price_float, trade_path
 
 
 async def _fetch_batch_prices(
@@ -220,10 +239,10 @@ async def _fetch_batch_prices(
     amounts: tuple[float | None, ...] | None = None,
     skip_cache: bool = False,
     silent: bool = False,
-) -> list[float | None]:
+) -> list[tuple[float, list[dict[str, Any]] | None] | None]:
     """Fetch prices for multiple tokens in parallel.
 
-    Returns a list of prices (float) or None for tokens that couldn't be priced.
+    Returns a list of (price, trade_path) tuples or None for tokens that couldn't be priced.
     Does not raise exceptions - errors are logged and None is returned for that token.
     """
     from y import get_prices
@@ -241,8 +260,7 @@ async def _fetch_batch_prices(
 
     try:
         results = await get_prices(tokens, block, **kwargs)
-        # results should be a list parallel to tokens
-        prices: list[float | None] = []
+        prices: list[tuple[float, list[dict[str, Any]] | None] | None] = []
         for i, p in enumerate(results):
             if p is None:
                 prices.append(None)
@@ -257,11 +275,11 @@ async def _fetch_batch_prices(
                     )
                     prices.append(None)
                 else:
-                    prices.append(price_float)
+                    trade_path = _serialize_trade_path(p)
+                    prices.append((price_float, trade_path))
         return prices
     except Exception as e:
         logger.error("batch_fetch_failed", block=block, error=str(e))
-        # Return None for all tokens on complete failure
         return [None] * len(tokens)
 
 
@@ -398,7 +416,7 @@ def _fill_batch_results(
     results: list[dict[str, Any]],
     tokens_to_fetch: list[str],
     indices_to_fetch: list[int],
-    prices: list[float | None],
+    prices: list[tuple[float, list[dict[str, Any]] | None] | None],
     block: int,
     block_timestamp: int | None,
     params: "BatchParams",
@@ -406,8 +424,14 @@ def _fill_batch_results(
     """Fill in batch results with fetched prices and cache them."""
     for idx, token in enumerate(tokens_to_fetch):
         i = indices_to_fetch[idx]
-        price_val = prices[idx]
+        price_entry = prices[idx]
         token_amount = params.amounts[i] if params.amounts is not None else None
+
+        if price_entry is None:
+            price_val = None
+            trade_path = None
+        else:
+            price_val, trade_path = price_entry
 
         results[i] = {
             "token": token,
@@ -415,6 +439,7 @@ def _fill_batch_results(
             "price": price_val,
             "block_timestamp": block_timestamp,
             "cached": False,
+            "trade_path": trade_path,
         }
 
         # Cache only if: price found AND no amount
@@ -481,7 +506,7 @@ async def price(
 
     start = time.monotonic()
     try:
-        price_float = await _fetch_price(
+        fetch_result = await _fetch_price(
             params.token,
             actual_block,
             amount=params.amount,
@@ -494,7 +519,7 @@ async def price(
         return _handle_price_error(e, params.token, actual_block, duration_ms)
 
     # Handle None return from get_price with fail_to_None=True
-    if price_float is None:
+    if fetch_result is None:
         price_requests_total.labels(chain=CHAIN_NAME, status="not_found").inc()
         logger.warning("price_not_found", token=params.token[:10], block=actual_block)
         return _make_error_response(
@@ -502,6 +527,7 @@ async def price(
             f"No price found for {params.token} at block {actual_block} on {CHAIN_NAME}",
         )
 
+    price_float, trade_path = fetch_result
     duration_ms = int((time.monotonic() - start) * 1000)
 
     # Fetch block timestamp
@@ -528,6 +554,7 @@ async def price(
         "price": price_float,
         "cached": False,
         "block_timestamp": block_timestamp,
+        "trade_path": trade_path,
     }
     if params.amount is not None:
         response["amount"] = params.amount

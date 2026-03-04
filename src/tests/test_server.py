@@ -340,7 +340,7 @@ class TestFetchPriceRetry:
         )
         with patch("y.get_price", mock_get_price):
             result = await _fetch_price(DAI, 18000000)
-            assert result == 1.0
+            assert result == (1.0, None)
             assert mock_get_price.call_count == 2
 
     @pytest.mark.asyncio
@@ -356,7 +356,7 @@ class TestFetchPriceRetry:
         )
         with patch("y.get_price", mock_get_price):
             result = await _fetch_price(DAI, 18000000)
-            assert result == 2.0
+            assert result == (2.0, None)
             assert mock_get_price.call_count == 2
 
     @pytest.mark.asyncio
@@ -372,7 +372,7 @@ class TestFetchPriceRetry:
         )
         with patch("y.get_price", mock_get_price):
             result = await _fetch_price(DAI, 18000000)
-            assert result == 3.0
+            assert result == (3.0, None)
             assert mock_get_price.call_count == 2
 
     @pytest.mark.asyncio
@@ -408,14 +408,17 @@ class TestFetchPriceSuccess:
 
     @pytest.mark.asyncio
     async def test_valid_price_returned(self, mock_y_module: None) -> None:
-        """Valid price is returned as float."""
+        """Valid price is returned as (float, trade_path) tuple."""
         from src.server import _fetch_price
 
         mock_get_price = AsyncMock(return_value=1.0)
         with patch("y.get_price", mock_get_price):
             result = await _fetch_price(DAI, 18000000)
-            assert result == 1.0
-            assert isinstance(result, float)
+            assert result is not None
+            price_val, trade_path = result
+            assert price_val == 1.0
+            assert isinstance(price_val, float)
+            assert trade_path is None
 
     @pytest.mark.asyncio
     async def test_valid_price_with_amount(self, mock_y_module: None) -> None:
@@ -425,7 +428,7 @@ class TestFetchPriceSuccess:
         mock_get_price = AsyncMock(return_value=0.99)
         with patch("y.get_price", mock_get_price):
             result = await _fetch_price(DAI, 18000000, amount=1000.0)
-            assert result == 0.99
+            assert result == (0.99, None)
             mock_get_price.assert_called_once_with(
                 DAI, 18000000, amount=1000.0, fail_to_None=True, sync=False
             )
@@ -438,7 +441,7 @@ class TestFetchPriceSuccess:
         mock_get_price = AsyncMock(return_value=0.0)
         with patch("y.get_price", mock_get_price):
             result = await _fetch_price(DAI, 18000000)
-            assert result == 0.0
+            assert result == (0.0, None)
 
 
 class TestFetchPriceNewParams:
@@ -452,7 +455,7 @@ class TestFetchPriceNewParams:
         mock_get_price = AsyncMock(return_value=1.0)
         with patch("y.get_price", mock_get_price):
             result = await _fetch_price(DAI, 18000000, skip_cache=True)
-            assert result == 1.0
+            assert result == (1.0, None)
             mock_get_price.assert_called_once_with(
                 DAI, 18000000, fail_to_None=True, sync=False, skip_cache=True
             )
@@ -466,7 +469,7 @@ class TestFetchPriceNewParams:
         ignore_pools = (USDC, WETH)
         with patch("y.get_price", mock_get_price):
             result = await _fetch_price(DAI, 18000000, ignore_pools=ignore_pools)
-            assert result == 1.0
+            assert result == (1.0, None)
             mock_get_price.assert_called_once_with(
                 DAI, 18000000, fail_to_None=True, sync=False, ignore_pools=ignore_pools
             )
@@ -479,7 +482,7 @@ class TestFetchPriceNewParams:
         mock_get_price = AsyncMock(return_value=1.0)
         with patch("y.get_price", mock_get_price):
             result = await _fetch_price(DAI, 18000000, silent=True)
-            assert result == 1.0
+            assert result == (1.0, None)
             mock_get_price.assert_called_once_with(
                 DAI, 18000000, fail_to_None=True, sync=False, silent=True
             )
@@ -500,7 +503,7 @@ class TestFetchPriceNewParams:
                 ignore_pools=ignore_pools,
                 silent=True,
             )
-            assert result == 1.0
+            assert result == (1.0, None)
             mock_get_price.assert_called_once_with(
                 DAI,
                 18000000,
