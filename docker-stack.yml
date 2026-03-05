@@ -3,7 +3,7 @@ services:
   nginx:
     image: nginx:alpine
     ports:
-      - "${PORT:-8000}:8000"
+      - "8000:8000"
     volumes:
       - ./nginx.conf:/etc/nginx/nginx.conf:ro
     deploy:
@@ -18,11 +18,11 @@ services:
   ypm-ethereum:
     image: ghcr.io/satoshiandkin/ypricemagic-server:latest
     init: true
+    env_file: .env
     environment:
       CHAIN_NAME: ethereum
       CHAIN_ID: 1
       RPC_URL: ${RPC_URL_ETHEREUM}
-      ETHERSCAN_TOKEN: ${ETHERSCAN_TOKEN}
     volumes:
       - cache-ethereum:/data/cache
       - brownie-ethereum:/root/.brownie
@@ -44,11 +44,11 @@ services:
   ypm-arbitrum:
     image: ghcr.io/satoshiandkin/ypricemagic-server:latest
     init: true
+    env_file: .env
     environment:
       CHAIN_NAME: arbitrum
       CHAIN_ID: 42161
       RPC_URL: ${RPC_URL_ARBITRUM}
-      ETHERSCAN_TOKEN: ${ETHERSCAN_TOKEN}
     volumes:
       - cache-arbitrum:/data/cache
       - brownie-arbitrum:/root/.brownie
@@ -70,11 +70,11 @@ services:
   ypm-optimism:
     image: ghcr.io/satoshiandkin/ypricemagic-server:latest
     init: true
+    env_file: .env
     environment:
       CHAIN_NAME: optimism
       CHAIN_ID: 10
       RPC_URL: ${RPC_URL_OPTIMISM}
-      ETHERSCAN_TOKEN: ${ETHERSCAN_TOKEN}
     volumes:
       - cache-optimism:/data/cache
       - brownie-optimism:/root/.brownie
@@ -96,11 +96,11 @@ services:
   ypm-base:
     image: ghcr.io/satoshiandkin/ypricemagic-server:latest
     init: true
+    env_file: .env
     environment:
       CHAIN_NAME: base
       CHAIN_ID: 8453
       RPC_URL: ${RPC_URL_BASE}
-      ETHERSCAN_TOKEN: ${ETHERSCAN_TOKEN}
     volumes:
       - cache-base:/data/cache
       - brownie-base:/root/.brownie
