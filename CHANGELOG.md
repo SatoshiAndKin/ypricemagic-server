@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.6.0](https://github.com/SatoshiAndKin/ypricemagic-server/compare/v0.5.1...v0.6.0) (2026-03-05)
+
+
+### Features
+
+* from→to quote endpoint, UI quote form, theme toggle, and UI polish ([#37](https://github.com/SatoshiAndKin/ypricemagic-server/issues/37)) ([c5439bb](https://github.com/SatoshiAndKin/ypricemagic-server/commit/c5439bba1eb4e7f6861883cc0a5ed91b041b64ab))
+* Python 3.13, price validator, UI polish, token display, and infra split ([#41](https://github.com/SatoshiAndKin/ypricemagic-server/issues/41)) ([92407d5](https://github.com/SatoshiAndKin/ypricemagic-server/commit/92407d58e5bb7f3cf6067b8ab7eb9d5cb4a6ad7c))
+* token autocomplete, tokenlist management, and zero-downtime deploy ([#35](https://github.com/SatoshiAndKin/ypricemagic-server/issues/35)) ([4f726fb](https://github.com/SatoshiAndKin/ypricemagic-server/commit/4f726fbcad0046ff9be4c131edb05c82a7a70549))
+* update ypricemagic and expose trade path in API responses ([#38](https://github.com/SatoshiAndKin/ypricemagic-server/issues/38)) ([5377285](https://github.com/SatoshiAndKin/ypricemagic-server/commit/53772856edd1bb6c185a994c7b7fd76362d7d296))
+
+
+### Bug Fixes
+
+* cap dank_mids EXTRA_QUEUED_CALLS on macOS to avoid SEM_VALUE_MAX crash ([#40](https://github.com/SatoshiAndKin/ypricemagic-server/issues/40)) ([4f032cc](https://github.com/SatoshiAndKin/ypricemagic-server/commit/4f032cc5b5958f62915bdf0173a9f877a20e9bea))
+* use env_file in docker-stack.yml for swarm compatibility ([#42](https://github.com/SatoshiAndKin/ypricemagic-server/issues/42)) ([f6430b6](https://github.com/SatoshiAndKin/ypricemagic-server/commit/f6430b627fa82d2137322e7fa6483623903e80ff))
+
 ## [0.5.1](https://github.com/SatoshiAndKin/ypricemagic-server/compare/v0.5.0...v0.5.1) (2026-03-03)
 
 
