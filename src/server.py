@@ -14,8 +14,7 @@ import structlog
 from fastapi import FastAPI, Query, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, JSONResponse
-from fastapi.staticfiles import StaticFiles
+from fastapi.responses import JSONResponse
 from prometheus_client import Counter, Histogram, make_asgi_app
 from tenacity import (
     RetryError,
@@ -156,19 +155,19 @@ async def validation_exception_handler(
 metrics_app = make_asgi_app()
 app.mount("/metrics", metrics_app)
 
+_cors_origins_raw = os.environ.get("CORS_ORIGINS", "")
+_cors_origins: list[str] = (
+    [o.strip() for o in _cors_origins_raw.split(",") if o.strip()]
+    if _cors_origins_raw.strip()
+    else ["*"]
+)
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=_cors_origins,
     allow_methods=["GET", "OPTIONS"],
     allow_headers=["*"],
 )
-
-# Mount static files at /static
-# Note: StaticFiles bypasses middleware, so CORS headers won't be added
-# This is fine for static assets (JS, CSS, JSON files)
-STATIC_DIR = os.path.join(os.path.dirname(__file__), "..", "static")
-if os.path.isdir(STATIC_DIR):
-    app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
 
 @app.middleware("http")
@@ -986,10 +985,3 @@ async def tokenlist_proxy(
         return _make_error_response(502, "Response is not valid JSON")
 
     return JSONResponse(content=data)
-
-
-@app.get("/")
-async def index() -> FileResponse:
-    """Serve the main UI from static files."""
-    index_path = os.path.join(STATIC_DIR, "index.html")
-    return FileResponse(index_path, media_type="text/html")
