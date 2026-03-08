@@ -2,23 +2,32 @@
 
 ## Testing Surface
 
-- **URL**: http://localhost:8000 (docker compose dev, ETH only)
-- **Tool**: agent-browser for visual verification, curl for API endpoints
-- **Start**: `docker compose up -d --build` (builds locally, starts ETH chain + nginx)
-- **Health check**: `curl -sf http://localhost:8000/ethereum/health`
-- **Stop**: `docker compose down`
+**Backend API:**
+- Test via pytest TestClient (no Docker needed)
+- If Docker running: curl to http://localhost:8000/{chain}/endpoint
 
-## Test Tokens (Ethereum mainnet, in Uniswap default tokenlist)
+**Frontend Svelte App:**
+- Dev server: `cd frontend && npm run dev` → http://localhost:5173
+- agent-browser can navigate and interact with the Svelte app
+- All form interactions testable via browser automation
 
-| Symbol | Address | Has Logo |
-|--------|---------|----------|
-| DAI | 0x6B175474E89094C44Da98b954EedeAC495271d0F | Yes |
-| USDC | 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48 | Yes |
-| WETH | 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2 | Yes |
-| UNI | 0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984 | Yes |
+**Full Stack (Docker):**
+- `docker compose up -d --build`
+- Wait for health: `curl -sf http://localhost:8000/ethereum/health`
+- Frontend at http://localhost:8000/
+- API at http://localhost:8000/{chain}/endpoint
+- Docs at http://localhost:8000/{chain}/docs
 
-## Notes
+## Testing Tools
 
-- Dev compose is ETH only. /arbitrum/, /optimism/, /base/ routes return 502 JSON.
-- First Docker build takes ~60s due to mypyc compilation of ypricemagic.
-- Price lookups require a working RPC connection to the Ethereum node.
+- **agent-browser**: For frontend UI testing (forms, modals, autocomplete, theme)
+- **curl**: For API endpoint testing
+- **pytest**: For backend unit/integration tests
+- **vitest**: For frontend unit tests
+
+## Known Quirks
+
+- Backend containers take 30-60s to start (brownie network registration)
+- Bucket classification is slow (10-30s per call)
+- The tokenlist proxy requires a valid HTTPS URL to a tokenlist endpoint
+- Amount-based price queries are not cached and may be slow

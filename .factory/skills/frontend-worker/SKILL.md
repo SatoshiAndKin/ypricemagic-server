@@ -1,6 +1,6 @@
 ---
 name: frontend-worker
-description: Frontend worker for vanilla JS UI features in ypricemagic-server
+description: Svelte 5 + Vite + TypeScript frontend worker for ypricemagic-server
 ---
 
 # Frontend Worker
@@ -9,83 +9,179 @@ NOTE: Startup and cleanup are handled by `worker-base`. This skill defines the W
 
 ## When to Use This Skill
 
-Use for features involving the browser UI: HTML, CSS, vanilla JavaScript, static file serving, autocomplete components, modals, localStorage management, tokenlist handling, charts, and theming.
+Use for all Svelte frontend features: project scaffolding, components, API client, tokenlist engine, autocomplete, forms, modals, theming, URL state, localStorage, tests, and build config.
+
+## Technology Stack
+
+- **Svelte 5** with runes syntax (`$state`, `$derived`, `$effect`, `$props`)
+- **Vite** for dev server and production builds
+- **TypeScript** for all code
+- **Vitest** for unit tests
+- **No additional UI frameworks** — use native Svelte components and CSS
+
+## Critical Svelte 5 Patterns
+
+- Use `let x = $state(value)` for reactive state, NOT `let x = value` with `$:`
+- Use `let { prop } = $props()` for component props, NOT `export let prop`
+- Use `onclick={handler}` for events, NOT `on:click={handler}`
+- Use `$derived(expr)` for computed values, NOT `$: derived = expr`
+- Use `$state.raw(value)` for large non-proxied objects (API responses)
+- Use `{#snippet name()}...{/snippet}` + `{@render name()}` instead of `<slot>`
+- Effects (`$effect`) are escape hatches — prefer `$derived` where possible
 
 ## Work Procedure
 
-1. **Read the feature description** carefully. Understand what assertions this feature fulfills (check the `fulfills` field).
+### 1. Understand the Feature
 
-2. **Read existing code** before writing anything:
-   - `static/index.html` — page structure, forms, modals
-   - `static/js/app.js` — all JavaScript logic, tokenlist management, form handlers, autocomplete
-   - `static/css/style.css` — all styles, CSS custom properties for theming
-   - `src/server.py` for the `/` endpoint and StaticFiles mount
-   - `nginx.conf` for static file routing
-   - `.factory/library/tokenlist-format.md` for tokenlist schema
-   - `.factory/library/architecture.md` for the UI architecture
+Read the feature description, preconditions, expectedBehavior, verificationSteps, and fulfills carefully. Read AGENTS.md for conventions. Check `.factory/library/` for relevant context.
 
-3. **Write tests first** (where applicable):
-   - For Python changes (e.g., StaticFiles mount), write pytest tests
-   - Run `uv run pytest` to confirm tests fail (red)
-   - For JS-only changes, manual browser verification is the primary test method
+### 2. Read Existing Code
 
-4. **Implement the feature**:
-   - Vanilla JS only — NO frameworks (React, Vue, etc.), NO npm, NO build tools
-   - Follow existing code style: `escapeHtml()` for all user/tokenlist data, system-ui font stack
-   - All tokenlist data rendered in the DOM MUST be escaped (XSS prevention)
-   - Keep JavaScript in `static/js/app.js` — do not split into multiple JS files unless the feature description says to
-   - Use semantic HTML elements where appropriate
-   - **Theming**: Use CSS custom properties (e.g., `var(--bg-primary)`) for all colors. Define light/dark values using `[data-theme="dark"]` and `[data-theme="light"]` selectors. System default uses `@media (prefers-color-scheme: dark)`.
-   - **Charts**: Use lightweight-charts from CDN. The script tag goes in index.html. Chart creation/update logic in app.js.
-   - **localStorage keys**: `theme` for theme preference, `defaultPairs` for per-chain default token pairs, existing keys (`tokenlists`, `tokenlistStates`, `localTokens`) unchanged.
+**For the first feature (scaffold):**
+- Read the current `static/index.html`, `static/js/app.js`, `static/css/style.css` to understand what to port
+- Read `.factory/library/architecture.md` and `.factory/library/tokenlist-format.md`
 
-5. **Run validators**:
-   - `uv run pytest` — all existing tests must pass
-   - `uv run ruff check .` — no lint errors
-   - `uv run ruff format --check .` — formatting OK
-   - `uv run mypy src/` — type checks pass (for Python changes)
+**For subsequent features:**
+- Read the existing `frontend/` directory structure
+- Read any components already created
+- Read `frontend/src/lib/` for shared utilities and stores
 
-6. **Manual verification** with agent-browser:
-   - Navigate to http://localhost:8000
-   - Test each user interaction described in the feature's `expectedBehavior`
-   - For forms: fill inputs, submit, verify results appear
-   - For autocomplete: type in token input, verify dropdown, select, verify fill
-   - For modals: test open/close, button actions
-   - For charts: verify rendering, zoom, tooltips
-   - For theming: toggle modes, verify all areas render correctly
-   - Take screenshots as evidence
+### 3. Reference the Original Implementation
 
-7. **Rebuild Docker if needed**: If you changed Python files, nginx.conf, or Dockerfile:
-   - `docker compose down && docker compose build && docker compose up -d`
-   - Wait for health: `sleep 60 && curl -sf http://localhost:8000/ethereum/health`
+The vanilla JS app at `static/js/app.js` (~2257 lines) is the behavioral specification. When porting a feature:
+- Read the relevant section of `app.js` to understand EXACT behavior
+- Match ALL edge cases, error handling, and state management
+- Preserve localStorage key names and data schemas exactly:
+  - `theme` — "light" | "dark" (removed for "system")
+  - `defaultPairs` — `{ [chain]: { from: addr, to: addr } }`
+  - `tokenlists` — array of tokenlist objects with tokens
+  - `localTokens` — array of token objects
+  - `tokenlistStates` — `{ [key]: boolean }`
+
+### 4. Write Tests First (TDD)
+
+Write Vitest tests BEFORE implementation for:
+- API client functions (URL construction, response parsing, error handling)
+- Tokenlist index building and search
+- URL state parsing
+- Any pure logic functions
+
+Test file convention: `*.test.ts` next to the module being tested, or in `__tests__/`.
+
+Run: `cd frontend && npm test -- --run` to verify tests fail.
+
+### 5. Implement
+
+**Project structure** (for scaffold feature):
+```
+frontend/
+  src/
+    lib/
+      api.ts          — API client (configurable base URL)
+      types.ts        — TypeScript interfaces for API responses
+      stores/         — Shared state (tokenlists, theme, chain)
+      components/     — Reusable Svelte components
+    routes/           — Page components (if using routing)
+    App.svelte        — Root component
+    main.ts           — Entry point
+    app.css           — Global styles (CSS custom properties for theming)
+  public/
+    tokenlists/
+      uniswap-default.json  — Bundled default tokenlist
+  index.html          — HTML shell with inline theme script
+  vite.config.ts      — Vite config with dev proxy
+  tsconfig.json
+  package.json
+```
+
+**API client pattern:**
+```typescript
+const API_BASE = import.meta.env.VITE_API_BASE_URL || '';
+
+export async function fetchQuote(chain: string, params: QuoteParams) {
+  const url = `${API_BASE}/${chain}/quote?${new URLSearchParams(...)}`;
+  const res = await fetch(url);
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
+    throw new Error(body.error || `Request failed: ${res.status}`);
+  }
+  return res.json();
+}
+```
+
+**Theme system:**
+- Inline `<script>` in `index.html` `<head>` (before CSS) for FOUC prevention
+- CSS custom properties with `[data-theme="dark"]` and `[data-theme="light"]`
+- Svelte theme store syncs with localStorage and `data-theme` attribute
+
+**Autocomplete component:**
+- Debounced search (150ms)
+- Keyboard navigation (ArrowUp/Down, Enter, Escape, Tab)
+- Mouse hover highlight, mousedown selection (preventDefault to prevent blur)
+- Token icon with onerror fallback
+- "No matches" text when empty results
+- Disambiguation badges when symbols collide
+
+**Important behaviors to preserve:**
+- Amount defaults to '1' on quote submit if empty
+- "/" in block field switches to datetime-local input type
+- Unknown token modal suppressed for URL-populated and chain-change values
+- Batch form does NOT check unknown tokens (unlike quote/bucket)
+- Chain mismatch warning in results
+- 3 parallel API calls on quote submit (quote + 2 price lookups)
+- Live age counter with interval cleanup
+- HTML escaping for all dynamic content
+
+### 6. Run Validators
+
+```bash
+cd frontend && npm run build
+cd frontend && npx svelte-check --tsconfig ./tsconfig.json
+cd frontend && npm test -- --run
+```
+
+All must pass. Fix any TypeScript errors or test failures.
+
+### 7. Manual Verification with agent-browser
+
+For UI features, verify with agent-browser:
+- Start the dev server: `cd frontend && npm run dev` (port 5173)
+- Navigate to http://localhost:5173
+- Test each interaction in the feature's `expectedBehavior`
+- Take snapshots as evidence
+- Kill the dev server when done
+
+### 8. Commit
+
+Commit all changes with a clear message.
 
 ## Example Handoff
 
 ```json
 {
-  "salientSummary": "Extracted inline HTML from server.py into static/index.html, static/js/app.js, and static/css/style.css. Added FastAPI StaticFiles mount and nginx /static/ location. All 3 forms (single price, batch, bucket) verified working via agent-browser. 236 tests pass (2 new for static serving).",
-  "whatWasImplemented": "Separated the monolithic INDEX_HTML string into three static files. Created static/ directory structure with tokenlists subdirectory. Mounted StaticFiles in FastAPI at /static. Updated nginx.conf with location /static/ block. Updated Dockerfile to COPY static/ into container. Downloaded Uniswap tokenlist to static/tokenlists/uniswap-default.json. Changed / endpoint to serve static/index.html via FileResponse.",
+  "salientSummary": "Built quote form component with from/to autocomplete, amount warning, block/date picker, loading states, error display, trade path rendering, USD prices, live age counter, and chain mismatch warning. 12 Vitest tests for API client and URL construction. svelte-check clean. Verified all interactions via agent-browser.",
+  "whatWasImplemented": "QuoteForm.svelte with full feature parity: token inputs with Autocomplete component, amount field with cache warning, block/date picker (/ trigger, Clear link), loading state (Fetching..., disabled button), error display, result rendering with conversion rate + USD prices + trade path + live age counter + chain mismatch warning. Reset Defaults button. Unknown token modal integration. 3 parallel API calls (quote + 2 prices). API client functions in api.ts with error envelope handling.",
   "whatWasLeftUndone": "",
   "verification": {
     "commandsRun": [
-      { "command": "uv run pytest", "exitCode": 0, "observation": "236 passed, 2 new static file tests" },
-      { "command": "uv run ruff check .", "exitCode": 0, "observation": "clean" },
-      { "command": "uv run mypy src/", "exitCode": 0, "observation": "clean" },
-      { "command": "docker compose build && docker compose up -d", "exitCode": 0, "observation": "rebuilt with static files" },
-      { "command": "curl -sf http://localhost:8000/static/js/app.js | head -1", "exitCode": 0, "observation": "returns JS content" }
+      {"command": "cd frontend && npm run build", "exitCode": 0, "observation": "Build successful, dist/ created"},
+      {"command": "cd frontend && npx svelte-check", "exitCode": 0, "observation": "0 errors"},
+      {"command": "cd frontend && npm test -- --run", "exitCode": 0, "observation": "12 tests passed"}
     ],
     "interactiveChecks": [
-      { "action": "Navigate to http://localhost:8000, verify page loads with styling", "observed": "Page renders correctly with all forms visible" },
-      { "action": "Submit single price form with DAI address", "observed": "Price result displayed: $1.00" },
-      { "action": "Switch chain to Arbitrum, submit batch form", "observed": "Batch results table rendered correctly" },
-      { "action": "Type / in block field", "observed": "Date picker appeared, clear link works" }
+      {"action": "Navigate to http://localhost:5173, fill quote form, submit", "observed": "Quote result displayed with conversion rate, USD prices, trade path, age counter"},
+      {"action": "Type / in block field", "observed": "Switched to date picker, Clear link appeared"},
+      {"action": "Enter amount, verify warning", "observed": "Yellow cache warning shown"},
+      {"action": "Click Reset Defaults", "observed": "Tokens reverted to factory defaults for current chain"},
+      {"action": "Submit with unknown token address", "observed": "Unknown token modal appeared with Save/Continue/Reject options"}
     ]
   },
   "tests": {
     "added": [
-      { "file": "src/tests/test_static.py", "cases": [
-        { "name": "test_static_js_served", "verifies": "GET /static/js/app.js returns 200 with JS content-type" },
-        { "name": "test_static_css_served", "verifies": "GET /static/css/style.css returns 200" }
+      {"file": "frontend/src/lib/api.test.ts", "cases": [
+        {"name": "fetchQuote builds correct URL", "verifies": "URL includes chain, from, to, amount params"},
+        {"name": "fetchQuote handles error envelope", "verifies": "Throws with error message from JSON body"},
+        {"name": "fetchQuote handles non-JSON error", "verifies": "Throws with HTTP status when body is not JSON"}
       ]}
     ]
   },
@@ -95,7 +191,8 @@ Use for features involving the browser UI: HTML, CSS, vanilla JavaScript, static
 
 ## When to Return to Orchestrator
 
-- The Docker containers won't start or are unhealthy after rebuild
-- A required endpoint behavior changed unexpectedly
-- The feature requires server-side changes not described in the feature description
-- localStorage quota or browser API issues that can't be worked around
+- A required Svelte 5 API or pattern doesn't work as expected
+- The backend API response shape differs from what's documented
+- Node.js / npm dependency issues that can't be resolved
+- Feature requires backend changes not in the feature description
+- The existing vanilla JS behavior is ambiguous and the feature description doesn't clarify

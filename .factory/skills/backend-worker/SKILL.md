@@ -1,6 +1,6 @@
 ---
 name: backend-worker
-description: Python backend worker for ypricemagic-server features
+description: Python backend worker for ypricemagic-server API cleanup
 ---
 
 # Backend Worker
@@ -9,50 +9,50 @@ NOTE: Startup and cleanup are handled by `worker-base`. This skill defines the W
 
 ## When to Use This Skill
 
-Use for all ypricemagic-server features: API endpoint changes, param parsing, caching, error handling, tests, and openapi.json updates.
+Use for backend API features: removing static file serving, enabling Swagger/ReDoc, CORS config, endpoint changes, param validation, tests, and openapi updates.
 
 ## Work Procedure
 
 ### 1. Understand the Feature
 
-Read the feature description, preconditions, expectedBehavior, and verificationSteps carefully. Read AGENTS.md for conventions and boundaries. If anything is ambiguous, check the existing code for patterns.
+Read the feature description, preconditions, expectedBehavior, verificationSteps, and fulfills carefully. Read AGENTS.md for boundaries. Check `.factory/library/architecture.md` for existing patterns.
 
 ### 2. Read Existing Code
 
 Before writing anything, read the files you'll modify:
-- `src/server.py` — endpoint definitions, error handling, response shapes
-- `src/params.py` — parameter validation patterns (ParseResult, ParseError, ParseSuccess, parse_price_params, parse_batch_params)
-- `src/cache.py` — caching logic (make_key, get/set patterns, diskcache)
+- `src/server.py` — endpoint definitions, middleware, static file serving, error handling
+- `src/params.py` — parameter validation patterns
+- `src/cache.py` — caching logic
 - Relevant test files in `src/tests/`
-- `openapi.json` — if updating API docs
 
-Understand the EXISTING patterns before adding new code.
+Key patterns:
+- Error responses use `{"error": "<message>"}` envelope format
+- All ypricemagic/brownie imports are lazy (inside functions)
+- Type annotations on all public functions (mypy strict)
+- `CORSMiddleware` with current config
+- `StaticFiles` mount and `FileResponse` for index.html (to be removed)
 
 ### 3. Write Tests First (TDD)
 
 Write failing tests BEFORE implementation:
-- For params: add test classes/methods in `test_params.py` following existing style (TestIsValidAddress, TestParsePriceParams patterns)
-- For cache: add tests in `test_cache.py` following existing style (tmp_path + mock.patch)
-- For server behavior: use `test_server.py`, using `unittest.mock.patch` to mock ypricemagic imports (they're lazy imports inside functions, so patch the import path at the call site)
-- Every expectedBehavior item should have at least one test
+- Follow existing test patterns in `src/tests/test_server.py` and `src/tests/test_params.py`
+- Use `unittest.mock.patch` for ypricemagic mocks
+- Each `expectedBehavior` item needs at least one test
+- If removing features (e.g., static file serving), update or remove the corresponding tests in `test_static.py`
 
-Run tests to confirm they fail: `uv run pytest -x -q`
+Run: `uv run pytest -x -q` — confirm new tests fail, existing unrelated tests pass.
 
 ### 4. Implement
 
-Write the implementation to make tests pass:
-- Follow existing code style exactly (double quotes, type annotations, error patterns)
-- Use the `{"error": "<message>"}` format for all error responses
-- Keep imports lazy for ypricemagic/brownie (inside functions, not at module top)
-- Type all functions with mypy-strict annotations
-- New endpoints: follow the existing pattern in server.py (Query params, parse function, error handling, Prometheus metrics)
-- New dataclasses: follow PriceParams/BatchParams pattern in params.py
-- Cache operations: use existing get_cached_price/set_cached_price patterns
-- For async background tasks: use `asyncio.create_task()` — do not block the response
+- Follow existing code style exactly (double quotes, 4-space indent, 100 char lines)
+- Use ruff format conventions
+- For removing static serving: remove the `StaticFiles` mount, remove the `GET /` FileResponse route, remove related imports
+- For enabling /docs and /redoc: FastAPI enables these by default — ensure `docs_url` and `redoc_url` are NOT set to `None`
+- For CORS: update `CORSMiddleware` allow_origins to be configurable via environment variable
+- Keep all existing endpoint behavior unchanged
 
 ### 5. Run All Validators
 
-After implementation, run ALL of these:
 ```bash
 uv run pytest -x -q
 uv run mypy src/
@@ -60,48 +60,48 @@ uv run ruff check src/
 uv run ruff format --check src/
 ```
 
-Fix any failures before proceeding. If ruff format fails, run `uv run ruff format src/` to auto-fix.
+Fix all failures. Auto-fix formatting with `uv run ruff format src/` if needed.
 
-### 6. Manual Verification (if applicable)
+### 6. Manual Verification
 
-For features that modify API behavior:
-- If Docker stack is running, rebuild: `docker compose down && docker compose build && docker compose up -d`
-- Wait for health: `sleep 60 && curl -sf http://localhost:8000/ethereum/health`
-- Test with curl against localhost:8000 — check response shapes, status codes
-- Verify backwards compatibility (existing endpoints unchanged)
+For API behavior changes:
+- Use `uv run pytest` (covers API via httpx TestClient)
+- If Docker is running, curl endpoints to verify
+- Verify `/docs` and `/redoc` return HTML
+- Verify `/openapi.json` includes all endpoints
+- Verify removed routes return 404
 
 ### 7. Commit
 
-Commit all changes with a clear message describing what was implemented.
+Commit all changes with a clear message.
 
 ## Example Handoff
 
 ```json
 {
-  "salientSummary": "Added skip_cache, ignore_pools, and silent query params to GET /price. Added parse_bool_param and parse_ignore_pools to params.py with full validation. Server passes all three through to get_price(). skip_cache bypasses server cache read but still writes. 18 new tests in test_params.py, all passing. mypy and ruff clean.",
-  "whatWasImplemented": "New optional query params (skip_cache, ignore_pools, silent) on GET /price endpoint with full validation, forwarding to ypricemagic, and cache bypass logic. Comprehensive test coverage for all param parsing edge cases.",
+  "salientSummary": "Removed static file serving from FastAPI (GET /, /static mount). Verified /docs and /redoc are accessible. Updated CORS to use CORS_ORIGINS env var. Removed test_static.py tests for removed features. Added 4 new tests for docs/redoc/openapi endpoints. 301 tests pass, mypy and ruff clean.",
+  "whatWasImplemented": "Removed StaticFiles mount and GET / FileResponse route from server.py. Removed FileResponse and StaticFiles imports. Verified FastAPI's built-in /docs, /redoc, /openapi.json are active. Updated CORSMiddleware to read CORS_ORIGINS from env (comma-separated, defaults to *). Removed 4 static file tests, added 4 docs endpoint tests.",
   "whatWasLeftUndone": "",
   "verification": {
     "commandsRun": [
-      {"command": "uv run pytest -x -q", "exitCode": 0, "observation": "65 passed in 0.08s"},
-      {"command": "uv run mypy src/", "exitCode": 0, "observation": "Success: no issues found in 10 source files"},
+      {"command": "uv run pytest -x -q", "exitCode": 0, "observation": "301 passed"},
+      {"command": "uv run mypy src/", "exitCode": 0, "observation": "Success"},
       {"command": "uv run ruff check src/", "exitCode": 0, "observation": "All checks passed"},
-      {"command": "uv run ruff format --check src/", "exitCode": 0, "observation": "4 files already formatted"}
+      {"command": "uv run ruff format --check src/", "exitCode": 0, "observation": "formatted"}
     ],
     "interactiveChecks": [
-      {"action": "curl GET /{chain}/price with skip_cache=true and valid token", "observed": "200 with cached:false, valid price"},
-      {"action": "curl GET /{chain}/price with skip_cache=maybe", "observed": "400 with error about invalid boolean"}
+      {"action": "curl GET /docs via TestClient", "observed": "200 HTML with Swagger UI"},
+      {"action": "curl GET / via TestClient", "observed": "404 not found"},
+      {"action": "curl GET /static/js/app.js via TestClient", "observed": "404 not found"}
     ]
   },
   "tests": {
     "added": [
-      {"file": "src/tests/test_params.py", "cases": [
-        {"name": "test_parse_bool_param_true", "verifies": "true/True/1 accepted"},
-        {"name": "test_parse_bool_param_false", "verifies": "false/False/0 accepted"},
-        {"name": "test_parse_bool_param_invalid", "verifies": "maybe/2/empty returns error"},
-        {"name": "test_parse_ignore_pools_valid", "verifies": "comma-separated addresses parsed correctly"},
-        {"name": "test_parse_ignore_pools_invalid_address", "verifies": "invalid address returns error"},
-        {"name": "test_parse_ignore_pools_empty", "verifies": "empty string returns empty tuple"}
+      {"file": "src/tests/test_server.py", "cases": [
+        {"name": "test_docs_accessible", "verifies": "GET /docs returns 200"},
+        {"name": "test_redoc_accessible", "verifies": "GET /redoc returns 200"},
+        {"name": "test_openapi_json", "verifies": "GET /openapi.json returns valid JSON"},
+        {"name": "test_static_removed", "verifies": "GET / and /static return 404"}
       ]}
     ]
   },
@@ -111,8 +111,7 @@ Commit all changes with a clear message describing what was implemented.
 
 ## When to Return to Orchestrator
 
-- Feature depends on a ypricemagic function that doesn't exist or has a different signature than documented
-- Docker build fails due to dependency issues you can't resolve by adjusting build constraints
-- Existing tests break in ways unrelated to your changes
-- A required service (Docker, nginx) is down and you can't restart it
-- The feature description is contradictory or ambiguous in ways that affect implementation direction
+- Feature depends on ypricemagic internals that don't match expected behavior
+- Docker build fails due to dependency issues
+- Existing tests break for reasons unrelated to this feature
+- Feature description is ambiguous about whether to keep or remove something
