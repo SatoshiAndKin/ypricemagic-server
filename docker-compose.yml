@@ -1,3 +1,7 @@
+networks:
+  proxy:
+    name: ypm-proxy
+
 services:
   traefik:
     image: traefik:v3.2
@@ -5,11 +9,14 @@ services:
     command:
       - "--providers.docker=true"
       - "--providers.docker.exposedbydefault=false"
+      - "--providers.docker.network=ypm-proxy"
       - "--entrypoints.web.address=:80"
       - "--api.dashboard=false"
       - "--ping=true"
     ports:
       - "${PORT:-8000}:80"
+    networks:
+      - proxy
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
     restart: unless-stopped
@@ -47,6 +54,8 @@ services:
       - "traefik.http.routers.health.rule=Path(`/health`)"
       - "traefik.http.routers.health.entrypoints=web"
       - "traefik.http.routers.health.service=ethereum"
+    networks:
+      - proxy
     restart: unless-stopped
     stop_grace_period: 30s
 
@@ -75,6 +84,8 @@ services:
       - "traefik.http.middlewares.strip-arbitrum.stripprefix.prefixes=/arbitrum"
       - "traefik.http.routers.arbitrum.middlewares=strip-arbitrum"
       - "traefik.http.services.arbitrum.loadbalancer.server.port=8001"
+    networks:
+      - proxy
     restart: unless-stopped
     stop_grace_period: 30s
 
@@ -103,6 +114,8 @@ services:
       - "traefik.http.middlewares.strip-optimism.stripprefix.prefixes=/optimism"
       - "traefik.http.routers.optimism.middlewares=strip-optimism"
       - "traefik.http.services.optimism.loadbalancer.server.port=8001"
+    networks:
+      - proxy
     restart: unless-stopped
     stop_grace_period: 30s
 
@@ -131,6 +144,8 @@ services:
       - "traefik.http.middlewares.strip-base.stripprefix.prefixes=/base"
       - "traefik.http.routers.base.middlewares=strip-base"
       - "traefik.http.services.base.loadbalancer.server.port=8001"
+    networks:
+      - proxy
     restart: unless-stopped
     stop_grace_period: 30s
 
@@ -144,6 +159,8 @@ services:
       - "traefik.http.routers.frontend.entrypoints=web"
       - "traefik.http.routers.frontend.priority=1"
       - "traefik.http.services.frontend.loadbalancer.server.port=8080"
+    networks:
+      - proxy
     healthcheck:
       test: ["CMD", "curl", "-sf", "http://localhost:8080/"]
       interval: 30s
