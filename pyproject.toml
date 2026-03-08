@@ -7,6 +7,7 @@ dependencies = [
     "fastapi",
     "uvicorn[standard]",
     "diskcache",
+    "httpx>=0.27,<1.0",
     "structlog",
     "prometheus-client",
     "tenacity",
@@ -24,7 +25,6 @@ dev = [
     "deptry",
     "vulture",
     "pre-commit",
-    "httpx>=0.27,<1.0",
 ]
 
 [tool.uv]
@@ -85,4 +85,4 @@ fail_under = 80
 show_missing = true
 
 [tool.deptry]
-per_rule_ignores = {DEP002 = ["uvicorn", "setuptools", "pre-commit", "pytest-cov", "pytest-randomly", "pytest-asyncio", "mypy", "ruff", "deptry", "vulture", "httpx"], DEP003 = ["brownie", "dank_mids", "y", "web3", "yaml"]}
+per_rule_ignores = {DEP002 = ["uvicorn", "setuptools", "pre-commit", "pytest-cov", "pytest-randomly", "pytest-asyncio", "mypy", "ruff", "deptry", "vulture"], DEP003 = ["brownie", "dank_mids", "y", "web3", "yaml"]}
