@@ -718,7 +718,6 @@ async def price(
     amount: str | None = Query(None),
     skip_cache: str | None = Query(None),
     ignore_pools: str | None = Query(None),
-    silent: str | None = Query(None),
     timestamp: str | None = Query(None),
 ) -> Any:
     result = parse_price_params(token, to, block, amount, skip_cache, ignore_pools, timestamp)
@@ -744,10 +743,8 @@ async def prices(
     tokens: str | None = Query(None),
     block: str | None = Query(None),
     amounts: str | None = Query(None),
-    to: str | None = Query(None),
     timestamp: str | None = Query(None),
     skip_cache: str | None = Query(None),
-    silent: str | None = Query(None),
 ) -> Any:
     """Batch pricing endpoint.
 
@@ -761,7 +758,6 @@ async def prices(
     Partial failures return 200 with null prices for failed tokens.
     All-failures also return 200.
     """
-    _ = to, silent
     result = parse_batch_params(tokens, block, amounts, timestamp, skip_cache)
     if isinstance(result, ParseError):
         batch_requests_total.labels(chain=CHAIN_NAME, status="bad_request").inc()
