@@ -425,10 +425,49 @@
           </div>
         {/if}
 
-        <div class="result-row">
-          <span class="result-label">Route</span>
-          <span class="result-value result-value-muted">{q.route}</span>
-        </div>
+        {#if q.from_trade_path && q.from_trade_path.length > 0}
+          <div class="result-row result-row-route">
+            <span class="result-label">{fromSym} Route</span>
+            <span class="result-value">
+              <ol class="route-list">
+                {#each q.from_trade_path as step, i}
+                  <li class="route-step">
+                    <span class="route-step-num">{i + 1}.</span>
+                    <span class="route-step-source">{step.source}</span>
+                    {#if step.pool}
+                      <span class="route-step-pool" title={step.pool}>
+                        via <code>{step.pool.slice(0, 10)}...</code>
+                      </span>
+                    {/if}
+                    <span class="route-step-price">@ {formatNumber(step.price)}</span>
+                  </li>
+                {/each}
+              </ol>
+            </span>
+          </div>
+        {/if}
+
+        {#if q.to_trade_path && q.to_trade_path.length > 0}
+          <div class="result-row result-row-route">
+            <span class="result-label">{toSym} Route</span>
+            <span class="result-value">
+              <ol class="route-list">
+                {#each q.to_trade_path as step, i}
+                  <li class="route-step">
+                    <span class="route-step-num">{i + 1}.</span>
+                    <span class="route-step-source">{step.source}</span>
+                    {#if step.pool}
+                      <span class="route-step-pool" title={step.pool}>
+                        via <code>{step.pool.slice(0, 10)}...</code>
+                      </span>
+                    {/if}
+                    <span class="route-step-price">@ {formatNumber(step.price)}</span>
+                  </li>
+                {/each}
+              </ol>
+            </span>
+          </div>
+        {/if}
       </div>
     </div>
   {/if}
