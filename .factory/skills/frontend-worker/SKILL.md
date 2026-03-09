@@ -126,11 +126,17 @@ export async function fetchQuote(chain: string, params: QuoteParams) {
 - Amount defaults to '1' on quote submit if empty
 - "/" in block field switches to datetime-local input type
 - Unknown token modal suppressed for URL-populated and chain-change values
-- Batch form does NOT check unknown tokens (unlike quote/bucket)
 - Chain mismatch warning in results
-- 3 parallel API calls on quote submit (quote + 2 price lookups)
 - Live age counter with interval cleanup
 - HTML escaping for all dynamic content
+
+**Behaviors being CHANGED (this mission):**
+- Quote form now makes ONE API call (fetchPrice with to param), NOT 3 parallel calls
+- The consolidated /price?to=... response includes from_price/to_price directly
+- fetchQuote is removed, replaced by fetchPrice with optional to/amount params
+- All fetch calls use 15s AbortController timeout
+- Chain switch aborts pending fetches
+- "Reset Defaults" button removed from QuoteForm
 
 ### 6. Run Validators
 

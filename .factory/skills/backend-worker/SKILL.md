@@ -1,6 +1,6 @@
 ---
 name: backend-worker
-description: Python backend worker for ypricemagic-server API cleanup
+description: Python backend worker for ypricemagic-server API changes
 ---
 
 # Backend Worker
@@ -9,7 +9,7 @@ NOTE: Startup and cleanup are handled by `worker-base`. This skill defines the W
 
 ## When to Use This Skill
 
-Use for backend API features: removing static file serving, enabling Swagger/ReDoc, CORS config, endpoint changes, param validation, tests, and openapi updates.
+Use for backend API features: endpoint changes, param validation, OpenAPI config, Sentry integration, env documentation, tests.
 
 ## Work Procedure
 
@@ -20,17 +20,17 @@ Read the feature description, preconditions, expectedBehavior, verificationSteps
 ### 2. Read Existing Code
 
 Before writing anything, read the files you'll modify:
-- `src/server.py` — endpoint definitions, middleware, static file serving, error handling
-- `src/params.py` — parameter validation patterns
+- `src/server.py` — endpoint definitions, middleware, error handling, Prometheus metrics
+- `src/params.py` — parameter validation (PriceParams, BatchParams, QuoteParams)
 - `src/cache.py` — caching logic
-- Relevant test files in `src/tests/`
+- `src/tests/test_server.py` and `src/tests/test_params.py` — existing test patterns
 
 Key patterns:
 - Error responses use `{"error": "<message>"}` envelope format
 - All ypricemagic/brownie imports are lazy (inside functions)
 - Type annotations on all public functions (mypy strict)
-- `CORSMiddleware` with current config
-- `StaticFiles` mount and `FileResponse` for index.html (to be removed)
+- `_fetch_price()` and `_fetch_batch_prices()` are the core price-fetching functions
+- Quote logic is currently in the `/quote` endpoint handler
 
 ### 3. Write Tests First (TDD)
 
@@ -38,7 +38,7 @@ Write failing tests BEFORE implementation:
 - Follow existing test patterns in `src/tests/test_server.py` and `src/tests/test_params.py`
 - Use `unittest.mock.patch` for ypricemagic mocks
 - Each `expectedBehavior` item needs at least one test
-- If removing features (e.g., static file serving), update or remove the corresponding tests in `test_static.py`
+- For removed features, write tests that assert 404/removal
 
 Run: `uv run pytest -x -q` — confirm new tests fail, existing unrelated tests pass.
 
@@ -46,10 +46,10 @@ Run: `uv run pytest -x -q` — confirm new tests fail, existing unrelated tests 
 
 - Follow existing code style exactly (double quotes, 4-space indent, 100 char lines)
 - Use ruff format conventions
-- For removing static serving: remove the `StaticFiles` mount, remove the `GET /` FileResponse route, remove related imports
-- For enabling /docs and /redoc: FastAPI enables these by default — ensure `docs_url` and `redoc_url` are NOT set to `None`
-- For CORS: update `CORSMiddleware` allow_origins to be configurable via environment variable
-- Keep all existing endpoint behavior unchanged
+- When modifying endpoints, ensure backward compatibility where specified
+- For timeout wrapping: use `asyncio.wait_for(coro, timeout=10.0)`, catch `asyncio.TimeoutError`
+- For Sentry: `sentry_sdk.init()` before FastAPI app creation, gated on `SENTRY_DSN` env var
+- For OpenAPI: use FastAPI's built-in auto-generation, set `version=` from `importlib.metadata`
 
 ### 5. Run All Validators
 
@@ -66,10 +66,9 @@ Fix all failures. Auto-fix formatting with `uv run ruff format src/` if needed.
 
 For API behavior changes:
 - Use `uv run pytest` (covers API via httpx TestClient)
-- If Docker is running, curl endpoints to verify
-- Verify `/docs` and `/redoc` return HTML
-- Verify `/openapi.json` includes all endpoints
-- Verify removed routes return 404
+- For OpenAPI changes: verify `/openapi.json` via TestClient returns correct spec
+- For removed routes: verify 404 via TestClient
+- Check Prometheus /metrics if counters changed
 
 ### 7. Commit
 
