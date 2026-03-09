@@ -43,3 +43,14 @@ def configure_logging() -> None:
 
 def get_logger(name: str) -> structlog.stdlib.BoundLogger:
     return structlog.get_logger(name)  # type: ignore[no-any-return]
+
+
+def sanitize_error_message(msg: str) -> str:
+    """Strip RPC URLs and API keys from error messages before sending to clients."""
+    rpc_url = os.environ.get("RPC_URL", "")
+    etherscan_token = os.environ.get("ETHERSCAN_TOKEN", "")
+    if rpc_url and rpc_url in msg:
+        msg = msg.replace(rpc_url, "[REDACTED_URL]")
+    if etherscan_token and len(etherscan_token) > 4 and etherscan_token in msg:
+        msg = msg.replace(etherscan_token, "[REDACTED]")
+    return msg

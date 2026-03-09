@@ -28,7 +28,7 @@ from tenacity import (
 )
 
 from src.cache import get_cached_price, set_cached_price
-from src.logger import configure_logging, get_logger
+from src.logger import configure_logging, get_logger, sanitize_error_message
 from src.params import (
     ParseError,
     is_valid_address,
@@ -372,8 +372,8 @@ async def _resolve_block_from_timestamp(timestamp: int) -> int:
 
 
 def _make_error_response(status: int, message: str) -> JSONResponse:
-    """Create a JSON error response."""
-    return JSONResponse(status_code=status, content={"error": message})
+    """Create a JSON error response with sensitive data scrubbed."""
+    return JSONResponse(status_code=status, content={"error": sanitize_error_message(message)})
 
 
 def _make_timeout_response() -> JSONResponse:
