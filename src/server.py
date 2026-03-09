@@ -32,7 +32,6 @@ from src.params import (
     is_valid_address,
     parse_batch_params,
     parse_price_params,
-    parse_quote_params,
 )
 
 if TYPE_CHECKING:
@@ -42,6 +41,7 @@ configure_logging()
 logger = get_logger("server")
 
 CHAIN_NAME = os.environ.get("CHAIN_NAME", "ethereum")
+PRICE_TIMEOUT = 10.0
 
 # Prometheus metrics
 price_requests_total = Counter(
@@ -72,16 +72,6 @@ check_bucket_requests_total = Counter(
 check_bucket_request_duration_seconds = Histogram(
     "check_bucket_request_duration_seconds",
     "Check bucket request duration",
-    ["chain"],
-)
-quote_requests_total = Counter(
-    "quote_requests_total",
-    "Total quote requests",
-    ["chain", "status"],
-)
-quote_request_duration_seconds = Histogram(
-    "quote_request_duration_seconds",
-    "Quote request duration",
     ["chain"],
 )
 
@@ -251,7 +241,7 @@ def _serialize_trade_path(result: Any) -> list[dict[str, Any]] | None:
 @retry(
     stop=stop_after_attempt(2),
     wait=wait_exponential(multiplier=1, min=1, max=4),
-    retry=retry_if_exception_type((ConnectionError, TimeoutError, OSError)),
+    retry=retry_if_exception_type((ConnectionError, OSError)),
 )
 async def _fetch_price(
     token: str,
@@ -259,7 +249,6 @@ async def _fetch_price(
     amount: float | None = None,
     skip_cache: bool = False,
     ignore_pools: tuple[str, ...] = (),
-    silent: bool = False,
 ) -> tuple[float, list[dict[str, Any]] | None] | None:
     """Fetch a single token price. Returns (price, trade_path) or None."""
     from y import get_price
@@ -274,10 +263,8 @@ async def _fetch_price(
         kwargs["skip_cache"] = True
     if ignore_pools:
         kwargs["ignore_pools"] = ignore_pools
-    if silent:
-        kwargs["silent"] = True
 
-    p = await get_price(token, block, **kwargs)
+    p = await asyncio.wait_for(get_price(token, block, **kwargs), timeout=PRICE_TIMEOUT)
     if p is None:
         return None
     price_float = float(p)
@@ -294,7 +281,6 @@ async def _fetch_batch_prices(
     block: int,
     amounts: tuple[float | None, ...] | None = None,
     skip_cache: bool = False,
-    silent: bool = False,
 ) -> list[tuple[float, list[dict[str, Any]] | None] | None]:
     """Fetch prices for multiple tokens in parallel.
 
@@ -311,11 +297,9 @@ async def _fetch_batch_prices(
         kwargs["amounts"] = amounts
     if skip_cache:
         kwargs["skip_cache"] = True
-    if silent:
-        kwargs["silent"] = True
 
     try:
-        results = await get_prices(tokens, block, **kwargs)
+        results = await asyncio.wait_for(get_prices(tokens, block, **kwargs), timeout=PRICE_TIMEOUT)
         prices: list[tuple[float, list[dict[str, Any]] | None] | None] = []
         for i, p in enumerate(results):
             if p is None:
@@ -334,6 +318,9 @@ async def _fetch_batch_prices(
                     trade_path = _serialize_trade_path(p)
                     prices.append((price_float, trade_path))
         return prices
+    except TimeoutError:
+        logger.warning("batch_fetch_timed_out", block=block)
+        raise
     except Exception as e:
         logger.error("batch_fetch_failed", block=block, error=str(e))
         return [None] * len(tokens)
@@ -376,9 +363,13 @@ def _make_error_response(status: int, message: str) -> JSONResponse:
     return JSONResponse(status_code=status, content={"error": message})
 
 
+def _make_timeout_response() -> JSONResponse:
+    return _make_error_response(504, "Price lookup timed out after 10 seconds")
+
+
 def _handle_price_error(e: Exception, token: str, block: int, duration_ms: int) -> JSONResponse:
     """Handle exceptions from price fetching and return appropriate response."""
-    inner = e.__cause__ if isinstance(e, RetryError) else e
+    inner = e.last_attempt.exception() if isinstance(e, RetryError) else e
     msg = str(inner)
     price_requests_total.labels(chain=CHAIN_NAME, status="error").inc()
     logger.error(
@@ -392,10 +383,213 @@ def _handle_price_error(e: Exception, token: str, block: int, duration_ms: int) 
             502,
             f"Price source returned invalid value for {token} at block {block}",
         )
+    if isinstance(inner, TimeoutError):
+        return _make_timeout_response()
     return _make_error_response(
         500,
         f"Price lookup failed for {token} at block {block}: {msg}",
     )
+
+
+async def _resolve_price_block(params: Any) -> int | JSONResponse:
+    from brownie import chain as brownie_chain
+
+    if params.timestamp is None:
+        return params.block if params.block is not None else brownie_chain.height
+
+    try:
+        return await _resolve_block_from_timestamp(params.timestamp)
+    except Exception as e:
+        logger.error(
+            "timestamp_resolution_failed",
+            timestamp=params.timestamp,
+            error=str(e),
+        )
+        return _make_error_response(
+            502,
+            f"Failed to resolve timestamp {params.timestamp} to block: {e}",
+        )
+
+
+def _make_identity_quote_response(
+    token: str,
+    quote_to: str,
+    amount: float,
+    block: int,
+    block_timestamp: int | None,
+) -> dict[str, Any]:
+    return {
+        "from": token,
+        "to": quote_to,
+        "amount": amount,
+        "output_amount": amount,
+        "block": block,
+        "chain": CHAIN_NAME,
+        "block_timestamp": block_timestamp,
+        "route": "identity",
+        "from_price": None,
+        "to_price": None,
+        "from_trade_path": None,
+        "to_trade_path": None,
+    }
+
+
+def _make_quote_not_found_response(direction: str, token: str, block: int) -> JSONResponse:
+    return _make_error_response(
+        404,
+        f"No price found for {direction} token {token} at block {block} on {CHAIN_NAME}",
+    )
+
+
+async def _handle_quote_mode(
+    params: Any, actual_block: int, quote_to: str, quote_amount: float
+) -> Any:
+    start = time.monotonic()
+
+    if params.token.lower() == quote_to.lower():
+        block_timestamp = await _fetch_block_timestamp(actual_block)
+        duration_ms = int((time.monotonic() - start) * 1000)
+        price_requests_total.labels(chain=CHAIN_NAME, status="ok").inc()
+        price_request_duration_seconds.labels(chain=CHAIN_NAME).observe(duration_ms / 1000)
+        return _make_identity_quote_response(
+            params.token, quote_to, quote_amount, actual_block, block_timestamp
+        )
+
+    try:
+        from_result = await _fetch_price(
+            params.token,
+            actual_block,
+            amount=params.amount,
+            skip_cache=params.skip_cache,
+            ignore_pools=params.ignore_pools,
+        )
+    except Exception as e:
+        duration_ms = int((time.monotonic() - start) * 1000)
+        return _handle_price_error(e, params.token, actual_block, duration_ms)
+
+    if from_result is None:
+        price_requests_total.labels(chain=CHAIN_NAME, status="not_found").inc()
+        return _make_quote_not_found_response("from", params.token, actual_block)
+
+    from_price, from_trade_path = from_result
+
+    try:
+        to_result = await _fetch_price(quote_to, actual_block)
+    except Exception as e:
+        duration_ms = int((time.monotonic() - start) * 1000)
+        return _handle_price_error(e, quote_to, actual_block, duration_ms)
+
+    if to_result is None:
+        price_requests_total.labels(chain=CHAIN_NAME, status="not_found").inc()
+        return _make_quote_not_found_response("to", quote_to, actual_block)
+
+    to_price, to_trade_path = to_result
+    if to_price == 0.0:
+        price_requests_total.labels(chain=CHAIN_NAME, status="not_found").inc()
+        return _make_error_response(
+            404,
+            f"Cannot price destination token {quote_to} at block {actual_block} on {CHAIN_NAME}",
+        )
+
+    output_amount = quote_amount * (from_price / to_price)
+    block_timestamp = await _fetch_block_timestamp(actual_block)
+    duration_ms = int((time.monotonic() - start) * 1000)
+    price_requests_total.labels(chain=CHAIN_NAME, status="ok").inc()
+    price_request_duration_seconds.labels(chain=CHAIN_NAME).observe(duration_ms / 1000)
+    return {
+        "from": params.token,
+        "to": quote_to,
+        "amount": quote_amount,
+        "output_amount": output_amount,
+        "block": actual_block,
+        "chain": CHAIN_NAME,
+        "block_timestamp": block_timestamp,
+        "route": "divide",
+        "from_price": from_price,
+        "to_price": to_price,
+        "from_trade_path": from_trade_path,
+        "to_trade_path": to_trade_path,
+    }
+
+
+def _make_cached_price_response(
+    token: str, actual_block: int, cached: dict[str, Any]
+) -> dict[str, Any]:
+    return {
+        "chain": CHAIN_NAME,
+        "token": token,
+        "block": actual_block,
+        "price": cached["price"],
+        "cached": True,
+        "block_timestamp": cached.get("block_timestamp"),
+    }
+
+
+async def _handle_usd_price_mode(params: Any, actual_block: int) -> Any:
+    if params.amount is None and not params.skip_cache:
+        cached = get_cached_price(params.token, actual_block)
+        if cached is not None:
+            logger.info(
+                "cache_hit",
+                chain=CHAIN_NAME,
+                token=params.token[:10],
+                block=actual_block,
+                price=cached["price"],
+            )
+            price_requests_total.labels(chain=CHAIN_NAME, status="cache_hit").inc()
+            return _make_cached_price_response(params.token, actual_block, cached)
+
+    start = time.monotonic()
+    try:
+        fetch_result = await _fetch_price(
+            params.token,
+            actual_block,
+            amount=params.amount,
+            skip_cache=params.skip_cache,
+            ignore_pools=params.ignore_pools,
+        )
+    except Exception as e:
+        duration_ms = int((time.monotonic() - start) * 1000)
+        return _handle_price_error(e, params.token, actual_block, duration_ms)
+
+    if fetch_result is None:
+        price_requests_total.labels(chain=CHAIN_NAME, status="not_found").inc()
+        logger.warning("price_not_found", token=params.token[:10], block=actual_block)
+        return _make_error_response(
+            404,
+            f"No price found for {params.token} at block {actual_block} on {CHAIN_NAME}",
+        )
+
+    price_float, trade_path = fetch_result
+    duration_ms = int((time.monotonic() - start) * 1000)
+    block_timestamp = await _fetch_block_timestamp(actual_block)
+
+    if params.amount is None:
+        set_cached_price(params.token, actual_block, price_float, block_timestamp=block_timestamp)
+    price_requests_total.labels(chain=CHAIN_NAME, status="ok").inc()
+    price_request_duration_seconds.labels(chain=CHAIN_NAME).observe(duration_ms / 1000)
+    logger.info(
+        "price_fetched",
+        chain=CHAIN_NAME,
+        token=params.token[:10],
+        block=actual_block,
+        price=price_float,
+        amount=params.amount,
+        duration_ms=duration_ms,
+    )
+
+    response: dict[str, Any] = {
+        "chain": CHAIN_NAME,
+        "token": params.token,
+        "block": actual_block,
+        "price": price_float,
+        "cached": False,
+        "block_timestamp": block_timestamp,
+        "trade_path": trade_path,
+    }
+    if params.amount is not None:
+        response["amount"] = params.amount
+    return response
 
 
 async def _resolve_batch_block(
@@ -506,6 +700,7 @@ def _fill_batch_results(
 @app.get("/price")
 async def price(
     token: str | None = Query(None),
+    to: str | None = Query(None),
     block: str | None = Query(None),
     amount: str | None = Query(None),
     skip_cache: str | None = Query(None),
@@ -513,108 +708,22 @@ async def price(
     silent: str | None = Query(None),
     timestamp: str | None = Query(None),
 ) -> Any:
-    result = parse_price_params(token, block, amount, skip_cache, ignore_pools, silent, timestamp)
+    result = parse_price_params(token, to, block, amount, skip_cache, ignore_pools, timestamp)
     if isinstance(result, ParseError):
         price_requests_total.labels(chain=CHAIN_NAME, status="bad_request").inc()
         return _make_error_response(400, result.error)
 
     params = result.data
+    quote_to = params.to
+    quote_amount = params.amount if params.amount is not None else 1.0
+    actual_block = await _resolve_price_block(params)
+    if isinstance(actual_block, JSONResponse):
+        return actual_block
 
-    from brownie import chain as brownie_chain
+    if quote_to is not None:
+        return await _handle_quote_mode(params, actual_block, quote_to, quote_amount)
 
-    # Determine the block to use
-    if params.timestamp is not None:
-        try:
-            actual_block = await _resolve_block_from_timestamp(params.timestamp)
-        except Exception as e:
-            logger.error(
-                "timestamp_resolution_failed",
-                timestamp=params.timestamp,
-                error=str(e),
-            )
-            return _make_error_response(
-                502,
-                f"Failed to resolve timestamp {params.timestamp} to block: {e}",
-            )
-    else:
-        actual_block = params.block if params.block is not None else brownie_chain.height
-
-    # Check cache only if: no amount AND not skip_cache
-    if params.amount is None and not params.skip_cache:
-        cached = get_cached_price(params.token, actual_block)
-        if cached is not None:
-            logger.info(
-                "cache_hit",
-                chain=CHAIN_NAME,
-                token=params.token[:10],
-                block=actual_block,
-                price=cached["price"],
-            )
-            price_requests_total.labels(chain=CHAIN_NAME, status="cache_hit").inc()
-            return {
-                "chain": CHAIN_NAME,
-                "token": params.token,
-                "block": actual_block,
-                "price": cached["price"],
-                "cached": True,
-                "block_timestamp": cached.get("block_timestamp"),
-            }
-
-    start = time.monotonic()
-    try:
-        fetch_result = await _fetch_price(
-            params.token,
-            actual_block,
-            amount=params.amount,
-            skip_cache=params.skip_cache,
-            ignore_pools=params.ignore_pools,
-            silent=params.silent,
-        )
-    except Exception as e:
-        duration_ms = int((time.monotonic() - start) * 1000)
-        return _handle_price_error(e, params.token, actual_block, duration_ms)
-
-    # Handle None return from get_price with fail_to_None=True
-    if fetch_result is None:
-        price_requests_total.labels(chain=CHAIN_NAME, status="not_found").inc()
-        logger.warning("price_not_found", token=params.token[:10], block=actual_block)
-        return _make_error_response(
-            404,
-            f"No price found for {params.token} at block {actual_block} on {CHAIN_NAME}",
-        )
-
-    price_float, trade_path = fetch_result
-    duration_ms = int((time.monotonic() - start) * 1000)
-
-    # Fetch block timestamp
-    block_timestamp = await _fetch_block_timestamp(actual_block)
-
-    if params.amount is None:
-        set_cached_price(params.token, actual_block, price_float, block_timestamp=block_timestamp)
-    price_requests_total.labels(chain=CHAIN_NAME, status="ok").inc()
-    price_request_duration_seconds.labels(chain=CHAIN_NAME).observe(duration_ms / 1000)
-    logger.info(
-        "price_fetched",
-        chain=CHAIN_NAME,
-        token=params.token[:10],
-        block=actual_block,
-        price=price_float,
-        amount=params.amount,
-        duration_ms=duration_ms,
-    )
-
-    response: dict[str, Any] = {
-        "chain": CHAIN_NAME,
-        "token": params.token,
-        "block": actual_block,
-        "price": price_float,
-        "cached": False,
-        "block_timestamp": block_timestamp,
-        "trade_path": trade_path,
-    }
-    if params.amount is not None:
-        response["amount"] = params.amount
-    return response
+    return await _handle_usd_price_mode(params, actual_block)
 
 
 @app.get("/prices")
@@ -622,6 +731,7 @@ async def prices(
     tokens: str | None = Query(None),
     block: str | None = Query(None),
     amounts: str | None = Query(None),
+    to: str | None = Query(None),
     timestamp: str | None = Query(None),
     skip_cache: str | None = Query(None),
     silent: str | None = Query(None),
@@ -638,7 +748,8 @@ async def prices(
     Partial failures return 200 with null prices for failed tokens.
     All-failures also return 200.
     """
-    result = parse_batch_params(tokens, block, amounts, timestamp, skip_cache, silent)
+    _ = to, silent
+    result = parse_batch_params(tokens, block, amounts, timestamp, skip_cache)
     if isinstance(result, ParseError):
         batch_requests_total.labels(chain=CHAIN_NAME, status="bad_request").inc()
         return _make_error_response(400, result.error)
@@ -663,13 +774,16 @@ async def prices(
         if params.amounts is not None:
             fetch_amounts = tuple(params.amounts[i] for i in indices_to_fetch)
 
-        prices = await _fetch_batch_prices(
-            tuple(tokens_to_fetch),
-            actual_block,
-            amounts=fetch_amounts,
-            skip_cache=params.skip_cache,
-            silent=params.silent,
-        )
+        try:
+            prices = await _fetch_batch_prices(
+                tuple(tokens_to_fetch),
+                actual_block,
+                amounts=fetch_amounts,
+                skip_cache=params.skip_cache,
+            )
+        except TimeoutError:
+            batch_requests_total.labels(chain=CHAIN_NAME, status="timeout").inc()
+            return _make_timeout_response()
 
         # Fetch block timestamp once for all
         block_timestamp = await _fetch_block_timestamp(actual_block)
@@ -758,176 +872,6 @@ async def check_bucket(
             500,
             f"Failed to classify token {token}: {e}",
         )
-
-
-@app.get("/quote")
-async def quote(
-    from_token: str | None = Query(None, alias="from"),
-    to_token: str | None = Query(None, alias="to"),
-    amount: str | None = Query(None),
-    block: str | None = Query(None),
-    timestamp: str | None = Query(None),
-) -> Any:
-    """From→to token quote endpoint.
-
-    Computes output_amount = amount * (price_from / price_to).
-
-    Response:
-    - from: source token address
-    - to: destination token address
-    - amount: input amount
-    - output_amount: computed output amount
-    - block: block number used
-    - chain: chain name
-    - block_timestamp: Unix epoch for the block
-    - route: "divide" for USD price division, "identity" for same-token quotes
-
-    Returns 400 for invalid params.
-    Returns 404 if either token cannot be priced.
-    """
-    result = parse_quote_params(from_token, to_token, amount, block, timestamp)
-    if isinstance(result, ParseError):
-        quote_requests_total.labels(chain=CHAIN_NAME, status="bad_request").inc()
-        return _make_error_response(400, result.error)
-
-    params = result.data
-
-    from brownie import chain as brownie_chain
-
-    # Determine the block to use
-    if params.timestamp is not None:
-        try:
-            actual_block = await _resolve_block_from_timestamp(params.timestamp)
-        except Exception as e:
-            logger.error(
-                "quote_timestamp_resolution_failed",
-                timestamp=params.timestamp,
-                error=str(e),
-            )
-            return _make_error_response(
-                502,
-                f"Failed to resolve timestamp {params.timestamp} to block: {e}",
-            )
-    else:
-        actual_block = params.block if params.block is not None else brownie_chain.height
-
-    start = time.monotonic()
-
-    # Same-token quote: output_amount == amount, route = "identity"
-    if params.from_token.lower() == params.to_token.lower():
-        block_timestamp = await _fetch_block_timestamp(actual_block)
-        duration_ms = int((time.monotonic() - start) * 1000)
-        quote_requests_total.labels(chain=CHAIN_NAME, status="ok").inc()
-        quote_request_duration_seconds.labels(chain=CHAIN_NAME).observe(duration_ms / 1000)
-        logger.info(
-            "quote_identity",
-            chain=CHAIN_NAME,
-            from_token=params.from_token[:10],
-            to_token=params.to_token[:10],
-            amount=params.amount,
-            block=actual_block,
-            duration_ms=duration_ms,
-        )
-        return {
-            "from": params.from_token,
-            "to": params.to_token,
-            "amount": params.amount,
-            "output_amount": params.amount,
-            "block": actual_block,
-            "chain": CHAIN_NAME,
-            "block_timestamp": block_timestamp,
-            "route": "identity",
-        }
-
-    # Fetch USD price for from_token
-    try:
-        from_result = await _fetch_price(params.from_token, actual_block)
-    except Exception as e:
-        duration_ms = int((time.monotonic() - start) * 1000)
-        return _handle_price_error(e, params.from_token, actual_block, duration_ms)
-
-    if from_result is None:
-        quote_requests_total.labels(chain=CHAIN_NAME, status="not_found").inc()
-        logger.warning(
-            "quote_from_token_not_found",
-            from_token=params.from_token[:10],
-            block=actual_block,
-        )
-        return _make_error_response(
-            404,
-            f"No price found for from token {params.from_token} at block {actual_block} on {CHAIN_NAME}",
-        )
-
-    from_price, from_trade_path = from_result
-
-    # Fetch USD price for to_token
-    try:
-        to_result = await _fetch_price(params.to_token, actual_block)
-    except Exception as e:
-        duration_ms = int((time.monotonic() - start) * 1000)
-        return _handle_price_error(e, params.to_token, actual_block, duration_ms)
-
-    if to_result is None:
-        quote_requests_total.labels(chain=CHAIN_NAME, status="not_found").inc()
-        logger.warning(
-            "quote_to_token_not_found",
-            to_token=params.to_token[:10],
-            block=actual_block,
-        )
-        return _make_error_response(
-            404,
-            f"No price found for to token {params.to_token} at block {actual_block} on {CHAIN_NAME}",
-        )
-
-    to_price, to_trade_path = to_result
-
-    # Guard against ZeroDivisionError: to_price == 0.0 means unpriceable destination
-    if to_price == 0.0:
-        quote_requests_total.labels(chain=CHAIN_NAME, status="not_found").inc()
-        logger.warning(
-            "quote_to_token_zero_price",
-            to_token=params.to_token[:10],
-            block=actual_block,
-        )
-        return _make_error_response(
-            404,
-            f"Cannot price destination token {params.to_token} at block {actual_block} on {CHAIN_NAME}",
-        )
-
-    # Compute output_amount using divide strategy
-    output_amount = params.amount * (from_price / to_price)
-
-    # Fetch block timestamp
-    block_timestamp = await _fetch_block_timestamp(actual_block)
-
-    duration_ms = int((time.monotonic() - start) * 1000)
-    quote_requests_total.labels(chain=CHAIN_NAME, status="ok").inc()
-    quote_request_duration_seconds.labels(chain=CHAIN_NAME).observe(duration_ms / 1000)
-    logger.info(
-        "quote_success",
-        chain=CHAIN_NAME,
-        from_token=params.from_token[:10],
-        to_token=params.to_token[:10],
-        amount=params.amount,
-        output_amount=output_amount,
-        from_price=from_price,
-        to_price=to_price,
-        block=actual_block,
-        duration_ms=duration_ms,
-    )
-
-    return {
-        "from": params.from_token,
-        "to": params.to_token,
-        "amount": params.amount,
-        "output_amount": output_amount,
-        "block": actual_block,
-        "chain": CHAIN_NAME,
-        "block_timestamp": block_timestamp,
-        "route": "divide",
-        "from_trade_path": from_trade_path,
-        "to_trade_path": to_trade_path,
-    }
 
 
 _TOKENLIST_PROXY_MAX_BYTES = 5 * 1024 * 1024  # 5 MB

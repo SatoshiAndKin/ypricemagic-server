@@ -1,16 +1,19 @@
 #!/usr/bin/env python3
-"""Compare ypricemagic-server prices against CryptoCompare historical prices."""
+"""Compare ypricemagic-server prices against DefiLlama historical prices."""
 
 from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
-import time
 import urllib.error
 import urllib.request
 from dataclasses import dataclass
 from datetime import UTC, datetime
+from pathlib import Path
+
+import diskcache
 
 # ---------------------------------------------------------------------------
 # Token matrix
@@ -24,30 +27,22 @@ VOLATILE_TOLERANCE = 0.10  # 10%
 class Token:
     name: str
     address: str
-    cc_symbol: str
     tolerance: float
 
 
 TOKENS: list[Token] = [
-    # Stablecoins
-    Token("USDC", "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48", "USDC", STABLECOIN_TOLERANCE),
-    Token("USDT", "0xdAC17F958D2ee523a2206206994597C13D831ec7", "USDT", STABLECOIN_TOLERANCE),
-    Token("DAI", "0x6B175474E89094C44Da98b954EedeAC495271d0F", "DAI", STABLECOIN_TOLERANCE),
-    # Volatile
-    Token("WETH", "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2", "ETH", VOLATILE_TOLERANCE),
-    Token("WBTC", "0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599", "BTC", VOLATILE_TOLERANCE),
-    Token("UNI", "0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984", "UNI", VOLATILE_TOLERANCE),
-    Token("LINK", "0x514910771AF9Ca656af840dff83E8264EcF986CA", "LINK", VOLATILE_TOLERANCE),
-    Token("AAVE", "0x7Fc66500c84A76Ad7e9c93437bFc5Ac33E2DDaE9", "AAVE", VOLATILE_TOLERANCE),
+    Token("USDC", "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48", STABLECOIN_TOLERANCE),
+    Token("USDT", "0xdAC17F958D2ee523a2206206994597C13D831ec7", STABLECOIN_TOLERANCE),
+    Token("DAI", "0x6B175474E89094C44Da98b954EedeAC495271d0F", STABLECOIN_TOLERANCE),
+    Token("WETH", "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2", VOLATILE_TOLERANCE),
+    Token("WBTC", "0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599", VOLATILE_TOLERANCE),
+    Token("UNI", "0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984", VOLATILE_TOLERANCE),
+    Token("LINK", "0x514910771AF9Ca656af840dff83E8264EcF986CA", VOLATILE_TOLERANCE),
+    Token("AAVE", "0x7Fc66500c84A76Ad7e9c93437bFc5Ac33E2DDaE9", VOLATILE_TOLERANCE),
 ]
 
-# TODO: more timestamps. 2020 to 2026
-TIMESTAMPS: list[int] = [
-    1672531200,  # 2023-01-01
-    1688169600,  # 2023-07-01
-    1704067200,  # 2024-01-01
-    1719792000,  # 2024-07-01
-]
+NUM_CHART_POINTS = 8
+CHART_PERIOD = "90d"
 
 # ---------------------------------------------------------------------------
 # Result tracking
@@ -59,9 +54,9 @@ class ComparisonResult:
     token: Token
     timestamp: int
     ypm_price: float | None
-    cc_price: float | None
+    ref_price: float | None
     ypm_error: str | None
-    cc_error: str | None
+    ref_error: str | None
     passed: bool | None  # None = skipped
 
 
@@ -71,10 +66,13 @@ class ComparisonResult:
 
 _TIMEOUT = 30
 
+_CACHE_DIR = Path(os.environ.get("CACHE_DIR", Path(__file__).resolve().parent.parent / "cache"))
+_llama_cache = diskcache.Cache(_CACHE_DIR / "defillama-prices")
 
-def _http_get_json(url: str, headers: dict[str, str] | None = None) -> object:
+
+def _http_get_json(url: str) -> object:
     """Perform a GET request and return parsed JSON."""
-    req = urllib.request.Request(url, headers=headers or {})
+    req = urllib.request.Request(url)
     with urllib.request.urlopen(req, timeout=_TIMEOUT) as resp:
         body = resp.read().decode()
     return json.loads(body)
@@ -91,70 +89,108 @@ def fetch_ypm_price(base_url: str, token: Token, timestamp: int) -> tuple[float 
     try:
         data = _http_get_json(url)
         if not isinstance(data, dict):
-            return None, f"unexpected response type: {type(data).__name__}"
+            return None, f"unexpected response: {data!r}"
         price = data.get("price")
         if price is None:
             error_msg = data.get("error", "no price in response")
-            return None, f"server error: {error_msg}"
+            return None, f"server error: {error_msg} body={data!r}"
         return float(price), None
     except urllib.error.HTTPError as exc:
-        return None, f"server returned {exc.code}"
+        body = exc.read().decode(errors="replace") if exc.fp else ""
+        return None, f"HTTP {exc.code}: {body[:200]}"
     except urllib.error.URLError as exc:
         return None, f"network error: {exc.reason}"
-    except (json.JSONDecodeError, ValueError, KeyError) as exc:
-        return None, f"parse error: {exc}"
     except Exception as exc:
-        return None, f"unexpected error: {exc}"
+        return None, f"{type(exc).__name__}: {exc}"
 
 
-def _fetch_cc_once(
-    url: str,
-    headers: dict[str, str],
-    symbol: str,
-) -> tuple[float | None, str | None]:
-    """Single attempt to fetch a CryptoCompare price. Returns (price, error)."""
-    data = _http_get_json(url, headers=headers)
+def fetch_defillama_first_timestamps(
+    tokens: list[Token],
+) -> dict[str, int]:
+    """Batch-fetch earliest available timestamps from DefiLlama /prices/first/.
+
+    Returns {address: unix_timestamp}. Cached on disk.
+    """
+    results: dict[str, int] = {}
+    uncached: list[Token] = []
+
+    for token in tokens:
+        cache_key = f"first:{token.address}"
+        cached = _llama_cache.get(cache_key)
+        if cached is not None:
+            results[token.address] = cached
+        else:
+            uncached.append(token)
+
+    if not uncached:
+        return results
+
+    coins = ",".join(f"ethereum:{t.address}" for t in uncached)
+    url = f"https://coins.llama.fi/prices/first/{coins}"
+    try:
+        data = _http_get_json(url)
+        if isinstance(data, dict):
+            for token in uncached:
+                key = f"ethereum:{token.address}"
+                entry = data.get("coins", {}).get(key, {})
+                ts = entry.get("timestamp")
+                if isinstance(ts, int | float):
+                    results[token.address] = int(ts)
+                    _llama_cache.set(f"first:{token.address}", int(ts))
+    except Exception:
+        pass  # non-fatal; we'll use a fallback start time
+
+    return results
+
+
+def fetch_defillama_chart(
+    tokens: list[Token],
+    start: int,
+    span: int,
+    period: str,
+) -> dict[str, list[tuple[int, float]]]:
+    """Batch-fetch price chart from DefiLlama /chart/.
+
+    Returns {address: [(timestamp, price), ...]}. Individual points cached on disk.
+    """
+    coins = ",".join(f"ethereum:{t.address}" for t in tokens)
+    url = f"https://coins.llama.fi/chart/{coins}?start={start}&span={span}&period={period}"
+    try:
+        data = _http_get_json(url)
+    except Exception as exc:
+        print(f"  [chart fetch failed: {exc}]", flush=True)  # noqa: T201
+        return {}
+
     if not isinstance(data, dict):
-        return None, f"unexpected response type: {type(data).__name__}"
-    symbol_data = data.get(symbol)
-    if not isinstance(symbol_data, dict):
-        return None, f"missing symbol key '{symbol}' in response"
-    price = symbol_data.get("USD")
-    if price is None:
-        return None, "no USD price in response"
-    return float(price), None
+        return {}
+
+    results: dict[str, list[tuple[int, float]]] = {}
+    for token in tokens:
+        key = f"ethereum:{token.address}"
+        entry = data.get("coins", {}).get(key, {})
+        prices = entry.get("prices", [])
+        points: list[tuple[int, float]] = []
+        for p in prices:
+            ts = p.get("timestamp")
+            price = p.get("price")
+            if ts is not None and price is not None:
+                _llama_cache.set(f"{token.address}:{ts}", float(price))
+                points.append((int(ts), float(price)))
+        results[token.address] = points
+
+    return results
 
 
-def fetch_cc_price(
-    symbol: str,
+def get_defillama_price(
+    token: Token,
     timestamp: int,
-    api_key: str | None,
 ) -> tuple[float | None, str | None]:
-    """Fetch a historical price from CryptoCompare. Returns (price, error)."""
-    url = (
-        f"https://min-api.cryptocompare.com/data/pricehistorical"
-        f"?fsym={symbol}&tsyms=USD&ts={timestamp}"
-    )
-    headers: dict[str, str] = {}
-    if api_key:
-        headers["Authorization"] = f"Apikey {api_key}"
-
-    for attempt in range(2):
-        try:
-            return _fetch_cc_once(url, headers, symbol)
-        except urllib.error.HTTPError as exc:
-            if exc.code == 429 and attempt == 0:
-                time.sleep(1)
-                continue
-            return None, f"HTTP {exc.code}"
-        except urllib.error.URLError as exc:
-            return None, f"network error: {exc.reason}"
-        except (json.JSONDecodeError, ValueError, KeyError) as exc:
-            return None, f"parse error: {exc}"
-        except Exception as exc:
-            return None, f"unexpected error: {exc}"
-
-    return None, "max retries exceeded"
+    """Get a single cached DefiLlama price. Returns (price, error)."""
+    cache_key = f"{token.address}:{timestamp}"
+    cached = _llama_cache.get(cache_key)
+    if cached is not None:
+        return (float(cached), None)
+    return (None, "not in cache")
 
 
 # ---------------------------------------------------------------------------
@@ -181,70 +217,98 @@ def _fmt_price(price: float) -> str:
 # ---------------------------------------------------------------------------
 
 
-def run(base_url: str, cc_key: str | None) -> int:
+def _compare_one(base_url: str, token: Token, ts: int, ref_price_val: float) -> ComparisonResult:
+    """Compare a single YPM price against a reference price and print the result."""
+    label = f"{token.name} ({_short_addr(token.address)}) @ {_ts_label(ts)}"
+
+    ypm_price, ypm_err = fetch_ypm_price(base_url, token, ts)
+    ref_price: float | None = ref_price_val
+    ref_err: str | None = None
+
+    result = ComparisonResult(
+        token=token,
+        timestamp=ts,
+        ypm_price=ypm_price,
+        ref_price=ref_price,
+        ypm_error=ypm_err,
+        ref_error=ref_err,
+        passed=None,
+    )
+
+    ypm_str = f"ERROR ({ypm_err})" if ypm_err is not None else _fmt_price(ypm_price)  # type: ignore[arg-type]
+    ref_str = f"ERROR ({ref_err})" if ref_err is not None else _fmt_price(ref_price)  # type: ignore[arg-type]
+
+    if ypm_err is not None or ref_err is not None:
+        verdict = "-- SKIP"
+    else:
+        assert ypm_price is not None
+        assert ref_price is not None
+        if ref_price == 0:
+            delta_pct = 0.0 if ypm_price == 0 else float("inf")
+        else:
+            delta_pct = abs(ypm_price - ref_price) / ref_price
+        tol_str = f"{token.tolerance:.0%}"
+        if delta_pct <= token.tolerance:
+            result.passed = True
+            verdict = f"Delta: {delta_pct:.2%}  PASS (tol: {tol_str})"
+        else:
+            result.passed = False
+            verdict = f"Delta: {delta_pct:.2%}  FAIL (tol: {tol_str})"
+
+    print(label)  # noqa: T201
+    print(f"  YPM: {ypm_str}")  # noqa: T201
+    print(f"  REF: {ref_str}")  # noqa: T201
+    print(f"  {verdict}")  # noqa: T201
+    print()  # noqa: T201
+
+    return result
+
+
+def run(base_url: str) -> int:
     """Run all comparisons and print results. Returns exit code."""
     print("YPM Price Validator")  # noqa: T201
     print("==================")  # noqa: T201
-    print(f"Server: {base_url}")  # noqa: T201
-    cc_label = "provided" if cc_key else "not provided"
-    print(f"CryptoCompare API key: {cc_label}")  # noqa: T201
+    print(f"Server:    {base_url}")  # noqa: T201
+    print(f"Reference: DefiLlama (cached at {_llama_cache.directory})")  # noqa: T201
     print()  # noqa: T201
 
+    # 1. Find earliest available timestamps per token
+    print("Fetching start timestamps...", flush=True)  # noqa: T201
+    first_ts = fetch_defillama_first_timestamps(TOKENS)
+    global_start = max(first_ts.get(t.address, 0) for t in TOKENS)
+    if global_start == 0:
+        global_start = 1609459200  # 2021-01-01 fallback
+    print(  # noqa: T201
+        f"Earliest common data: {_ts_label(global_start)} "
+        f"(using {NUM_CHART_POINTS} points, {CHART_PERIOD} apart)",
+        flush=True,
+    )
+    print()  # noqa: T201
+
+    # 2. Fetch reference price charts per token (each gets its own timestamps)
+    print("Fetching DefiLlama price charts...", flush=True)  # noqa: T201
+    chart_data = fetch_defillama_chart(TOKENS, global_start, NUM_CHART_POINTS, CHART_PERIOD)
+
+    total_points = sum(len(pts) for pts in chart_data.values())
+    print(f"Got {total_points} price points across {len(chart_data)} tokens")  # noqa: T201
+    print()  # noqa: T201
+
+    if total_points == 0:
+        print("ERROR: no chart data returned from DefiLlama")  # noqa: T201
+        return 1
+
+    # 3. Compare each token at its own chart timestamps
     results: list[ComparisonResult] = []
 
     for token in TOKENS:
-        for ts in TIMESTAMPS:
-            label = f"{token.name} ({_short_addr(token.address)}) @ {_ts_label(ts)}"
-
-            ypm_price, ypm_err = fetch_ypm_price(base_url, token, ts)
-            # Rate-limit CryptoCompare calls
-            time.sleep(1)
-            cc_price, cc_err = fetch_cc_price(token.cc_symbol, ts, cc_key)
-
-            result = ComparisonResult(
-                token=token,
-                timestamp=ts,
-                ypm_price=ypm_price,
-                cc_price=cc_price,
-                ypm_error=ypm_err,
-                cc_error=cc_err,
-                passed=None,
-            )
-
-            # Build output line
-            if ypm_err is not None:
-                ypm_str = f"ERROR ({ypm_err})"
-            else:
-                assert ypm_price is not None
-                ypm_str = _fmt_price(ypm_price)
-
-            if cc_err is not None:
-                cc_str = f"ERROR ({cc_err})"
-            else:
-                assert cc_price is not None
-                cc_str = _fmt_price(cc_price)
-
-            if ypm_err is not None or cc_err is not None:
-                verdict = "— SKIP"
-            else:
-                assert ypm_price is not None
-                assert cc_price is not None
-                if cc_price == 0:
-                    delta_pct = 0.0 if ypm_price == 0 else float("inf")
-                else:
-                    delta_pct = abs(ypm_price - cc_price) / cc_price
-                tol_str = f"{token.tolerance:.0%}"
-                if delta_pct <= token.tolerance:
-                    result.passed = True
-                    verdict = f"Delta: {delta_pct:.2%}  ✓ PASS (tolerance: {tol_str})"
-                else:
-                    result.passed = False
-                    verdict = f"Delta: {delta_pct:.2%}  ✗ FAIL (tolerance: {tol_str})"
-
-            print(label)  # noqa: T201
-            print(f"  YPM: {ypm_str}  CC: {cc_str}  {verdict}")  # noqa: T201
+        points = chart_data.get(token.address, [])
+        if not points:
+            print(f"{token.name}: no chart data from DefiLlama, skipping")  # noqa: T201
             print()  # noqa: T201
+            continue
 
+        for ts, ref_price_val in points:
+            result = _compare_one(base_url, token, ts, ref_price_val)
             results.append(result)
 
     # Summary
@@ -263,20 +327,15 @@ def run(base_url: str, cc_key: str | None) -> int:
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description="Compare ypricemagic-server prices against CryptoCompare historical prices.",
+        description="Compare ypricemagic-server prices against DefiLlama historical prices.",
     )
     parser.add_argument(
         "--url",
         default="http://localhost:8000/ethereum",
         help="ypricemagic-server base URL (default: %(default)s)",
     )
-    parser.add_argument(
-        "--cryptocompare-key",
-        default=None,
-        help="CryptoCompare API key for higher rate limits",
-    )
     args = parser.parse_args()
-    sys.exit(run(args.url, args.cryptocompare_key))
+    sys.exit(run(args.url))
 
 
 if __name__ == "__main__":
