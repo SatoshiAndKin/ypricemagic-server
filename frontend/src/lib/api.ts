@@ -30,10 +30,10 @@ export async function fetchQuote(
   block?: string,
   amount?: string,
 ): Promise<QuoteResponse> {
-  const params = new URLSearchParams({ from, to });
+  const params = new URLSearchParams({ token: from, to });
   if (block) params.set('block', block);
   if (amount) params.set('amount', amount);
-  const res = await fetch(`${BASE_URL}/${chain}/quote?${params}`);
+  const res = await fetch(`${BASE_URL}/${chain}/price?${params}`);
   return parseResponse<QuoteResponse>(res);
 }
 

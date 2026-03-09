@@ -6,13 +6,14 @@
   import QuoteForm from './lib/components/QuoteForm.svelte';
   import TokenlistModal from './lib/components/TokenlistModal.svelte';
   import { selectedChain, type Chain } from './lib/stores/chain';
-  import { CHAIN_IDS } from './lib/stores/tokenlist';
+  import { CHAIN_IDS, initTokenlists } from './lib/stores/tokenlist';
 
   let showTokenlistModal = $state(false);
 
   let quoteFormRef: ReturnType<typeof QuoteForm> | undefined;
 
-  onMount(() => {
+  onMount(async () => {
+    await initTokenlists();
     const params = new URLSearchParams(window.location.search);
 
     // Chain
