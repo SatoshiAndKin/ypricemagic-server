@@ -1,5 +1,6 @@
 import { writable } from 'svelte/store';
 import type { TokenlistToken } from '../types';
+import uniswapDefaultList from '../../../public/tokenlists/uniswap-default.json';
 
 // Re-export TokenlistToken for convenience
 export type { TokenlistToken };
@@ -318,36 +319,14 @@ function loadTokenlistStates(): Record<string, boolean> {
 export async function initTokenlists(): Promise<void> {
   const states = loadTokenlistStates();
 
-  // 1. Fetch the Uniswap default tokenlist
-  let defaultTokens: TokenlistToken[] = [];
-  let defaultMeta: Partial<TokenlistEntry> = {};
-  try {
-    const resp = await fetch('/tokenlists/uniswap-default.json');
-    if (resp.ok) {
-      const data = (await resp.json()) as {
-        name: string;
-        tokens: TokenlistToken[];
-        timestamp?: string;
-        version?: { major: number; minor: number; patch: number };
-      };
-      defaultTokens = data.tokens ?? [];
-      defaultMeta = {
-        name: data.name ?? 'Uniswap Default List',
-        timestamp: data.timestamp,
-        version: data.version,
-      };
-    }
-  } catch {
-    // network error — proceed without
-  }
-
+  // 1. Bundled Uniswap default tokenlist (no fetch needed)
   const defaultList: TokenlistEntry = {
-    name: defaultMeta.name ?? 'Uniswap Default List',
-    tokens: defaultTokens,
+    name: uniswapDefaultList.name,
+    tokens: uniswapDefaultList.tokens as TokenlistToken[],
     isDefault: true,
     enabled: states['default'] !== false, // default on unless explicitly disabled
-    timestamp: defaultMeta.timestamp,
-    version: defaultMeta.version,
+    timestamp: uniswapDefaultList.timestamp,
+    version: uniswapDefaultList.version,
   };
 
   // 2. Built-in default pair tokens list
