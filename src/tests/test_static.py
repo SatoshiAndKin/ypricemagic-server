@@ -17,6 +17,8 @@ class TestDocEndpoints:
 
         assert response.status_code == 200
         assert "text/html" in response.headers["content-type"]
+        assert "openapi.json" in response.text
+        assert '"/openapi.json"' not in response.text
 
     @pytest.mark.asyncio
     async def test_redoc_returns_200(self, mock_y_module: None) -> None:

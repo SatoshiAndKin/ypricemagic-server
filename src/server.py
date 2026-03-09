@@ -14,6 +14,7 @@ import structlog
 from fastapi import FastAPI, Query, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.openapi.docs import get_redoc_html, get_swagger_ui_html
 from fastapi.responses import JSONResponse
 from prometheus_client import Counter, Histogram, make_asgi_app
 from tenacity import (
@@ -131,7 +132,23 @@ async def lifespan(app: FastAPI) -> Any:
     yield
 
 
-app = FastAPI(title="ypricemagic API", lifespan=lifespan)
+app = FastAPI(title="ypricemagic API", lifespan=lifespan, docs_url=None, redoc_url=None)
+
+
+@app.get("/docs", include_in_schema=False)
+async def swagger_ui() -> Any:
+    return get_swagger_ui_html(
+        openapi_url="openapi.json",
+        title=f"{app.title} - Swagger UI",
+    )
+
+
+@app.get("/redoc", include_in_schema=False)
+async def redoc_ui() -> Any:
+    return get_redoc_html(
+        openapi_url="openapi.json",
+        title=f"{app.title} - ReDoc",
+    )
 
 
 @app.exception_handler(RequestValidationError)

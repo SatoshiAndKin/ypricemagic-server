@@ -317,6 +317,20 @@ html:not([data-theme]) .theme-icon-system { display: inline; }
   border-color: var(--input-focus-border);
 }
 
+.chain-selector-link {
+  margin: 8px 0 0;
+  font-size: 13px;
+}
+
+.chain-selector-link a {
+  color: var(--link-color);
+  text-decoration: none;
+}
+
+.chain-selector-link a:hover {
+  text-decoration: underline;
+}
+
 /* Section headings */
 section {
   margin-bottom: 20px;

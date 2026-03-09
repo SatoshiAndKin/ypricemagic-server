@@ -4,8 +4,6 @@
   import Header from './lib/components/Header.svelte';
   import ChainSelector from './lib/components/ChainSelector.svelte';
   import QuoteForm from './lib/components/QuoteForm.svelte';
-  import BatchForm from './lib/components/BatchForm.svelte';
-  import BucketForm from './lib/components/BucketForm.svelte';
   import TokenlistModal from './lib/components/TokenlistModal.svelte';
   import { selectedChain, type Chain } from './lib/stores/chain';
   import { CHAIN_IDS } from './lib/stores/tokenlist';
@@ -13,8 +11,6 @@
   let showTokenlistModal = $state(false);
 
   let quoteFormRef: ReturnType<typeof QuoteForm> | undefined;
-  let batchFormRef: ReturnType<typeof BatchForm> | undefined;
-  let bucketFormRef: ReturnType<typeof BucketForm> | undefined;
 
   onMount(() => {
     const params = new URLSearchParams(window.location.search);
@@ -42,19 +38,6 @@
 
       const amount = params.get('amount');
       if (amount && quoteFormRef) quoteFormRef.setAmount(amount);
-
-      // Batch form
-      const tokensParam = params.get('tokens');
-      if (tokensParam && batchFormRef) {
-        const addresses = tokensParam.split(',').map((s) => s.trim()).filter(Boolean);
-        const amountsParam = params.get('amounts');
-        const amounts = amountsParam ? amountsParam.split(',').map((s) => s.trim()) : [];
-        batchFormRef.setTokens(addresses, amounts);
-      }
-
-      // Bucket form
-      const bucketToken = params.get('bucket_token');
-      if (bucketToken && bucketFormRef) bucketFormRef.setToken(bucketToken);
     }, 0);
   });
 </script>
@@ -69,5 +52,3 @@
 <ChainSelector />
 
 <QuoteForm bind:this={quoteFormRef} chain={$selectedChain} chainId={CHAIN_IDS[$selectedChain]} />
-<BatchForm bind:this={batchFormRef} chain={$selectedChain} chainId={CHAIN_IDS[$selectedChain]} />
-<BucketForm bind:this={bucketFormRef} chain={$selectedChain} chainId={CHAIN_IDS[$selectedChain]} />
