@@ -2,13 +2,11 @@
   import { untrack } from 'svelte';
   import Autocomplete from './Autocomplete.svelte';
   import UnknownTokenModal from './UnknownTokenModal.svelte';
-  import { fetchQuote, fetchPrice } from '../api';
-  import type { QuoteResponse, PriceResponse } from '../types';
+  import { fetchQuote } from '../api';
+  import type { QuoteResponse } from '../types';
   import {
     getEffectivePair,
     saveCustomPair,
-    resetCustomPair,
-    DEFAULT_PAIRS,
     isTokenInIndex,
     addLocalToken,
     type Chain,
@@ -20,8 +18,6 @@
 
   interface QuoteResult {
     quote: QuoteResponse;
-    fromPrice: PriceResponse | null;
-    toPrice: PriceResponse | null;
   }
 
   // Component refs (not reactive; accessed imperatively)
@@ -168,17 +164,6 @@
     blockInput = '';
   }
 
-  function resetDefaults() {
-    resetCustomPair(chain as Chain);
-    const pair = DEFAULT_PAIRS[chain as Chain];
-    if (pair) {
-      fromAddress = pair.from;
-      toAddress = pair.to;
-      fromRef?.setFromAddress(pair.from);
-      toRef?.setFromAddress(pair.to);
-    }
-  }
-
   async function handleSubmit(e: Event) {
     e.preventDefault();
     stopAgeInterval();
@@ -201,21 +186,17 @@
 
     loading = true;
     try {
-      const [quoteData, fromPriceData, toPriceData] = await Promise.all([
-        fetchQuote(chain, fromAddr, toAddr, blockParam, amountParam),
-        fetchPrice(chain, fromAddr, blockParam).catch(() => null),
-        fetchPrice(chain, toAddr, blockParam).catch(() => null),
-      ]);
+      const quoteData = await fetchQuote(chain, fromAddr, toAddr, blockParam, amountParam);
 
-      result = { quote: quoteData, fromPrice: fromPriceData, toPrice: toPriceData };
+      result = { quote: quoteData };
 
-      // Save custom pair if both addresses are valid
       if (isValidAddress(fromAddr) && isValidAddress(toAddr)) {
         saveCustomPair(chain, fromAddr, toAddr);
       }
 
-      // Start age interval
-      startAgeInterval(quoteData.timestamp);
+      if (quoteData.block_timestamp != null) {
+        startAgeInterval(quoteData.block_timestamp);
+      }
     } catch (err) {
       error = err instanceof Error ? err.message : String(err);
     } finally {
@@ -363,7 +344,6 @@
       <button type="submit" disabled={loading}>
         {loading ? 'Fetching...' : 'Get Quote'}
       </button>
-      <button type="button" class="btn-secondary" onclick={resetDefaults}>Reset Defaults</button>
     </div>
 
     {#if error}
@@ -373,8 +353,9 @@
 
   {#if result}
     {@const q = result.quote}
-    {@const fromSym = getSymbol(q.from_token)}
-    {@const toSym = getSymbol(q.to_token)}
+    {@const fromSym = getSymbol(q.from)}
+    {@const toSym = getSymbol(q.to)}
+    {@const rate = q.amount > 0 ? q.output_amount / q.amount : 0}
     <div class="result-card">
       <div class="result-section-title">Result</div>
 
@@ -389,34 +370,38 @@
         <div class="result-row">
           <span class="result-label">Conversion</span>
           <span class="result-value result-value-number">
-            1 {fromSym} = {formatNumber(q.quote)}
+            1 {fromSym} = {formatNumber(rate)}
             {toSym}
           </span>
         </div>
 
         <div class="result-row">
-          <span class="result-label">Input → Output</span>
+          <span class="result-label">Input / Output</span>
           <span class="result-value result-value-number">
-            {formatNumber(q.from_amount)}
+            {formatNumber(q.amount)}
             {fromSym} →
-            {formatNumber(q.to_amount)}
+            {formatNumber(q.output_amount)}
             {toSym}
           </span>
         </div>
 
-        <div class="result-row">
-          <span class="result-label">From Token Price (USD)</span>
-          <span class="result-value result-value-number">
-            {formatPrice(result.fromPrice?.price ?? null)}
-          </span>
-        </div>
+        {#if q.from_price != null}
+          <div class="result-row">
+            <span class="result-label">From Token Price (USD)</span>
+            <span class="result-value result-value-number">
+              {formatPrice(q.from_price)}
+            </span>
+          </div>
+        {/if}
 
-        <div class="result-row">
-          <span class="result-label">To Token Price (USD)</span>
-          <span class="result-value result-value-number">
-            {formatPrice(result.toPrice?.price ?? null)}
-          </span>
-        </div>
+        {#if q.to_price != null}
+          <div class="result-row">
+            <span class="result-label">To Token Price (USD)</span>
+            <span class="result-value result-value-number">
+              {formatPrice(q.to_price)}
+            </span>
+          </div>
+        {/if}
 
         <div class="result-row">
           <span class="result-label">Chain</span>
@@ -428,41 +413,22 @@
           <span class="result-value result-value-number">{q.block}</span>
         </div>
 
-        <div class="result-row">
-          <span class="result-label">Block Timestamp</span>
-          <span class="result-value">{formatTimestamp(q.timestamp)}</span>
-        </div>
-
-        <div class="result-row">
-          <span class="result-label">Age</span>
-          <span class="result-value result-value-muted">{ageDisplay}</span>
-        </div>
-
-        {#if q.route && q.route.length > 0}
-          <div class="result-row result-row-route">
-            <span class="result-label">Route</span>
-            <span class="result-value">
-              <ol class="route-list">
-                {#each q.route as step, i}
-                  <li class="route-step">
-                    <span class="route-step-num">{i + 1}.</span>
-                    <span class="route-step-tokens">
-                      {getSymbol(step.from)} → {getSymbol(step.to)}
-                    </span>
-                    <span class="route-step-pool" title={step.pool}>
-                      via <code>{step.pool.slice(0, 10)}…</code>
-                    </span>
-                  </li>
-                {/each}
-              </ol>
-            </span>
-          </div>
-        {:else}
+        {#if q.block_timestamp != null}
           <div class="result-row">
-            <span class="result-label">Route</span>
-            <span class="result-value result-value-muted">—</span>
+            <span class="result-label">Block Timestamp</span>
+            <span class="result-value">{formatTimestamp(q.block_timestamp)}</span>
+          </div>
+
+          <div class="result-row">
+            <span class="result-label">Age</span>
+            <span class="result-value result-value-muted">{ageDisplay}</span>
           </div>
         {/if}
+
+        <div class="result-row">
+          <span class="result-label">Route</span>
+          <span class="result-value result-value-muted">{q.route}</span>
+        </div>
       </div>
     </div>
   {/if}

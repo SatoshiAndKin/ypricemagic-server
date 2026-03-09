@@ -26,15 +26,18 @@ export interface TradeStep {
 }
 
 export interface QuoteResponse {
-  quote: number;
-  from_token: string;
-  to_token: string;
-  from_amount: number;
-  to_amount: number;
-  chain: string;
+  from: string;
+  to: string;
+  amount: number;
+  output_amount: number;
   block: number;
-  timestamp: number;
-  route: TradeStep[] | null;
+  chain: string;
+  block_timestamp: number | null;
+  route: string;
+  from_price: number;
+  to_price: number;
+  from_trade_path: string[] | null;
+  to_trade_path: string[] | null;
 }
 
 export interface BucketResponse {
