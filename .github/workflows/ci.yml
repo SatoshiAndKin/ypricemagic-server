@@ -14,14 +14,6 @@ on:
   pull_request:
     branches: [main]
     types: [opened, synchronize, reopened, ready_for_review]
-    paths-ignore:
-      - "**.md"
-      - "**.png"
-      - ".factory/validation/**"
-      - "docs/**"
-      - "runbooks/**"
-      - "openapi.json"
-      - "*.json"
 
 concurrency:
   group: ci-${{ github.ref }}

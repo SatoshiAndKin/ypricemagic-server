@@ -1,6 +1,6 @@
 # AGENTS.md — ypricemagic-server
 
-Multi-chain ERC-20 token price API backed by [ypricemagic](https://github.com/BobTheBuidler/ypricemagic). One container per chain, routed through nginx.
+Multi-chain ERC-20 token price API backed by [ypricemagic](https://github.com/BobTheBuidler/ypricemagic). One container per chain, routed through Traefik.
 
 ## Environment Setup
 
@@ -49,22 +49,28 @@ uv run pre-commit install
 
 ```
 src/
-  server.py      # FastAPI app, lifespan, price/health endpoints
+  server.py      # FastAPI app, lifespan, price/health/batch/bucket endpoints
   cache.py       # diskcache-backed price cache (keyed by token:block)
-  params.py      # Input validation (token address, block number)
-  tests/
-    test_params.py  # Unit tests for params module
+  params.py      # Input validation (token address, block number, timestamps)
+  logger.py      # structlog configuration with secret redaction
+  tests/         # pytest tests (test_server, test_params, test_cache, test_logger, test_static)
+frontend/        # Svelte 5 + Vite browser UI (separate Docker image)
+scripts/         # validate_prices.py, export_openapi.py, update_tokenlist.py, deploy.sh
+traefik-proxy/   # Shared Traefik reverse proxy config
 .github/
   workflows/     # CI (tests+lint), Docker publish, release-please, PR review
-  ISSUE_TEMPLATE/
 ```
 
 ## API Endpoints
 
-- `GET /price?chain=<chain>&token=<address>&block=<block>&amount=<amount>` — fetch token price (amount is optional, human-readable token units for price impact)
-- `GET /health` — aggregate health (checks ethereum backend)
-- `GET /health/<chain>` — per-chain health
-- `GET /` — browser UI
+All endpoints are chain-scoped via path prefix (`/{chain}/...`), routed by Traefik.
+
+- `GET /{chain}/price?token=<address>&block=<block>` — single token USD price (optional: `to`, `amount`, `timestamp`, `skip_cache`, `ignore_pools`)
+- `GET /{chain}/prices?tokens=<addr1>,<addr2>&block=<block>` — batch USD pricing
+- `GET /{chain}/check_bucket?token=<address>` — token pricing bucket classification
+- `GET /health` — aggregate health (proxied to ethereum backend)
+- `GET /{chain}/health` — per-chain health
+- `GET /` — browser UI (served by frontend container)
 
 ## Supported Chains
 
@@ -73,10 +79,11 @@ src/
 ## Architecture
 
 ```
-client → nginx:8000 → ypm-ethereum:8001
-                    → ypm-arbitrum:8001
-                    → ypm-optimism:8001
-                    → ypm-base:8001
+client → traefik-proxy:8000 → frontend:8080
+                             → ypm-ethereum:8001
+                             → ypm-arbitrum:8001
+                             → ypm-optimism:8001
+                             → ypm-base:8001
 ```
 
 Each chain container: brownie network connect → dank_mids patch → uvicorn FastAPI server.
@@ -107,7 +114,7 @@ Each chain container: brownie network connect → dank_mids patch → uvicorn Fa
 | `RPC_URL_OPTIMISM` | yes | Optimism RPC endpoint |
 | `RPC_URL_BASE` | yes | Base RPC endpoint |
 | `ETHERSCAN_TOKEN` | yes | Etherscan API key (used for all explorer APIs) |
-| `PORT` | no | External port for nginx (default: 8000) |
+| `PORT` | no | External port for Traefik proxy (default: 8000) |
 | `CACHE_DIR` | no | Path for diskcache storage (default: /data/cache) |
 | `CHAIN_NAME` | container | Set per-container by docker-compose |
 | `CHAIN_ID` | container | Set per-container by docker-compose |
