@@ -6,6 +6,8 @@ import socket
 import time
 import uuid
 from contextlib import asynccontextmanager
+from importlib.metadata import PackageNotFoundError
+from importlib.metadata import version as _pkg_version
 from typing import TYPE_CHECKING, Any
 from urllib.parse import urlparse
 
@@ -132,7 +134,18 @@ async def lifespan(app: FastAPI) -> Any:
     yield
 
 
-app = FastAPI(title="ypricemagic API", lifespan=lifespan, docs_url=None, redoc_url=None)
+try:
+    _VERSION = _pkg_version("ypricemagic-server")
+except PackageNotFoundError:
+    _VERSION = "dev"
+
+app = FastAPI(
+    title="ypricemagic API",
+    version=_VERSION,
+    lifespan=lifespan,
+    docs_url=None,
+    redoc_url=None,
+)
 
 
 @app.get("/docs", include_in_schema=False)
