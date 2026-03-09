@@ -12,6 +12,7 @@ from typing import TYPE_CHECKING, Any
 from urllib.parse import urlparse
 
 import httpx
+import sentry_sdk
 import structlog
 from fastapi import FastAPI, Query, Request
 from fastapi.exceptions import RequestValidationError
@@ -43,7 +44,22 @@ configure_logging()
 logger = get_logger("server")
 
 CHAIN_NAME = os.environ.get("CHAIN_NAME", "ethereum")
-PRICE_TIMEOUT = 10.0
+
+try:
+    _VERSION = _pkg_version("ypricemagic-server")
+except PackageNotFoundError:
+    _VERSION = "dev"
+
+_sentry_dsn = os.environ.get("SENTRY_DSN", "")
+if _sentry_dsn:
+    sentry_sdk.init(
+        dsn=_sentry_dsn,
+        environment=os.environ.get("SENTRY_ENVIRONMENT", "production"),
+        release=_VERSION,
+        traces_sample_rate=float(os.environ.get("SENTRY_TRACES_SAMPLE_RATE", "0.1")),
+        send_default_pii=False,
+    )
+PRICE_TIMEOUT = 30.0
 
 # Prometheus metrics
 price_requests_total = Counter(
@@ -123,11 +139,6 @@ async def lifespan(app: FastAPI) -> Any:
         raise
     yield
 
-
-try:
-    _VERSION = _pkg_version("ypricemagic-server")
-except PackageNotFoundError:
-    _VERSION = "dev"
 
 app = FastAPI(
     title="ypricemagic API",
@@ -377,7 +388,7 @@ def _make_error_response(status: int, message: str) -> JSONResponse:
 
 
 def _make_timeout_response() -> JSONResponse:
-    return _make_error_response(504, "Price lookup timed out after 10 seconds")
+    return _make_error_response(504, f"Price lookup timed out after {PRICE_TIMEOUT:.0f} seconds")
 
 
 def _handle_price_error(e: Exception, token: str, block: int, duration_ms: int) -> JSONResponse:

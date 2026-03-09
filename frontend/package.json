@@ -10,6 +10,7 @@
     "test": "vitest"
   },
   "dependencies": {
+    "@sentry/svelte": "^10.42.0",
     "svelte": "^5.0.0"
   },
   "devDependencies": {

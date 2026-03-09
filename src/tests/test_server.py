@@ -2244,7 +2244,7 @@ class TestPriceQuoteMode:
             response = client.get("/price", params={"token": DAI})
 
         assert response.status_code == 504
-        assert response.json() == {"error": "Price lookup timed out after 10 seconds"}
+        assert response.json() == {"error": "Price lookup timed out after 30 seconds"}
 
     @pytest.mark.asyncio
     async def test_price_quote_mode_timeout_returns_504(self, mock_y_module: None) -> None:
@@ -2266,7 +2266,7 @@ class TestPriceQuoteMode:
             response = client.get("/price", params={"token": DAI, "to": USDC})
 
         assert response.status_code == 504
-        assert response.json() == {"error": "Price lookup timed out after 10 seconds"}
+        assert response.json() == {"error": "Price lookup timed out after 30 seconds"}
 
     @pytest.mark.asyncio
     async def test_fast_price_requests_unaffected_by_timeout(self, mock_y_module: None) -> None:
