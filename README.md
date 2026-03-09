@@ -56,7 +56,7 @@ The Traefik proxy lives in `traefik-proxy/docker-compose.yml` and has its own `.
 
 ## API
 
-All requests go through Traefik on port 8000. An interactive browser UI is served at `/` on `YPM_HOST`.
+All requests go through Traefik on port 8000. The browser UI is at `/`.
 
 ### `GET /{chain}/price`
 
@@ -68,12 +68,12 @@ Fetch the USD price for a single token on a specific chain.
 | `token` | query | yes | ERC-20 token address (`0x...`) |
 | `block` | query | no | Block number; mutually exclusive with `timestamp` |
 | `timestamp` | query | no | Unix epoch or ISO-8601 timestamp; resolves to a block |
-| `amount` | query | no | Human-readable token amount for amount-aware pricing |
+| `to` | query | no | Output token address; switches to quote mode |
+| `amount` | query | no | Token amount (for price impact, or input amount when `to` is set) |
 | `skip_cache` | query | no | `true` to bypass disk cache |
 | `ignore_pools` | query | no | Comma-separated pool addresses to exclude |
-| `silent` | query | no | `true` to suppress verbose upstream logging |
 
-**Response schema (`200`):**
+**Response schema (`200`, USD price mode):**
 
 ```json
 {
@@ -82,12 +82,48 @@ Fetch the USD price for a single token on a specific chain.
   "block": 21900000,
   "price": 1.0,
   "cached": false,
-  "block_timestamp": 1740000000,
-  "amount": 1000.0
+  "block_timestamp": 1740000000
 }
 ```
 
-`amount` is only present when provided in the request.
+`amount` is included in the response when provided in the request.
+
+**Response schema (`200`, quote mode -- when `to` is set):**
+
+```json
+{
+  "from": "0x...",
+  "to": "0x...",
+  "amount": 1000.0,
+  "output_amount": 0.357,
+  "block": 21900000,
+  "chain": "ethereum",
+  "block_timestamp": 1740000000,
+  "route": "divide"
+}
+```
+
+Quote mode prices both tokens in USD and divides: `output_amount = amount * (from_price / to_price)`. If `from` and `to` are the same address, it returns an identity quote.
+
+#### `curl` examples
+
+**USD price:**
+
+```bash
+curl "http://localhost:8000/ethereum/price?token=0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48&block=21900000"
+```
+
+**From→to quote (USDC → WETH):**
+
+```bash
+curl "http://localhost:8000/ethereum/price?token=0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48&to=0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2&amount=1000"
+```
+
+**Historical quote at a timestamp:**
+
+```bash
+curl "http://localhost:8000/ethereum/price?token=0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48&to=0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2&amount=1000&timestamp=1693526400"
+```
 
 ### `GET /{chain}/prices`
 
@@ -101,7 +137,6 @@ Batch USD pricing for multiple tokens.
 | `timestamp` | query | no | Unix epoch or ISO-8601 timestamp; resolves to a block |
 | `amounts` | query | no | Comma-separated amounts aligned with `tokens` order |
 | `skip_cache` | query | no | `true` to bypass disk cache |
-| `silent` | query | no | `true` to suppress verbose upstream logging |
 
 **Response schema (`200`):**
 
@@ -118,54 +153,6 @@ Batch USD pricing for multiple tokens.
 ```
 
 Tokens that fail pricing return `"price": null` while the endpoint still returns `200`.
-
-### `GET /{chain}/quote`
-
-From→to token quoting endpoint for swap-style quote flows.
-
-| Parameter | In | Required | Description |
-|-----------|----|----------|-------------|
-| `chain` | path | yes | `ethereum`, `arbitrum`, `optimism`, or `base` |
-| `from` | query | yes | Input token address |
-| `to` | query | yes | Output token address |
-| `amount` | query | yes | Input token amount |
-| `block` | query | no | Historical block number |
-| `timestamp` | query | no | Historical Unix epoch timestamp (resolved to block) |
-
-**Response schema (`200`):**
-
-```json
-{
-  "from": "0x...",
-  "to": "0x...",
-  "amount": 1000.0,
-  "output_amount": 0.357,
-  "block": 21900000,
-  "chain": "ethereum",
-  "block_timestamp": 1740000000,
-  "route": "divide"
-}
-```
-
-#### `curl` examples for `/quote`
-
-**Basic quote:**
-
-```bash
-curl "http://localhost:8000/ethereum/quote?from=0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48&to=0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2&amount=1000"
-```
-
-**Historical quote at a block:**
-
-```bash
-curl "http://localhost:8000/ethereum/quote?from=0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48&to=0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2&amount=1000&block=18000000"
-```
-
-**Historical quote at a timestamp:**
-
-```bash
-curl "http://localhost:8000/ethereum/quote?from=0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48&to=0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2&amount=1000&timestamp=1693526400"
-```
 
 ### `GET /{chain}/check_bucket`
 
@@ -215,43 +202,26 @@ Per-chain health check (externally reached as `GET /<chain>/health`, for example
 
 **Response schema (`200`):** same schema as `GET /health`.
 
-### From→to quoting workflow
+### How quoting works
 
-1. Resolve a target block (`latest`, explicit `block`, or block resolved from `timestamp`).
-2. Attempt direct route/path pricing when available.
-3. Fall back to divide strategy (`output_amount = amount × (price_from / price_to)`) when no direct route is available.
-4. Return `route` to indicate strategy (`divide`) plus `block_timestamp` for price age displays.
-5. When `amount` is set, quotes are more likely to be uncached and may take longer.
+When `to` is set on `/price`, the server prices both tokens in USD and divides:
+
+1. Resolve a target block (latest, explicit `block`, or resolved from `timestamp`).
+2. Fetch USD price for `token` (the input) and `to` (the output).
+3. Compute `output_amount = amount * (from_price / to_price)`.
+4. If `token` and `to` are the same address, return an identity quote (output = input).
+
+Quotes with `amount` set are less likely to be cached and may take longer.
 
 ## Browser UI
 
-The root path (`/`) serves an interactive browser UI for all API endpoints.
-
-### Quote UI screenshot (latest block)
+The root path (`/`) is a browser UI for the API.
 
 ![Latest-block USDC→crvUSD quote result with price age in seconds](docs/readme-quote-latest-block.png)
 
-### Theme toggle (light / dark / system)
+The UI has a theme toggle (system/light/dark, saved in local storage) and token autocomplete on all address inputs. Autocomplete searches by symbol, name, or address across loaded tokenlists, filtered by the selected chain.
 
-The header includes a theme toggle with three modes: `system` (default), `light`, and `dark`. The selected mode is persisted in local storage. Quote/result sections, tokenlist modal, and related chart-friendly historical views are styled for both light and dark mode.
-
-### Token autocomplete
-
-All token address inputs support autocomplete. Type a symbol, name, or address to search across loaded tokenlists. Results are filtered by the currently selected chain. If you submit an address that isn't in any enabled tokenlist, a warning modal lets you proceed anyway or add the token to your local list.
-
-Autocomplete works in the quote, batch, and bucket forms.
-
-### Tokenlist management
-
-Click the gear icon (⚙) in the header to open the tokenlist manager. From there you can:
-
-- View loaded tokenlists and toggle them on/off
-- Add a new tokenlist by URL (HTTPS only)
-- Import a tokenlist from a JSON file
-- Export the locally-saved tokenlist
-- Delete custom tokenlists
-
-All tokenlist state is stored in `localStorage`. The [Uniswap Default tokenlist](https://tokens.uniswap.org) is bundled at Docker build time and always available.
+The gear icon (⚙) opens a tokenlist manager where you can toggle lists on/off, add lists by URL, import/export JSON files, or delete custom lists. All tokenlist state lives in `localStorage`. The [Uniswap Default tokenlist](https://tokens.uniswap.org) is bundled and always available.
 
 ## Supported Chains
 
