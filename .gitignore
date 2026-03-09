@@ -25,7 +25,9 @@ htmlcov/
 # OS files
 .DS_Store
 Thumbs.db
-static/tokenlists/uniswap-default.json
+
+# Old static UI (replaced by frontend/)
+static/
 
 # Node / frontend
 node_modules/
