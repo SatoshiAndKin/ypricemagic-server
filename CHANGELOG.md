@@ -1,5 +1,33 @@
 # Changelog
 
+## [0.6.0](https://github.com/SatoshiAndKin/ypricemagic-server/compare/v0.5.1...v0.6.0) (2026-03-09)
+
+
+### Features
+
+* enable Traefik dashboard and relax image tag to v3 ([#49](https://github.com/SatoshiAndKin/ypricemagic-server/issues/49)) ([754329d](https://github.com/SatoshiAndKin/ypricemagic-server/commit/754329d3b7bf4434d1a740653dcb63358b6a42d0))
+* enable Traefik dashboard API for debugging ([#50](https://github.com/SatoshiAndKin/ypricemagic-server/issues/50)) ([39c3120](https://github.com/SatoshiAndKin/ypricemagic-server/commit/39c312018570ad1d4986469441e007e53567f06f))
+* from→to quote endpoint, UI quote form, theme toggle, and UI polish ([#37](https://github.com/SatoshiAndKin/ypricemagic-server/issues/37)) ([c5439bb](https://github.com/SatoshiAndKin/ypricemagic-server/commit/c5439bba1eb4e7f6861883cc0a5ed91b041b64ab))
+* Python 3.13, price validator, UI polish, token display, and infra split ([#41](https://github.com/SatoshiAndKin/ypricemagic-server/issues/41)) ([92407d5](https://github.com/SatoshiAndKin/ypricemagic-server/commit/92407d58e5bb7f3cf6067b8ab7eb9d5cb4a6ad7c))
+* separate dev and prod compose stacks to simplify local builds and rollout deploys ([#48](https://github.com/SatoshiAndKin/ypricemagic-server/issues/48)) ([da42445](https://github.com/SatoshiAndKin/ypricemagic-server/commit/da42445039e92d5afa954eaad6dd6db26babfffe))
+* split into API backend + Svelte frontend + Traefik infrastructure ([#43](https://github.com/SatoshiAndKin/ypricemagic-server/issues/43)) ([029570e](https://github.com/SatoshiAndKin/ypricemagic-server/commit/029570e0510adb8fb69c23b9df75d870bc79dbfb))
+* token autocomplete, tokenlist management, and zero-downtime deploy ([#35](https://github.com/SatoshiAndKin/ypricemagic-server/issues/35)) ([4f726fb](https://github.com/SatoshiAndKin/ypricemagic-server/commit/4f726fbcad0046ff9be4c131edb05c82a7a70549))
+* update ypricemagic and expose trade path in API responses ([#38](https://github.com/SatoshiAndKin/ypricemagic-server/issues/38)) ([5377285](https://github.com/SatoshiAndKin/ypricemagic-server/commit/53772856edd1bb6c185a994c7b7fd76362d7d296))
+
+
+### Bug Fixes
+
+* add explicit proxy network so Traefik can reach all backends ([#47](https://github.com/SatoshiAndKin/ypricemagic-server/issues/47)) ([7bd39c0](https://github.com/SatoshiAndKin/ypricemagic-server/commit/7bd39c0213757513cfdb136e03996a4dd43c60d9))
+* build+push frontend image and remove broken deploy job ([#56](https://github.com/SatoshiAndKin/ypricemagic-server/issues/56)) ([b6fbc73](https://github.com/SatoshiAndKin/ypricemagic-server/commit/b6fbc7319dbd4803d396abac37ec7ffb180ccdd4))
+* bundle Uniswap default tokenlist instead of fetching at runtime ([#54](https://github.com/SatoshiAndKin/ypricemagic-server/issues/54)) ([27b3266](https://github.com/SatoshiAndKin/ypricemagic-server/commit/27b326604cb56d8cc539b373c252402be0757628))
+* cap dank_mids EXTRA_QUEUED_CALLS on macOS to avoid SEM_VALUE_MAX crash ([#40](https://github.com/SatoshiAndKin/ypricemagic-server/issues/40)) ([4f032cc](https://github.com/SatoshiAndKin/ypricemagic-server/commit/4f032cc5b5958f62915bdf0173a9f877a20e9bea))
+* default quote amount and pin Python 3.12 ([#51](https://github.com/SatoshiAndKin/ypricemagic-server/issues/51)) ([6c5afbf](https://github.com/SatoshiAndKin/ypricemagic-server/commit/6c5afbfc3151b021a3b0aec7d9d20ecf89aff9c1))
+* move httpx to main dependencies so it is installed in production ([#46](https://github.com/SatoshiAndKin/ypricemagic-server/issues/46)) ([fa5bbfe](https://github.com/SatoshiAndKin/ypricemagic-server/commit/fa5bbfebc1469cfca8916b0441926586f05fcbcc))
+* repair chain docs and simplify frontend ([#52](https://github.com/SatoshiAndKin/ypricemagic-server/issues/52)) ([bb1d0e8](https://github.com/SatoshiAndKin/ypricemagic-server/commit/bb1d0e8daf754d9c00e3291c25ece85d3ee6b309))
+* upgrade vitest to ^4 to match @vitest/coverage-v8 peer dep ([#45](https://github.com/SatoshiAndKin/ypricemagic-server/issues/45)) ([4ac7239](https://github.com/SatoshiAndKin/ypricemagic-server/commit/4ac72396b378f4c73094e8ddb1eaef7db0fcc502))
+* use env_file in docker-stack.yml for swarm compatibility ([#42](https://github.com/SatoshiAndKin/ypricemagic-server/issues/42)) ([f6430b6](https://github.com/SatoshiAndKin/ypricemagic-server/commit/f6430b627fa82d2137322e7fa6483623903e80ff))
+* use ghcr frontend image in prod compose instead of local build ([#55](https://github.com/SatoshiAndKin/ypricemagic-server/issues/55)) ([aea2656](https://github.com/SatoshiAndKin/ypricemagic-server/commit/aea26564f5537096cfcf9d6a95cad3cc31c1b3df))
+
 ## [0.5.1](https://github.com/SatoshiAndKin/ypricemagic-server/compare/v0.5.0...v0.5.1) (2026-03-03)
 
 
