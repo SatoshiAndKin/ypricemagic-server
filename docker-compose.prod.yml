@@ -25,6 +25,7 @@ services:
       CHAIN_ID: 1
       RPC_URL: ${RPC_URL_ETHEREUM}
       ETHERSCAN_TOKEN: ${ETHERSCAN_TOKEN}
+      SENTRY_DSN: ${SENTRY_DSN:-}
     volumes:
       - cache-ethereum:/data/cache
       - brownie-ethereum:/root/.brownie
@@ -47,6 +48,7 @@ services:
       CHAIN_ID: 42161
       RPC_URL: ${RPC_URL_ARBITRUM}
       ETHERSCAN_TOKEN: ${ETHERSCAN_TOKEN}
+      SENTRY_DSN: ${SENTRY_DSN:-}
     volumes:
       - cache-arbitrum:/data/cache
       - brownie-arbitrum:/root/.brownie
@@ -66,6 +68,7 @@ services:
       CHAIN_ID: 10
       RPC_URL: ${RPC_URL_OPTIMISM}
       ETHERSCAN_TOKEN: ${ETHERSCAN_TOKEN}
+      SENTRY_DSN: ${SENTRY_DSN:-}
     volumes:
       - cache-optimism:/data/cache
       - brownie-optimism:/root/.brownie
@@ -85,6 +88,7 @@ services:
       CHAIN_ID: 8453
       RPC_URL: ${RPC_URL_BASE}
       ETHERSCAN_TOKEN: ${ETHERSCAN_TOKEN}
+      SENTRY_DSN: ${SENTRY_DSN:-}
     volumes:
       - cache-base:/data/cache
       - brownie-base:/root/.brownie

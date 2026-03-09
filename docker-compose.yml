@@ -25,6 +25,7 @@ services:
       CHAIN_ID: 1
       RPC_URL: ${RPC_URL_ETHEREUM}
       ETHERSCAN_TOKEN: ${ETHERSCAN_TOKEN}
+      SENTRY_DSN: ${SENTRY_DSN:-}
     volumes:
       - cache-ethereum:/data/cache
       - brownie-ethereum:/root/.brownie
@@ -45,6 +46,8 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+      args:
+        VITE_SENTRY_DSN: ${VITE_SENTRY_DSN:-}
     labels:
       traefik.enable: "true"
       docker-rollout.pre-stop-hook: "touch /tmp/drain && sleep 10"
