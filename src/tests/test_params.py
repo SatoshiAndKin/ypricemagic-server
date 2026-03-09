@@ -845,17 +845,17 @@ class TestParseQuoteParams:
         assert isinstance(result, ParseError)
         assert "to" in result.error.lower()
 
-    def test_missing_amount(self) -> None:
-        """Missing amount returns error."""
+    def test_missing_amount_defaults_to_one(self) -> None:
+        """Missing amount defaults to 1.0."""
         result = parse_quote_params(DAI, USDC, None)
-        assert isinstance(result, ParseError)
-        assert "amount" in result.error.lower()
+        assert isinstance(result, QuoteParseSuccess)
+        assert result.data.amount == 1.0
 
-    def test_empty_amount(self) -> None:
-        """Empty amount returns error."""
+    def test_empty_amount_defaults_to_one(self) -> None:
+        """Empty amount defaults to 1.0."""
         result = parse_quote_params(DAI, USDC, "")
-        assert isinstance(result, ParseError)
-        assert "amount" in result.error.lower()
+        assert isinstance(result, QuoteParseSuccess)
+        assert result.data.amount == 1.0
 
     def test_invalid_amount_non_numeric(self) -> None:
         """Non-numeric amount returns error."""

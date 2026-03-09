@@ -41,7 +41,7 @@ class QuoteParams:
 
     from_token: the token to quote from (required)
     to_token: the token to quote to (required)
-    amount: the amount of from_token (required, must be positive)
+    amount: the amount of from_token (defaults to 1.0, must be positive)
     block: optional block number
     timestamp: optional Unix/ISO timestamp (mutually exclusive with block)
     """
@@ -480,7 +480,7 @@ def parse_quote_params(
     Validates:
     - from_token: valid address (required)
     - to_token: valid address (required)
-    - amount: positive number (required)
+    - amount: positive number (defaults to 1.0)
     - block: optional block number
     - timestamp: optional Unix/ISO timestamp (mutually exclusive with block)
 
@@ -496,14 +496,13 @@ def parse_quote_params(
     if isinstance(validated_to, ParseError):
         return validated_to
 
-    # Validate amount
-    if not amount:
-        return ParseError("Missing required parameter: amount")
-    parsed_amount = _parse_amount(amount)
+    # Validate amount (defaults to 1.0 if not provided)
+    effective_amount = amount if amount and amount.strip() else None
+    parsed_amount = _parse_amount(effective_amount)
     if isinstance(parsed_amount, ParseError):
         return parsed_amount
     if parsed_amount is None:
-        return ParseError("Missing required parameter: amount")
+        parsed_amount = 1.0
 
     # Parse block and timestamp
     parsed_block = _parse_block(block)
