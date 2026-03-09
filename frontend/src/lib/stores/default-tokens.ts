@@ -1,0 +1,60 @@
+import type { TokenlistToken } from "../types";
+
+export const DEFAULT_TOKENS: TokenlistToken[] = [
+    // --- Ethereum (chainId: 1) ---
+    { chainId: 1, address: "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2", symbol: "WETH", name: "Wrapped Ether", decimals: 18 },
+    { chainId: 1, address: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48", symbol: "USDC", name: "USD Coin", decimals: 6 },
+    { chainId: 1, address: "0xdAC17F958D2ee523a2206206994597C13D831ec7", symbol: "USDT", name: "Tether USD", decimals: 6 },
+    { chainId: 1, address: "0x6B175474E89094C44Da98b954EedeAC495271d0F", symbol: "DAI", name: "Dai Stablecoin", decimals: 18 },
+    { chainId: 1, address: "0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599", symbol: "WBTC", name: "Wrapped BTC", decimals: 8 },
+    { chainId: 1, address: "0xf939E0A03FB07F59A73314E73794Be0E57ac1b4E", symbol: "crvUSD", name: "Curve USD", decimals: 18 },
+    { chainId: 1, address: "0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984", symbol: "UNI", name: "Uniswap", decimals: 18 },
+    { chainId: 1, address: "0x514910771AF9Ca656af840dff83E8264EcF986CA", symbol: "LINK", name: "Chainlink", decimals: 18 },
+    { chainId: 1, address: "0x7Fc66500c84A76Ad7e9c93437bFc5Ac33E2DDaE9", symbol: "AAVE", name: "Aave", decimals: 18 },
+    { chainId: 1, address: "0xD533a949740bb3306d119CC777fa900bA034cd52", symbol: "CRV", name: "Curve DAO Token", decimals: 18 },
+    { chainId: 1, address: "0x9f8F72aA9304c8B593d555F12eF6589cC3A579A2", symbol: "MKR", name: "Maker", decimals: 18 },
+    { chainId: 1, address: "0xC011a73ee8576Fb46F5E1c5751cA3B9Fe0af2a6F", symbol: "SNX", name: "Synthetix", decimals: 18 },
+    { chainId: 1, address: "0xc00e94Cb662C3520282E6f5717214004A7f26888", symbol: "COMP", name: "Compound", decimals: 18 },
+    { chainId: 1, address: "0x5A98FcBEA516Cf06857215779Fd812CA3beF1B32", symbol: "LDO", name: "Lido DAO", decimals: 18 },
+    { chainId: 1, address: "0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84", symbol: "stETH", name: "Lido Staked Ether", decimals: 18 },
+    { chainId: 1, address: "0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0", symbol: "wstETH", name: "Wrapped stETH", decimals: 18 },
+    { chainId: 1, address: "0xae78736Cd615f374D3085123A210448E74Fc6393", symbol: "rETH", name: "Rocket Pool ETH", decimals: 18 },
+    { chainId: 1, address: "0x853d955aCEf822Db058eb8505911ED77F175b99e", symbol: "FRAX", name: "Frax", decimals: 18 },
+    { chainId: 1, address: "0x0bc529c00C6401aEF6D220BE8C6Ea1667F6Ad93e", symbol: "YFI", name: "yearn.finance", decimals: 18 },
+    { chainId: 1, address: "0x6810e776880C02933D47DB1b9fc05908e5386b96", symbol: "GNO", name: "Gnosis", decimals: 18 },
+
+    // --- Arbitrum (chainId: 42161) ---
+    { chainId: 42161, address: "0x82aF49447D8a07e3bd95BD0d56f35241523fBab1", symbol: "WETH", name: "Wrapped Ether", decimals: 18 },
+    { chainId: 42161, address: "0xaf88d065e77c8cC2239327C5EDb3A432268e5831", symbol: "USDC", name: "USD Coin", decimals: 6 },
+    { chainId: 42161, address: "0xFF970A61A04b1cA14834A43f5dE4533eBDDB5CC8", symbol: "USDC.e", name: "Bridged USDC", decimals: 6 },
+    { chainId: 42161, address: "0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9", symbol: "USDT", name: "Tether USD", decimals: 6 },
+    { chainId: 42161, address: "0xDA10009cBd5D07dd0CeCc6364F8F8D61F49D8419", symbol: "DAI", name: "Dai Stablecoin", decimals: 18 },
+    { chainId: 42161, address: "0x2f2a2543B76A4166549F7aaB2e75Bef0aefC5B0f", symbol: "WBTC", name: "Wrapped BTC", decimals: 8 },
+    { chainId: 42161, address: "0x912CE59144191C1204E64559FE8253a0e49E6548", symbol: "ARB", name: "Arbitrum", decimals: 18 },
+    { chainId: 42161, address: "0xfc5A1A6EB076a2C7aD06eD22C90d7E710E35ad0a", symbol: "GMX", name: "GMX", decimals: 18 },
+    { chainId: 42161, address: "0xf97f4df75117a78c1A5a0DBb814Af92458539FB4", symbol: "LINK", name: "Chainlink", decimals: 18 },
+    { chainId: 42161, address: "0xFa7F8980b0f1E64A2062791cc3b0871572f1F7f0", symbol: "UNI", name: "Uniswap", decimals: 18 },
+    { chainId: 42161, address: "0x5979D7b546E38E9Ab08D2f7f2DC12C0C2E1B1e24", symbol: "wstETH", name: "Wrapped stETH", decimals: 18 },
+    { chainId: 42161, address: "0x539bdE0d7Dbd336b79148AA742883198BBF60342", symbol: "MAGIC", name: "MAGIC", decimals: 18 },
+
+    // --- Optimism (chainId: 10) ---
+    { chainId: 10, address: "0x4200000000000000000000000000000000000006", symbol: "WETH", name: "Wrapped Ether", decimals: 18 },
+    { chainId: 10, address: "0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85", symbol: "USDC", name: "USD Coin", decimals: 6 },
+    { chainId: 10, address: "0x7F5c764cBc14f9669B88837ca1490cCa17c31607", symbol: "USDC.e", name: "Bridged USDC", decimals: 6 },
+    { chainId: 10, address: "0x94b008aA00579c1307B0EF2c499aD98a8ce58e58", symbol: "USDT", name: "Tether USD", decimals: 6 },
+    { chainId: 10, address: "0xDA10009cBd5D07dd0CeCc6364F8F8D61F49D8419", symbol: "DAI", name: "Dai Stablecoin", decimals: 18 },
+    { chainId: 10, address: "0x68f180fcCe6836688e9084f035309E29Bf0A2095", symbol: "WBTC", name: "Wrapped BTC", decimals: 8 },
+    { chainId: 10, address: "0x4200000000000000000000000000000000000042", symbol: "OP", name: "Optimism", decimals: 18 },
+    { chainId: 10, address: "0x8700dAec35aF8Ff88c16BdF0418774CB3D7599B4", symbol: "SNX", name: "Synthetix", decimals: 18 },
+    { chainId: 10, address: "0x350a791Bfc2C21F9Ed5d10980Dad2e2638ffa7f6", symbol: "LINK", name: "Chainlink", decimals: 18 },
+    { chainId: 10, address: "0x1F32b1c2345538c0c6f582fCB022739c4A194Ebb", symbol: "wstETH", name: "Wrapped stETH", decimals: 18 },
+    { chainId: 10, address: "0x9Bcef72be871e61ED4fBbc7630889beE758eb81D", symbol: "rETH", name: "Rocket Pool ETH", decimals: 18 },
+
+    // --- Base (chainId: 8453) ---
+    { chainId: 8453, address: "0x4200000000000000000000000000000000000006", symbol: "WETH", name: "Wrapped Ether", decimals: 18 },
+    { chainId: 8453, address: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913", symbol: "USDC", name: "USD Coin", decimals: 6 },
+    { chainId: 8453, address: "0xd9aAEc86B65D86f6A7B5B1b0c42FFA531710b6CA", symbol: "USDbC", name: "USD Base Coin", decimals: 6 },
+    { chainId: 8453, address: "0x50c5725949A6F0c72E6C4a641F24049A917DB0Cb", symbol: "DAI", name: "Dai Stablecoin", decimals: 18 },
+    { chainId: 8453, address: "0x2Ae3F1Ec7F1F5012CFEab0185bfc7aa3cf0DEc22", symbol: "cbETH", name: "Coinbase Wrapped Staked ETH", decimals: 18 },
+    { chainId: 8453, address: "0xc1CBa3fCea344f92D9239c08C0568f6F2F0ee452", symbol: "wstETH", name: "Wrapped stETH", decimals: 18 },
+];
