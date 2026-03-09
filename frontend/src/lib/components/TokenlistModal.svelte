@@ -9,7 +9,7 @@
     removeList,
     type TokenlistEntry,
   } from '../stores/tokenlist';
-  import { fetchTokenlistProxy } from '../api';
+  import { fetchTokenlist } from '../api';
 
   let { isOpen, onclose, chain, chainId }: {
     isOpen: boolean;
@@ -87,7 +87,7 @@
       const timeoutPromise = new Promise<never>((_, reject) =>
         setTimeout(() => reject(new Error('Request timed out after 30 seconds')), 30000)
       );
-      const list = await Promise.race([fetchTokenlistProxy(chain, url), timeoutPromise]);
+      const list = await Promise.race([fetchTokenlist(chain, url), timeoutPromise]);
 
       // Validate structure
       if (!list.name || !Array.isArray(list.tokens)) {
@@ -218,7 +218,7 @@
     if (!list?.url) return;
 
     try {
-      const updated = await fetchTokenlistProxy(chain, list.url);
+      const updated = await fetchTokenlist(chain, list.url);
       removeList(index);
       addList({
         name: updated.name,

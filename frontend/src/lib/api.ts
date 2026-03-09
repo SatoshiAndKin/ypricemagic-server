@@ -82,8 +82,7 @@ export async function fetchHealth(chain: string): Promise<HealthResponse> {
   return parseResponse<HealthResponse>(res);
 }
 
-export async function fetchTokenlistProxy(chain: string, url: string): Promise<Tokenlist> {
-  const params = new URLSearchParams({ url });
-  const res = await fetchWithTimeout(`${BASE_URL}/${chain}/tokenlist/proxy?${params}`);
+export async function fetchTokenlist(_chain: string, url: string): Promise<Tokenlist> {
+  const res = await fetchWithTimeout(url);
   return parseResponse<Tokenlist>(res);
 }

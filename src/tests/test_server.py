@@ -1,9 +1,7 @@
 """Tests for server._fetch_price behavior."""
 
-import socket
 from unittest.mock import AsyncMock, patch
 
-import httpx
 import pytest
 
 DAI = "0x6B175474E89094C44Da98b954EedeAC495271d0F"
@@ -2361,167 +2359,100 @@ class TestPriceQuoteModeConcurrent:
         assert output_amounts[0] == 0.5
 
 
-class TestTokenlistProxy:
-    """Tests for GET /tokenlist/proxy CORS-safe tokenlist fetching."""
+class TestRedocEndpoint:
+    """Tests for GET /redoc documentation endpoint."""
 
-    def test_proxy_missing_url(self, mock_y_module: None) -> None:
-        """No url param returns 400."""
+    @pytest.mark.asyncio
+    async def test_redoc_returns_html(self, mock_y_module: None) -> None:
+        """GET /redoc returns 200 with HTML content."""
         from fastapi.testclient import TestClient
 
         from src.server import app
 
         client = TestClient(app)
-        response = client.get("/tokenlist/proxy")
-
-        assert response.status_code == 400
-        assert response.json()["error"] == "Missing required 'url' parameter"
-
-    def test_proxy_non_https(self, mock_y_module: None) -> None:
-        """http:// URL returns 400."""
-        from fastapi.testclient import TestClient
-
-        from src.server import app
-
-        client = TestClient(app)
-        response = client.get("/tokenlist/proxy", params={"url": "http://example.com/list.json"})
-
-        assert response.status_code == 400
-        assert response.json()["error"] == "Only HTTPS URLs are allowed"
-
-    def test_proxy_private_ip(self, mock_y_module: None) -> None:
-        """https://127.0.0.1/list.json returns 400 (SSRF protection)."""
-        from fastapi.testclient import TestClient
-
-        from src.server import app
-
-        # Mock socket.getaddrinfo to return a loopback address
-        loopback_info = [(socket.AF_INET, socket.SOCK_STREAM, 6, "", ("127.0.0.1", 0))]
-        with patch("src.server.socket.getaddrinfo", return_value=loopback_info):
-            client = TestClient(app)
-            response = client.get(
-                "/tokenlist/proxy",
-                params={"url": "https://127.0.0.1/list.json"},
-            )
-
-        assert response.status_code == 400
-        assert (
-            response.json()["error"] == "URLs pointing to private/internal networks are not allowed"
-        )
-
-    def test_proxy_success(self, mock_y_module: None) -> None:
-        """Mock httpx to return valid JSON → 200."""
-        from unittest.mock import MagicMock
-
-        from fastapi.testclient import TestClient
-
-        from src.server import app
-
-        tokenlist = {"name": "Test", "tokens": []}
-        mock_response = MagicMock()
-        mock_response.content = b'{"name": "Test", "tokens": []}'
-        mock_response.json.return_value = tokenlist
-
-        mock_client_instance = AsyncMock()
-        mock_client_instance.get.return_value = mock_response
-        mock_client_instance.__aenter__ = AsyncMock(return_value=mock_client_instance)
-        mock_client_instance.__aexit__ = AsyncMock(return_value=False)
-
-        # Also mock _is_private_ip to return False for the test URL
-        with (
-            patch("src.server.httpx.AsyncClient", return_value=mock_client_instance),
-            patch("src.server._is_private_ip", return_value=False),
-        ):
-            client = TestClient(app)
-            response = client.get(
-                "/tokenlist/proxy",
-                params={"url": "https://tokens.example.com/list.json"},
-            )
+        response = client.get("/redoc")
 
         assert response.status_code == 200
-        assert response.json() == tokenlist
+        assert "text/html" in response.headers["content-type"]
+        assert "ReDoc" in response.text
 
-    def test_proxy_upstream_failure(self, mock_y_module: None) -> None:
-        """Mock httpx to raise → 502."""
+
+class TestSerializeTradePath:
+    """Tests for _serialize_trade_path helper."""
+
+    def test_trade_path_serialized(self, mock_y_module: None) -> None:
+        """A price result with a path attribute is serialized correctly."""
+        from src.server import _serialize_trade_path
+
+        step = type(
+            "Step",
+            (),
+            {
+                "source": "uniswap_v3",
+                "input_token": DAI,
+                "output_token": WETH,
+                "pool": "0x1234567890abcdef1234567890abcdef12345678",
+                "price": 0.0005,
+            },
+        )()
+        result = type("PriceResult", (), {"path": [step]})()
+
+        serialized = _serialize_trade_path(result)
+
+        assert serialized is not None
+        assert len(serialized) == 1
+        assert serialized[0]["source"] == "uniswap_v3"
+        assert serialized[0]["input_token"] == DAI
+        assert serialized[0]["output_token"] == WETH
+        assert serialized[0]["price"] == 0.0005
+
+    def test_no_path_returns_none(self, mock_y_module: None) -> None:
+        """A price result without a path attribute returns None."""
+        from src.server import _serialize_trade_path
+
+        assert _serialize_trade_path(1.0) is None
+
+    def test_empty_path_returns_none(self, mock_y_module: None) -> None:
+        """A price result with an empty path returns None."""
+        from src.server import _serialize_trade_path
+
+        result = type("PriceResult", (), {"path": []})()
+        assert _serialize_trade_path(result) is None
+
+
+class TestPriceCacheHit:
+    """Tests for cache hit success path in /price endpoint."""
+
+    @pytest.mark.asyncio
+    async def test_cache_hit_returns_cached_response(self, mock_y_module: None) -> None:
+        """When cache has the price, returns cached response without calling get_price."""
         from fastapi.testclient import TestClient
 
         from src.server import app
 
-        mock_client_instance = AsyncMock()
-        mock_client_instance.get.side_effect = httpx.ConnectError("Connection refused")
-        mock_client_instance.__aenter__ = AsyncMock(return_value=mock_client_instance)
-        mock_client_instance.__aexit__ = AsyncMock(return_value=False)
+        mock_get_price = AsyncMock(return_value=1.0)
+        mock_chain = type("MockChain", (), {"height": 19000000})()
+
+        def mock_get_cached_price(token: str, block: int) -> dict[str, object] | None:
+            if token == DAI and block == 18000000:
+                return {"price": 1.23, "block_timestamp": 1700000000}
+            return None
 
         with (
-            patch("src.server.httpx.AsyncClient", return_value=mock_client_instance),
-            patch("src.server._is_private_ip", return_value=False),
+            patch("y.get_price", mock_get_price),
+            patch("brownie.chain", mock_chain),
+            patch("src.server.get_cached_price", mock_get_cached_price),
         ):
             client = TestClient(app)
-            response = client.get(
-                "/tokenlist/proxy",
-                params={"url": "https://tokens.example.com/list.json"},
-            )
+            response = client.get("/price", params={"token": DAI, "block": "18000000"})
 
-        assert response.status_code == 502
-        assert "Failed to fetch tokenlist" in response.json()["error"]
-
-    def test_proxy_invalid_json(self, mock_y_module: None) -> None:
-        """Mock httpx to return non-JSON → 502."""
-        from unittest.mock import MagicMock
-
-        from fastapi.testclient import TestClient
-
-        from src.server import app
-
-        mock_response = MagicMock()
-        mock_response.content = b"<html>Not JSON</html>"
-        mock_response.json.side_effect = ValueError("No JSON")
-
-        mock_client_instance = AsyncMock()
-        mock_client_instance.get.return_value = mock_response
-        mock_client_instance.__aenter__ = AsyncMock(return_value=mock_client_instance)
-        mock_client_instance.__aexit__ = AsyncMock(return_value=False)
-
-        with (
-            patch("src.server.httpx.AsyncClient", return_value=mock_client_instance),
-            patch("src.server._is_private_ip", return_value=False),
-        ):
-            client = TestClient(app)
-            response = client.get(
-                "/tokenlist/proxy",
-                params={"url": "https://tokens.example.com/list.json"},
-            )
-
-        assert response.status_code == 502
-        assert response.json()["error"] == "Response is not valid JSON"
-
-    def test_proxy_too_large(self, mock_y_module: None) -> None:
-        """Mock httpx to return >5MB → 502."""
-        from unittest.mock import MagicMock
-
-        from fastapi.testclient import TestClient
-
-        from src.server import app
-
-        mock_response = MagicMock()
-        mock_response.content = b"x" * (5 * 1024 * 1024 + 1)
-
-        mock_client_instance = AsyncMock()
-        mock_client_instance.get.return_value = mock_response
-        mock_client_instance.__aenter__ = AsyncMock(return_value=mock_client_instance)
-        mock_client_instance.__aexit__ = AsyncMock(return_value=False)
-
-        with (
-            patch("src.server.httpx.AsyncClient", return_value=mock_client_instance),
-            patch("src.server._is_private_ip", return_value=False),
-        ):
-            client = TestClient(app)
-            response = client.get(
-                "/tokenlist/proxy",
-                params={"url": "https://tokens.example.com/list.json"},
-            )
-
-        assert response.status_code == 502
-        assert response.json()["error"] == "Response exceeds 5MB limit"
+        assert response.status_code == 200
+        data = response.json()
+        assert data["price"] == 1.23
+        assert data["cached"] is True
+        assert data["block_timestamp"] == 1700000000
+        assert data["block"] == 18000000
+        mock_get_price.assert_not_called()
 
 
 class TestEndpointSchemaRegression:

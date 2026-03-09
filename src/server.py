@@ -1,17 +1,13 @@
 import asyncio
-import ipaddress
 import math
 import os
-import socket
 import time
 import uuid
 from contextlib import asynccontextmanager
 from importlib.metadata import PackageNotFoundError
 from importlib.metadata import version as _pkg_version
 from typing import TYPE_CHECKING, Any
-from urllib.parse import urlparse
 
-import httpx
 import sentry_sdk
 import structlog
 from fastapi import FastAPI, Query, Request
@@ -892,77 +888,3 @@ async def check_bucket(
             500,
             f"Failed to classify token {token}: {e}",
         )
-
-
-_TOKENLIST_PROXY_MAX_BYTES = 5 * 1024 * 1024  # 5 MB
-_TOKENLIST_PROXY_TIMEOUT = 30.0  # seconds
-
-
-def _is_private_ip(host: str) -> bool:
-    """Check if any resolved IP for *host* is private, loopback, or link-local."""
-    try:
-        infos = socket.getaddrinfo(host, None, proto=socket.IPPROTO_TCP)
-    except socket.gaierror:
-        # If resolution fails, treat as private (deny by default)
-        return True
-    for info in infos:
-        addr = info[4][0]
-        try:
-            ip = ipaddress.ip_address(addr)
-        except ValueError:
-            continue
-        if ip.is_private or ip.is_loopback or ip.is_link_local:
-            return True
-    return False
-
-
-@app.get("/tokenlist/proxy")
-async def tokenlist_proxy(
-    url: str | None = Query(None),
-) -> JSONResponse:
-    """Fetch a remote tokenlist server-side to avoid CORS issues.
-
-    HTTPS-only, SSRF-protected (blocks private/internal IPs), 5 MB limit, 30 s timeout.
-    """
-    if not url:
-        return _make_error_response(400, "Missing required 'url' parameter")
-
-    parsed = urlparse(url)
-    if parsed.scheme != "https":
-        return _make_error_response(400, "Only HTTPS URLs are allowed")
-
-    hostname = parsed.hostname or ""
-    if not hostname:
-        return _make_error_response(400, "Only HTTPS URLs are allowed")
-
-    # Block .local hostnames explicitly (getaddrinfo might resolve via mDNS)
-    if hostname.endswith(".local"):
-        return _make_error_response(
-            400, "URLs pointing to private/internal networks are not allowed"
-        )
-
-    if _is_private_ip(hostname):
-        return _make_error_response(
-            400, "URLs pointing to private/internal networks are not allowed"
-        )
-
-    try:
-        async with httpx.AsyncClient(timeout=_TOKENLIST_PROXY_TIMEOUT) as client:
-            response = await client.get(url)
-            response.raise_for_status()
-    except httpx.HTTPStatusError as exc:
-        return _make_error_response(
-            502, f"Failed to fetch tokenlist: HTTP {exc.response.status_code}"
-        )
-    except Exception as exc:
-        return _make_error_response(502, f"Failed to fetch tokenlist: {exc}")
-
-    if len(response.content) > _TOKENLIST_PROXY_MAX_BYTES:
-        return _make_error_response(502, "Response exceeds 5MB limit")
-
-    try:
-        data = response.json()
-    except Exception:
-        return _make_error_response(502, "Response is not valid JSON")
-
-    return JSONResponse(content=data)
