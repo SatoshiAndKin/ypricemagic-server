@@ -98,9 +98,7 @@ services:
       traefik.http.services.base.loadbalancer.server.port: "8001"
 
   frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
+    image: ghcr.io/satoshiandkin/ypricemagic-server-frontend:latest
     labels:
       traefik.enable: "true"
       docker-rollout.pre-stop-hook: "touch /tmp/drain && sleep 10"
