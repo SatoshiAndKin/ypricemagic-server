@@ -2116,23 +2116,30 @@ class TestQuoteEndpoint:
             assert "to" in response.json()["error"].lower()
 
     @pytest.mark.asyncio
-    async def test_quote_missing_amount_returns_400(self, mock_y_module: None) -> None:
-        """Missing amount param returns 400."""
+    async def test_quote_missing_amount_defaults_to_one(self, mock_y_module: None) -> None:
+        """Missing amount param defaults to 1.0."""
         from fastapi.testclient import TestClient
 
         from src.server import app
 
+        # Mock prices: USDC = $1, WETH = $2000
+        mock_get_price = AsyncMock(side_effect=[1.0, 2000.0])
         mock_chain = type("MockChain", (), {"height": 19000000})()
 
-        with patch("brownie.chain", mock_chain):
+        with (
+            patch("brownie.chain", mock_chain),
+            patch("y.get_price", mock_get_price),
+            patch("y.get_block_timestamp_async", AsyncMock(return_value=1700000000)),
+        ):
             client = TestClient(app)
             response = client.get(
                 "/quote",
                 params={"from": USDC, "to": WETH},
             )
 
-            assert response.status_code == 400
-            assert "amount" in response.json()["error"].lower()
+            assert response.status_code == 200
+            data = response.json()
+            assert data["amount"] == 1.0
 
     @pytest.mark.asyncio
     async def test_quote_invalid_address_returns_400(self, mock_y_module: None) -> None:
