@@ -17,11 +17,11 @@ def is_valid_address(address: str) -> bool:
 @dataclass
 class PriceParams:
     token: str
+    to: str | None = None
     block: int | None = None
     amount: float | None = None
     skip_cache: bool = False
     ignore_pools: tuple[str, ...] = ()
-    silent: bool = False
     timestamp: int | None = None
 
 
@@ -31,25 +31,6 @@ class BatchParams:
     block: int | None = None
     amounts: tuple[float | None, ...] | None = None
     skip_cache: bool = False
-    silent: bool = False
-    timestamp: int | None = None
-
-
-@dataclass
-class QuoteParams:
-    """Parameters for the quote endpoint.
-
-    from_token: the token to quote from (required)
-    to_token: the token to quote to (required)
-    amount: the amount of from_token (defaults to 1.0, must be positive)
-    block: optional block number
-    timestamp: optional Unix/ISO timestamp (mutually exclusive with block)
-    """
-
-    from_token: str
-    to_token: str
-    amount: float
-    block: int | None = None
     timestamp: int | None = None
 
 
@@ -240,11 +221,11 @@ def _parse_bool_with_default(value: str | None, name: str) -> bool | ParseError:
 
 def parse_price_params(
     token: str | None,
+    to: str | None = None,
     block: str | None = None,
     amount: str | None = None,
     skip_cache: str | None = None,
     ignore_pools: str | None = None,
-    silent: str | None = None,
     timestamp: str | None = None,
 ) -> ParseResult:
     if not token:
@@ -252,6 +233,11 @@ def parse_price_params(
 
     if not is_valid_address(token):
         return ParseError(f"Invalid token address: {token}")
+
+    normalized_to = to.strip() if to is not None else None
+    parsed_to = normalized_to or None
+    if parsed_to is not None and not is_valid_address(parsed_to):
+        return ParseError(f"Invalid to token address: {parsed_to}")
 
     parsed_block = _parse_block(block)
     if isinstance(parsed_block, ParseError):
@@ -264,10 +250,6 @@ def parse_price_params(
     parsed_skip_cache = _parse_bool_with_default(skip_cache, "skip_cache")
     if isinstance(parsed_skip_cache, ParseError):
         return parsed_skip_cache
-
-    parsed_silent = _parse_bool_with_default(silent, "silent")
-    if isinstance(parsed_silent, ParseError):
-        return parsed_silent
 
     parsed_ignore_pools = parse_ignore_pools(ignore_pools)
     if isinstance(parsed_ignore_pools, ParseError):
@@ -286,11 +268,11 @@ def parse_price_params(
     return ParseSuccess(
         data=PriceParams(
             token=token,
+            to=parsed_to,
             block=parsed_block,
             amount=parsed_amount,
             skip_cache=parsed_skip_cache,
             ignore_pools=parsed_ignore_pools,
-            silent=parsed_silent,
             timestamp=parsed_timestamp,
         )
     )
@@ -380,7 +362,6 @@ def parse_batch_params(
     amounts: str | None = None,
     timestamp: str | None = None,
     skip_cache: str | None = None,
-    silent: str | None = None,
 ) -> BatchParseResult:
     """Parse batch pricing parameters.
 
@@ -389,7 +370,7 @@ def parse_batch_params(
     - block: optional block number
     - amounts: optional comma-separated amounts (must match token count if provided)
     - timestamp: optional Unix/ISO timestamp (mutually exclusive with block)
-    - skip_cache, silent: optional booleans
+    - skip_cache: optional boolean
 
     Returns BatchParseSuccess with BatchParams on success.
     Returns ParseError on validation failure.
@@ -425,10 +406,6 @@ def parse_batch_params(
     if isinstance(parsed_skip_cache, ParseError):
         return parsed_skip_cache
 
-    parsed_silent = _parse_bool_with_default(silent, "silent")
-    if isinstance(parsed_silent, ParseError):
-        return parsed_silent
-
     # Mutual exclusivity check: timestamp and block cannot both be provided
     if parsed_timestamp is not None and parsed_block is not None:
         return ParseError(
@@ -441,90 +418,6 @@ def parse_batch_params(
             block=parsed_block,
             amounts=parsed_amounts,
             skip_cache=parsed_skip_cache,
-            silent=parsed_silent,
-            timestamp=parsed_timestamp,
-        )
-    )
-
-
-@dataclass
-class QuoteParseSuccess:
-    data: "QuoteParams"
-
-
-QuoteParseResult = QuoteParseSuccess | ParseError
-
-
-def _parse_quote_token(token: str | None, name: str) -> str | ParseError:
-    """Validate a token address for quote endpoint.
-
-    Returns the token address on success.
-    Returns ParseError on validation failure.
-    """
-    if not token:
-        return ParseError(f"Missing required parameter: {name}")
-    if not is_valid_address(token):
-        return ParseError(f"Invalid {name} token address: {token}")
-    return token
-
-
-def parse_quote_params(
-    from_token: str | None,
-    to_token: str | None,
-    amount: str | None,
-    block: str | None = None,
-    timestamp: str | None = None,
-) -> QuoteParseResult:
-    """Parse quote endpoint parameters.
-
-    Validates:
-    - from_token: valid address (required)
-    - to_token: valid address (required)
-    - amount: positive number (defaults to 1.0)
-    - block: optional block number
-    - timestamp: optional Unix/ISO timestamp (mutually exclusive with block)
-
-    Returns QuoteParseSuccess with QuoteParams on success.
-    Returns ParseError on validation failure.
-    """
-    # Validate tokens
-    validated_from = _parse_quote_token(from_token, "from")
-    if isinstance(validated_from, ParseError):
-        return validated_from
-
-    validated_to = _parse_quote_token(to_token, "to")
-    if isinstance(validated_to, ParseError):
-        return validated_to
-
-    # Validate amount (defaults to 1.0 if not provided)
-    effective_amount = amount if amount and amount.strip() else None
-    parsed_amount = _parse_amount(effective_amount)
-    if isinstance(parsed_amount, ParseError):
-        return parsed_amount
-    if parsed_amount is None:
-        parsed_amount = 1.0
-
-    # Parse block and timestamp
-    parsed_block = _parse_block(block)
-    if isinstance(parsed_block, ParseError):
-        return parsed_block
-
-    parsed_timestamp = parse_timestamp(timestamp)
-    if isinstance(parsed_timestamp, ParseError):
-        return parsed_timestamp
-
-    # Mutual exclusivity check
-    if parsed_timestamp is not None and parsed_block is not None:
-        return ParseError(
-            "Parameters 'timestamp' and 'block' are mutually exclusive. Provide only one."
-        )
-
-    return QuoteParseSuccess(
-        data=QuoteParams(
-            from_token=validated_from,
-            to_token=validated_to,
-            amount=parsed_amount,
-            block=parsed_block,
             timestamp=parsed_timestamp,
         )
     )

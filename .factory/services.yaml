@@ -19,8 +19,8 @@ services:
     depends_on: []
 
   vite-dev:
-    start: cd /Users/bryan/code/ypricemagic-server/frontend && npm run dev -- --port 5173
-    stop: lsof -ti :5173 | xargs kill 2>/dev/null || true
-    healthcheck: curl -sf http://localhost:5173/
-    port: 5173
+    start: cd /Users/bryan/code/ypricemagic-server/frontend && npx vite --port 5199
+    stop: lsof -ti :5199 | xargs kill 2>/dev/null || true
+    healthcheck: curl -sf http://localhost:5199/
+    port: 5199
     depends_on: []

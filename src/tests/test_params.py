@@ -4,13 +4,11 @@ from src.params import (
     BatchParseSuccess,
     ParseError,
     ParseSuccess,
-    QuoteParseSuccess,
     is_valid_address,
     parse_batch_params,
     parse_bool_param,
     parse_ignore_pools,
     parse_price_params,
-    parse_quote_params,
     parse_timestamp,
 )
 
@@ -56,7 +54,7 @@ class TestParsePriceParams:
         assert result.data.block is None
 
     def test_valid_token_and_block(self) -> None:
-        result = parse_price_params(DAI, "18000000")
+        result = parse_price_params(DAI, None, "18000000")
         assert isinstance(result, ParseSuccess)
         assert result.data.token == DAI
         assert result.data.block == 18000000
@@ -77,79 +75,79 @@ class TestParsePriceParams:
         assert "Invalid token address" in result.error
 
     def test_invalid_block_non_numeric(self) -> None:
-        result = parse_price_params(DAI, "abc")
+        result = parse_price_params(DAI, None, "abc")
         assert isinstance(result, ParseError)
         assert "Invalid block number" in result.error
 
     def test_invalid_block_negative(self) -> None:
-        result = parse_price_params(DAI, "-100")
+        result = parse_price_params(DAI, None, "-100")
         assert isinstance(result, ParseError)
         assert "Invalid block number" in result.error
 
     def test_invalid_block_zero(self) -> None:
-        result = parse_price_params(DAI, "0")
+        result = parse_price_params(DAI, None, "0")
         assert isinstance(result, ParseError)
         assert "Invalid block number" in result.error
 
     def test_valid_block_one(self) -> None:
-        result = parse_price_params(DAI, "1")
+        result = parse_price_params(DAI, None, "1")
         assert isinstance(result, ParseSuccess)
         assert result.data.block == 1
 
     def test_no_block_param(self) -> None:
-        result = parse_price_params(USDC, None)
+        result = parse_price_params(USDC, None, None)
         assert isinstance(result, ParseSuccess)
         assert result.data.block is None
 
     def test_block_at_max(self) -> None:
-        result = parse_price_params(DAI, str(MAX_BLOCK))
+        result = parse_price_params(DAI, None, str(MAX_BLOCK))
         assert isinstance(result, ParseSuccess)
         assert result.data.block == MAX_BLOCK
 
     def test_block_exceeds_max(self) -> None:
-        result = parse_price_params(DAI, str(MAX_BLOCK + 1))
+        result = parse_price_params(DAI, None, str(MAX_BLOCK + 1))
         assert isinstance(result, ParseError)
         assert "Invalid block number" in result.error
 
     def test_block_overflow(self) -> None:
-        result = parse_price_params(DAI, "99999999999999999999999999999")
+        result = parse_price_params(DAI, None, "99999999999999999999999999999")
         assert isinstance(result, ParseError)
         assert "Invalid block number" in result.error
 
 
 class TestParsePriceParamsAmount:
     def test_valid_amount(self) -> None:
-        result = parse_price_params(DAI, "18000000", "1000")
+        result = parse_price_params(DAI, None, "18000000", "1000")
         assert isinstance(result, ParseSuccess)
         assert result.data.amount == 1000.0
 
     def test_valid_amount_decimal(self) -> None:
-        result = parse_price_params(DAI, "18000000", "0.5")
+        result = parse_price_params(DAI, None, "18000000", "0.5")
         assert isinstance(result, ParseSuccess)
         assert result.data.amount == 0.5
 
     def test_no_amount(self) -> None:
-        result = parse_price_params(DAI, "18000000")
+        result = parse_price_params(DAI, None, "18000000")
         assert isinstance(result, ParseSuccess)
         assert result.data.amount is None
 
     def test_none_amount(self) -> None:
-        result = parse_price_params(DAI, "18000000", None)
+        result = parse_price_params(DAI, None, "18000000", None)
         assert isinstance(result, ParseSuccess)
         assert result.data.amount is None
 
     def test_invalid_amount_non_numeric(self) -> None:
-        result = parse_price_params(DAI, "18000000", "abc")
+        result = parse_price_params(DAI, None, "18000000", "abc")
         assert isinstance(result, ParseError)
         assert "Invalid amount" in result.error
 
     def test_invalid_amount_zero(self) -> None:
-        result = parse_price_params(DAI, "18000000", "0")
+        result = parse_price_params(DAI, None, "18000000", "0")
         assert isinstance(result, ParseError)
         assert "Invalid amount" in result.error
 
     def test_invalid_amount_negative(self) -> None:
-        result = parse_price_params(DAI, "18000000", "-100")
+        result = parse_price_params(DAI, None, "18000000", "-100")
         assert isinstance(result, ParseError)
         assert "Invalid amount" in result.error
 
@@ -264,87 +262,91 @@ class TestParseIgnorePools:
 
 class TestParsePriceParamsNewFields:
     def test_skip_cache_true(self) -> None:
-        result = parse_price_params(DAI, "18000000", None, skip_cache="true")
+        result = parse_price_params(DAI, None, "18000000", None, skip_cache="true")
         assert isinstance(result, ParseSuccess)
         assert result.data.skip_cache is True
 
-    def test_skip_cache_false(self) -> None:
-        result = parse_price_params(DAI, "18000000", None, skip_cache="false")
-        assert isinstance(result, ParseSuccess)
-        assert result.data.skip_cache is False
-
     def test_skip_cache_default_false(self) -> None:
-        result = parse_price_params(DAI, "18000000")
+        result = parse_price_params(DAI, None, "18000000")
         assert isinstance(result, ParseSuccess)
         assert result.data.skip_cache is False
 
     def test_skip_cache_invalid(self) -> None:
-        result = parse_price_params(DAI, "18000000", None, skip_cache="maybe")
+        result = parse_price_params(DAI, None, "18000000", None, skip_cache="maybe")
         assert isinstance(result, ParseError)
         assert "skip_cache" in result.error
 
-    def test_silent_true(self) -> None:
-        result = parse_price_params(DAI, "18000000", None, silent="true")
+    def test_to_address_valid(self) -> None:
+        result = parse_price_params(DAI, USDC, "18000000")
         assert isinstance(result, ParseSuccess)
-        assert result.data.silent is True
+        assert result.data.to == USDC
 
-    def test_silent_default_false(self) -> None:
-        result = parse_price_params(DAI, "18000000")
+    def test_to_empty_string_becomes_none(self) -> None:
+        result = parse_price_params(DAI, "", "18000000")
         assert isinstance(result, ParseSuccess)
-        assert result.data.silent is False
+        assert result.data.to is None
 
-    def test_silent_invalid(self) -> None:
-        result = parse_price_params(DAI, "18000000", None, silent="2")
+    def test_to_whitespace_becomes_none(self) -> None:
+        result = parse_price_params(DAI, "   ", "18000000")
+        assert isinstance(result, ParseSuccess)
+        assert result.data.to is None
+
+    def test_to_invalid_address(self) -> None:
+        result = parse_price_params(DAI, "notanaddress", "18000000")
         assert isinstance(result, ParseError)
-        assert "silent" in result.error
+        assert "Invalid to token address" in result.error
 
     def test_ignore_pools_single(self) -> None:
-        result = parse_price_params(DAI, "18000000", None, ignore_pools=USDC)
+        result = parse_price_params(DAI, None, "18000000", None, ignore_pools=USDC)
         assert isinstance(result, ParseSuccess)
         assert result.data.ignore_pools == (USDC,)
 
     def test_ignore_pools_multiple(self) -> None:
-        result = parse_price_params(DAI, "18000000", None, ignore_pools=f"{USDC},{WETH}")
+        result = parse_price_params(DAI, None, "18000000", None, ignore_pools=f"{USDC},{WETH}")
         assert isinstance(result, ParseSuccess)
         assert result.data.ignore_pools == (USDC, WETH)
 
     def test_ignore_pools_default_empty(self) -> None:
-        result = parse_price_params(DAI, "18000000")
+        result = parse_price_params(DAI, None, "18000000")
         assert isinstance(result, ParseSuccess)
         assert result.data.ignore_pools == ()
 
     def test_ignore_pools_invalid_address(self) -> None:
-        result = parse_price_params(DAI, "18000000", None, ignore_pools="notanaddress")
+        result = parse_price_params(DAI, None, "18000000", None, ignore_pools="notanaddress")
         assert isinstance(result, ParseError)
         assert "notanaddress" in result.error
 
     def test_ignore_pools_empty_string(self) -> None:
-        result = parse_price_params(DAI, "18000000", None, ignore_pools="")
+        result = parse_price_params(DAI, None, "18000000", None, ignore_pools="")
         assert isinstance(result, ParseSuccess)
         assert result.data.ignore_pools == ()
 
     def test_all_new_params_combined(self) -> None:
         result = parse_price_params(
-            DAI, "18000000", "1000", skip_cache="true", silent="1", ignore_pools=f"{USDC},{WETH}"
+            DAI,
+            USDC,
+            "18000000",
+            "1000",
+            skip_cache="true",
+            ignore_pools=f"{USDC},{WETH}",
         )
         assert isinstance(result, ParseSuccess)
         assert result.data.token == DAI
+        assert result.data.to == USDC
         assert result.data.block == 18000000
         assert result.data.amount == 1000.0
         assert result.data.skip_cache is True
-        assert result.data.silent is True
         assert result.data.ignore_pools == (USDC, WETH)
 
     def test_backwards_compat_no_new_params(self) -> None:
         """Omitting new params preserves existing behavior exactly."""
-        result = parse_price_params(DAI, "18000000", "1000")
+        result = parse_price_params(DAI, None, "18000000", "1000")
         assert isinstance(result, ParseSuccess)
         assert result.data.token == DAI
+        assert result.data.to is None
         assert result.data.block == 18000000
         assert result.data.amount == 1000.0
-        # New fields have defaults
         assert result.data.skip_cache is False
-        assert result.data.silent is False
         assert result.data.ignore_pools == ()
 
 
@@ -428,7 +430,7 @@ class TestParsePriceParamsTimestamp:
 
     def test_timestamp_and_block_mutually_exclusive(self) -> None:
         """Both timestamp and block returns ParseError."""
-        result = parse_price_params(DAI, "18000000", None, None, None, None, "1700000000")
+        result = parse_price_params(DAI, None, "18000000", None, None, None, "1700000000")
         assert isinstance(result, ParseError)
         assert "mutually exclusive" in result.error.lower()
 
@@ -446,12 +448,11 @@ class TestParsePriceParamsTimestamp:
 
     def test_timestamp_with_other_params(self) -> None:
         """Timestamp works with other params like amount, skip_cache, etc."""
-        result = parse_price_params(DAI, None, "1000", "true", None, "true", "1700000000")
+        result = parse_price_params(DAI, None, None, "1000", "true", None, "1700000000")
         assert isinstance(result, ParseSuccess)
         assert result.data.timestamp == 1700000000
         assert result.data.amount == 1000.0
         assert result.data.skip_cache is True
-        assert result.data.silent is True
 
     def test_no_timestamp_no_block(self) -> None:
         """Omitting both timestamp and block is valid (uses latest block)."""
@@ -712,7 +713,7 @@ class TestParseBatchParamsTimestamp:
 
 
 class TestParseBatchParamsBooleans:
-    """Tests for skip_cache and silent parameters in batch pricing."""
+    """Tests for skip_cache in batch pricing."""
 
     def test_skip_cache_true(self) -> None:
         result = parse_batch_params(DAI, skip_cache="true")
@@ -729,27 +730,6 @@ class TestParseBatchParamsBooleans:
         assert isinstance(result, ParseError)
         assert "skip_cache" in result.error
 
-    def test_silent_true(self) -> None:
-        result = parse_batch_params(DAI, silent="true")
-        assert isinstance(result, BatchParseSuccess)
-        assert result.data.silent is True
-
-    def test_silent_default_false(self) -> None:
-        result = parse_batch_params(DAI)
-        assert isinstance(result, BatchParseSuccess)
-        assert result.data.silent is False
-
-    def test_silent_invalid(self) -> None:
-        result = parse_batch_params(DAI, silent="2")
-        assert isinstance(result, ParseError)
-        assert "silent" in result.error
-
-    def test_both_booleans_true(self) -> None:
-        result = parse_batch_params(DAI, skip_cache="1", silent="1")
-        assert isinstance(result, BatchParseSuccess)
-        assert result.data.skip_cache is True
-        assert result.data.silent is True
-
 
 class TestParseBatchParamsCombined:
     """Tests for combined parameters in batch pricing."""
@@ -761,14 +741,12 @@ class TestParseBatchParamsCombined:
             block="18000000",
             amounts="1000,500",
             skip_cache="true",
-            silent="true",
         )
         assert isinstance(result, BatchParseSuccess)
         assert result.data.tokens == (DAI, USDC)
         assert result.data.block == 18000000
         assert result.data.amounts == (1000.0, 500.0)
         assert result.data.skip_cache is True
-        assert result.data.silent is True
 
     def test_timestamp_amounts_combined(self) -> None:
         """Timestamp and amounts can be combined."""
@@ -781,142 +759,3 @@ class TestParseBatchParamsCombined:
         assert result.data.timestamp == 1700000000
         assert result.data.amounts == (1000.0, 500.0)
         assert result.data.block is None
-
-
-class TestParseQuoteParams:
-    """Tests for parse_quote_params function."""
-
-    def test_valid_params(self) -> None:
-        """All valid params return QuoteParseSuccess."""
-        result = parse_quote_params(DAI, USDC, "1000")
-        assert isinstance(result, QuoteParseSuccess)
-        assert result.data.from_token == DAI
-        assert result.data.to_token == USDC
-        assert result.data.amount == 1000.0
-        assert result.data.block is None
-        assert result.data.timestamp is None
-
-    def test_valid_with_block(self) -> None:
-        """Block param is parsed correctly."""
-        result = parse_quote_params(DAI, USDC, "1000", block="18000000")
-        assert isinstance(result, QuoteParseSuccess)
-        assert result.data.block == 18000000
-
-    def test_valid_with_timestamp(self) -> None:
-        """Timestamp param is parsed correctly."""
-        result = parse_quote_params(DAI, USDC, "1000", timestamp="1700000000")
-        assert isinstance(result, QuoteParseSuccess)
-        assert result.data.timestamp == 1700000000
-        assert result.data.block is None
-
-    def test_missing_from_token(self) -> None:
-        """Missing from_token returns error."""
-        result = parse_quote_params(None, USDC, "1000")
-        assert isinstance(result, ParseError)
-        assert "from" in result.error.lower()
-
-    def test_empty_from_token(self) -> None:
-        """Empty from_token returns error."""
-        result = parse_quote_params("", USDC, "1000")
-        assert isinstance(result, ParseError)
-        assert "from" in result.error.lower()
-
-    def test_missing_to_token(self) -> None:
-        """Missing to_token returns error."""
-        result = parse_quote_params(DAI, None, "1000")
-        assert isinstance(result, ParseError)
-        assert "to" in result.error.lower()
-
-    def test_empty_to_token(self) -> None:
-        """Empty to_token returns error."""
-        result = parse_quote_params(DAI, "", "1000")
-        assert isinstance(result, ParseError)
-        assert "to" in result.error.lower()
-
-    def test_invalid_from_token_address(self) -> None:
-        """Invalid from_token address returns error."""
-        result = parse_quote_params("notanaddress", USDC, "1000")
-        assert isinstance(result, ParseError)
-        assert "from" in result.error.lower()
-
-    def test_invalid_to_token_address(self) -> None:
-        """Invalid to_token address returns error."""
-        result = parse_quote_params(DAI, "notanaddress", "1000")
-        assert isinstance(result, ParseError)
-        assert "to" in result.error.lower()
-
-    def test_missing_amount_defaults_to_one(self) -> None:
-        """Missing amount defaults to 1.0."""
-        result = parse_quote_params(DAI, USDC, None)
-        assert isinstance(result, QuoteParseSuccess)
-        assert result.data.amount == 1.0
-
-    def test_empty_amount_defaults_to_one(self) -> None:
-        """Empty amount defaults to 1.0."""
-        result = parse_quote_params(DAI, USDC, "")
-        assert isinstance(result, QuoteParseSuccess)
-        assert result.data.amount == 1.0
-
-    def test_invalid_amount_non_numeric(self) -> None:
-        """Non-numeric amount returns error."""
-        result = parse_quote_params(DAI, USDC, "abc")
-        assert isinstance(result, ParseError)
-        assert "amount" in result.error.lower()
-
-    def test_invalid_amount_negative(self) -> None:
-        """Negative amount returns error."""
-        result = parse_quote_params(DAI, USDC, "-100")
-        assert isinstance(result, ParseError)
-        assert "amount" in result.error.lower()
-
-    def test_invalid_amount_zero(self) -> None:
-        """Zero amount returns error."""
-        result = parse_quote_params(DAI, USDC, "0")
-        assert isinstance(result, ParseError)
-        assert "amount" in result.error.lower()
-
-    def test_valid_amount_decimal(self) -> None:
-        """Decimal amount is parsed correctly."""
-        result = parse_quote_params(DAI, USDC, "0.5")
-        assert isinstance(result, QuoteParseSuccess)
-        assert result.data.amount == 0.5
-
-    def test_timestamp_and_block_mutually_exclusive(self) -> None:
-        """Both timestamp and block returns error."""
-        result = parse_quote_params(DAI, USDC, "1000", block="18000000", timestamp="1700000000")
-        assert isinstance(result, ParseError)
-        assert "mutually exclusive" in result.error.lower()
-
-    def test_invalid_block(self) -> None:
-        """Invalid block returns error."""
-        result = parse_quote_params(DAI, USDC, "1000", block="abc")
-        assert isinstance(result, ParseError)
-        assert "block" in result.error.lower()
-
-    def test_invalid_timestamp(self) -> None:
-        """Invalid timestamp returns error."""
-        result = parse_quote_params(DAI, USDC, "1000", timestamp="invalid")
-        assert isinstance(result, ParseError)
-        assert "timestamp" in result.error.lower()
-
-    def test_future_timestamp(self) -> None:
-        """Future timestamp returns error."""
-        result = parse_quote_params(DAI, USDC, "1000", timestamp="9999999999")
-        assert isinstance(result, ParseError)
-        assert "future" in result.error.lower()
-
-    def test_same_from_and_to_token(self) -> None:
-        """Same from and to token is valid (handled by endpoint, not parser)."""
-        result = parse_quote_params(DAI, DAI, "1000")
-        assert isinstance(result, QuoteParseSuccess)
-        assert result.data.from_token == DAI
-        assert result.data.to_token == DAI
-
-    def test_all_params_combined(self) -> None:
-        """All params work together."""
-        result = parse_quote_params(DAI, USDC, "1000", block="18000000")
-        assert isinstance(result, QuoteParseSuccess)
-        assert result.data.from_token == DAI
-        assert result.data.to_token == USDC
-        assert result.data.amount == 1000.0
-        assert result.data.block == 18000000
