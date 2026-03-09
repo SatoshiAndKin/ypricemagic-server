@@ -1,0 +1,27 @@
+networks:
+  proxy:
+    name: traefik-proxy
+
+services:
+  traefik:
+    image: traefik:v3.2
+    container_name: traefik
+    command:
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--providers.docker.network=traefik-proxy"
+      - "--entrypoints.web.address=:80"
+      - "--api.dashboard=false"
+      - "--ping=true"
+    ports:
+      - "${PORT:-8000}:80"
+    networks:
+      - proxy
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "traefik", "healthcheck", "--ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3

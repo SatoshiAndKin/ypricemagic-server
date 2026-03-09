@@ -41,6 +41,7 @@ TOKENS: list[Token] = [
     Token("AAVE", "0x7Fc66500c84A76Ad7e9c93437bFc5Ac33E2DDaE9", "AAVE", VOLATILE_TOLERANCE),
 ]
 
+# TODO: more timestamps. 2020 to 2026
 TIMESTAMPS: list[int] = [
     1672531200,  # 2023-01-01
     1688169600,  # 2023-07-01

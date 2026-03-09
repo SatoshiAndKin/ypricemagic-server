@@ -1,21 +1,27 @@
 # ypricemagic-server
 
-A multi-chain token price API backed by [ypricemagic](https://github.com/BobTheBuidler/ypricemagic). One container runs per chain; an nginx reverse proxy routes requests by chain-prefixed paths (`/<chain>/...`).
+A multi-chain token price API backed by [ypricemagic](https://github.com/BobTheBuidler/ypricemagic). One container runs per chain; a shared Traefik proxy routes requests by host plus chain-prefixed paths.
 
 ## Architecture
 
 ```
-client → nginx:8000 → ypm-ethereum:8001
-                    → ypm-arbitrum:8001
-                    → ypm-optimism:8001
-                    → ypm-base:8001
+client → traefik-proxy:8000 → frontend:8080
+                            → ypm-ethereum:8001
+                            → ypm-arbitrum:8001
+                            → ypm-optimism:8001
+                            → ypm-base:8001
 ```
 
 Each chain container runs FastAPI + brownie + dank_mids + ypricemagic. Prices are cached to disk (diskcache) at `/data/cache`, keyed by `token:block`.
 
 ## Setup
 
-Copy `env.example` to `.env` and fill in your RPC URLs and Etherscan API key:
+Create two env files:
+
+- app config: copy `env.example` to `.env`
+- proxy config: copy `traefik-proxy/env.example` to `traefik-proxy/.env`
+
+App `.env`:
 
 ```
 RPC_URL_ETHEREUM=https://...
@@ -23,20 +29,34 @@ RPC_URL_ARBITRUM=https://...
 RPC_URL_OPTIMISM=https://...
 RPC_URL_BASE=https://...
 ETHERSCAN_TOKEN=your_etherscan_api_key
+YPM_HOST=localhost
+```
+
+Proxy `traefik-proxy/.env`:
+
+```
 PORT=8000
 ```
 
 ## Running
 
 ```bash
+docker compose -f traefik-proxy/docker-compose.yml --env-file traefik-proxy/.env up -d
 docker compose up --build
 ```
 
-The API is available at `http://localhost:8000` (or `$PORT`). A browser UI is served at `/`.
+For local usage, open `http://localhost:<PORT>` from `traefik-proxy/.env`.
+
+For a deployed host-based setup, set `YPM_HOST` in `.env` (for example `YPM_HOST=ypricemagic.stytt.com`) and access:
+
+- `https://<YPM_HOST>/` — frontend UI
+- `https://<YPM_HOST>/ethereum/docs` — Swagger for ethereum backend
+
+The Traefik proxy lives in `traefik-proxy/docker-compose.yml` and has its own `.env` so port binding is managed separately from app settings.
 
 ## API
 
-All requests go through nginx on port 8000. An interactive browser UI is served at `/`.
+All requests go through Traefik on port 8000. An interactive browser UI is served at `/` on `YPM_HOST`.
 
 ### `GET /{chain}/price`
 
@@ -250,8 +270,8 @@ All tokenlist state is stored in `localStorage`. The [Uniswap Default tokenlist]
 - **dank_mids** — batched async RPC calls
 - **FastAPI** + **uvicorn** — HTTP server
 - **diskcache** — persistent price cache
-- **nginx** — reverse proxy / chain routing
-- **Docker** (`linux/amd64`) + Docker Compose + **Swarm** (zero-downtime deploy)
+- **Traefik** — shared reverse proxy / host + chain routing
+- **Docker** (`linux/amd64`) + Docker Compose
 - **Uniswap tokenlist** — bundled token metadata for autocomplete
 
 ## Deployment
@@ -259,37 +279,24 @@ All tokenlist state is stored in `localStorage`. The [Uniswap Default tokenlist]
 ### Docker Compose (development)
 
 ```bash
+docker compose -f traefik-proxy/docker-compose.yml --env-file traefik-proxy/.env up -d
 docker compose up --build
 ```
 
-### Docker Swarm (production)
+### Shared Traefik layout
 
-The `docker-compose.yml` includes Swarm-compatible deploy configuration for zero-downtime deploys:
-
-- **`update_config.order: start-first`** — new containers start before old ones stop (blue-green)
-- **`rollback_config`** — automatic rollback on update failure
-- **`stop_grace_period: 30s`** — allows in-flight requests to drain before shutdown
-- **Health checks** gate traffic switching; nginx only routes to healthy backends
+- `traefik-proxy/docker-compose.yml` starts the repo-local shared proxy on the `PORT` defined in `traefik-proxy/.env`
+- root `docker-compose.yml` starts only the ypricemagic app services and joins the external `traefik-proxy` Docker network
+- all Traefik routes are scoped to `YPM_HOST`, so this app does not capture traffic for other apps on the same server
 
 Brownie cache volumes (`brownie-<chain>`) persist across deploys so contract metadata doesn't need to be re-fetched.
-
-To deploy manually:
-
-```bash
-docker swarm init  # one-time setup
-docker compose config -o docker-stack.yml
-python3 scripts/strip_depends_on.py docker-stack.yml  # strip extended depends_on for Swarm
-docker stack deploy -c docker-stack.yml ypm --with-registry-auth
-```
 
 ### CD pipeline
 
 A GitHub Actions workflow (`.github/workflows/cd.yml`) runs on every push to `main`:
 
-1. Builds and pushes the Docker image to `ghcr.io`
-2. Copies the compose file to the server via SCP
-3. Renders a Swarm-compatible compose file with `docker compose config`
-4. Deploys via `docker stack deploy`
-5. Polls `/health` to verify the deployment succeeded
+1. Starts or reuses the shared Traefik stack from `traefik-proxy/`
+2. Builds and updates the ypricemagic app services
+3. Polls `/health` on `YPM_HOST` to verify the deployment succeeded
 
 Required GitHub Actions variables: `SSH_HOST`, `SSH_USER`, `SSH_KEY`.
