@@ -14,14 +14,15 @@
 3. Common causes:
    - RPC URL unreachable at startup (brownie connect fails)
    - Invalid ETHERSCAN_TOKEN (explorer requests fail)
-   - Port conflict on 8001
+   - Traefik proxy not running from `traefik-proxy/`
 4. Restart a single chain: `docker compose restart ypm-<chain>`
-5. Full restart: `docker compose down && docker compose up -d`
+5. Full app restart: `docker compose down && docker compose up -d`
+6. If routes return 404, also restart the shared proxy: `docker compose -f traefik-proxy/docker-compose.yml --env-file traefik-proxy/.env up -d`
 
 ## Cache Issues
 
 - Cache location: Docker volume `cache-<chain>` mounted at `/data/cache`
-- To clear cache for a chain: `docker compose down ypm-<chain> && docker volume rm ypricemagic-server_cache-<chain> && docker compose up -d ypm-<chain>`
+- To clear cache for a chain: `docker compose stop ypm-<chain> && docker volume rm ypricemagic-server_cache-<chain> && docker compose up -d ypm-<chain>`
 - Cache read/write failures are non-fatal — prices are still returned, just not cached
 
 ## High Latency
@@ -40,4 +41,7 @@ docker pull ghcr.io/satoshiandkin/ypricemagic-server:sha-<commit>
 
 # Update docker-compose.yml to pin to that image, then:
 docker compose up -d
+
+# If routing is also broken, make sure the shared proxy is up:
+docker compose -f traefik-proxy/docker-compose.yml --env-file traefik-proxy/.env up -d
 ```
