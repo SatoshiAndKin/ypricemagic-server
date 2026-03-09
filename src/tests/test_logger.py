@@ -57,3 +57,43 @@ class TestGetLogger:
     def test_returns_logger(self) -> None:
         log = get_logger("test")
         assert log is not None
+
+
+class TestSanitizeErrorMessage:
+    def test_strips_rpc_url(self) -> None:
+        from src.logger import sanitize_error_message
+
+        with patch.dict(os.environ, {"RPC_URL": "https://eth.alchemy.com/v2/secret-key"}):
+            result = sanitize_error_message(
+                "Connection failed: https://eth.alchemy.com/v2/secret-key/eth_call"
+            )
+        assert "secret-key" not in result
+        assert "[REDACTED_URL]" in result
+
+    def test_strips_etherscan_token(self) -> None:
+        from src.logger import sanitize_error_message
+
+        with patch.dict(os.environ, {"ETHERSCAN_TOKEN": "ABCDE12345"}):
+            result = sanitize_error_message("Explorer error with key ABCDE12345")
+        assert "ABCDE12345" not in result
+        assert "[REDACTED]" in result
+
+    def test_passes_through_clean_message(self) -> None:
+        from src.logger import sanitize_error_message
+
+        with patch.dict(os.environ, {"RPC_URL": "", "ETHERSCAN_TOKEN": ""}):
+            result = sanitize_error_message("Token not found at block 100")
+        assert result == "Token not found at block 100"
+
+    def test_strips_both_secrets(self) -> None:
+        from src.logger import sanitize_error_message
+
+        with patch.dict(
+            os.environ,
+            {"RPC_URL": "https://rpc.example.com/key123", "ETHERSCAN_TOKEN": "SCANNER99"},
+        ):
+            result = sanitize_error_message(
+                "Failed at https://rpc.example.com/key123 with SCANNER99"
+            )
+        assert "key123" not in result
+        assert "SCANNER99" not in result

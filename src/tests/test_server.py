@@ -2856,3 +2856,64 @@ class TestEndpointSchemaRegression:
             assert len(data_with_amount) == 8
             assert "amount" in data_with_amount
             assert isinstance(data_with_amount["amount"], int | float)
+
+
+class TestErrorMessageSanitization:
+    """Error responses must not leak RPC URLs or API keys."""
+
+    @pytest.mark.asyncio
+    async def test_rpc_url_scrubbed_from_price_error(self, mock_y_module: None) -> None:
+        """When _fetch_price raises containing the RPC URL, the response is scrubbed."""
+        import os
+        from unittest.mock import patch as stdlib_patch
+
+        from fastapi.testclient import TestClient
+
+        from src.server import app
+
+        rpc_url = "https://eth-mainnet.g.alchemy.com/v2/secret-api-key-123"
+        error_msg = f"ConnectionError: {rpc_url}/eth_call failed"
+        mock_get_price = AsyncMock(side_effect=ConnectionError(error_msg))
+        mock_chain = type("MockChain", (), {"height": 19000000})()
+
+        with (
+            stdlib_patch.dict(os.environ, {"RPC_URL": rpc_url}),
+            patch("y.get_price", mock_get_price),
+            patch("brownie.chain", mock_chain),
+        ):
+            client = TestClient(app)
+            response = client.get("/price", params={"token": DAI, "block": "18000000"})
+
+        assert response.status_code == 500
+        body = response.json()
+        assert "secret-api-key-123" not in body["error"]
+        assert rpc_url not in body["error"]
+        assert "[REDACTED_URL]" in body["error"]
+
+    @pytest.mark.asyncio
+    async def test_etherscan_token_scrubbed_from_error(self, mock_y_module: None) -> None:
+        """Etherscan tokens in exception messages are scrubbed from error responses."""
+        import os
+        from unittest.mock import patch as stdlib_patch
+
+        from fastapi.testclient import TestClient
+
+        from src.server import app
+
+        etherscan_token = "ABCDEF1234567890"  # pragma: allowlist secret
+        error_msg = f"Explorer API failed with key {etherscan_token}"
+        mock_get_price = AsyncMock(side_effect=ConnectionError(error_msg))
+        mock_chain = type("MockChain", (), {"height": 19000000})()
+
+        with (
+            stdlib_patch.dict(os.environ, {"ETHERSCAN_TOKEN": etherscan_token}),
+            patch("y.get_price", mock_get_price),
+            patch("brownie.chain", mock_chain),
+        ):
+            client = TestClient(app)
+            response = client.get("/price", params={"token": DAI, "block": "18000000"})
+
+        assert response.status_code == 500
+        body = response.json()
+        assert etherscan_token not in body["error"]
+        assert "[REDACTED]" in body["error"]
