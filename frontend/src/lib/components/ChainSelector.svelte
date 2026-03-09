@@ -8,11 +8,14 @@
 </script>
 
 <div class="form-group chain-selector">
-  <label for="chain">Chain (applies to all forms)</label>
+  <label for="chain">Chain</label>
   <select id="chain" value={$selectedChain} onchange={handleChange}>
     <option value="ethereum">Ethereum</option>
     <option value="arbitrum">Arbitrum</option>
     <option value="optimism">Optimism</option>
     <option value="base">Base</option>
   </select>
+  <p class="chain-selector-link">
+    <a href={`/${$selectedChain}/docs`} target="_blank" rel="noreferrer">Open {$selectedChain} Swagger docs</a>
+  </p>
 </div>
