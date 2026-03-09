@@ -1,0 +1,27 @@
+{
+  "threat_model_version": "1.0.0",
+  "last_updated": "2026-03-09T00:00:00Z",
+  "security_team_contacts": [],
+  "compliance_requirements": [],
+  "scan_frequency": "on_commit",
+  "severity_thresholds": {
+    "block_merge": ["CRITICAL"],
+    "require_review": ["HIGH", "CRITICAL"],
+    "notify_security_team": ["CRITICAL"]
+  },
+  "vulnerability_patterns": {
+    "enabled": [
+      "ssrf",
+      "xss",
+      "command_injection",
+      "path_traversal",
+      "auth_bypass",
+      "idor",
+      "secret_leakage",
+      "resource_exhaustion",
+      "cors_misconfiguration",
+      "information_disclosure"
+    ],
+    "custom_patterns_path": null
+  }
+}
