@@ -3,10 +3,8 @@ name: CD
 on:
   push:
     branches: [main]
-  workflow_dispatch:  # Allow manual triggers
+  workflow_dispatch:
 
-# Run after CI (CI also triggers on push to main)
-# Branch protection should require CI to pass before merge
 concurrency:
   group: cd-${{ github.ref }}
   cancel-in-progress: false
@@ -34,8 +32,8 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Extract metadata for Docker
-        id: meta
+      - name: Extract metadata for backend
+        id: meta-backend
         uses: docker/metadata-action@v5
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
@@ -44,103 +42,34 @@ jobs:
             type=ref,event=branch
             type=raw,value=latest,enable={{is_default_branch}}
 
-      - name: Build and push Docker image
+      - name: Build and push backend image
         uses: docker/build-push-action@v6
         with:
           context: .
           push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
+          tags: ${{ steps.meta-backend.outputs.tags }}
+          labels: ${{ steps.meta-backend.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
           platforms: linux/amd64
 
-  deploy:
-    needs: build-and-push
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-
-    steps:
-      - uses: actions/checkout@v4
-
-      # One-time setup requirement (run once on the server):
-      #   docker swarm init
-      #
-      # The server must have:
-      #   - Docker Swarm initialized
-      #   - A checkout of this repo at ~/ypm/ with .env file configured
-      #   - SSH access configured with the key stored in SSH_KEY secret
-      #
-      # Required GitHub secrets:
-      #   - SSH_HOST: The server hostname or IP
-      #   - SSH_USER: The SSH user (typically 'root' or a user with docker group)
-      #   - SSH_KEY: The private SSH key for authentication
-
-      - name: Copy docker-stack.yml to server
-        uses: appleboy/scp-action@v0.1.7
+      - name: Extract metadata for frontend
+        id: meta-frontend
+        uses: docker/metadata-action@v5
         with:
-          host: ${{ secrets.SSH_HOST }}
-          username: ${{ secrets.SSH_USER }}
-          key: ${{ secrets.SSH_KEY }}
-          source: "docker-stack.yml"
-          target: ~/ypm
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-frontend
+          tags: |
+            type=sha
+            type=ref,event=branch
+            type=raw,value=latest,enable={{is_default_branch}}
 
-      - name: Deploy to server
-        uses: appleboy/ssh-action@v1
+      - name: Build and push frontend image
+        uses: docker/build-push-action@v6
         with:
-          host: ${{ secrets.SSH_HOST }}
-          username: ${{ secrets.SSH_USER }}
-          key: ${{ secrets.SSH_KEY }}
-          script_stop: true
-          script: |
-            set -eux -o pipefail
-
-            cd ~/ypm
-
-            # Login to GitHub Container Registry
-            echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
-
-            # Pull the latest image
-            docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
-
-            # Source environment variables for docker stack deploy
-            # Note: docker stack deploy does not auto-load .env like docker compose does
-            set -a
-            source .env
-            set +a
-
-            # Deploy the stack using the production stack file directly
-            # docker-stack.yml is Swarm-compatible (no extended depends_on)
-            docker stack deploy -c docker-stack.yml ypm --with-registry-auth
-
-            echo "Deploy initiated. Check 'docker service ls' and 'docker service logs ypm_ypm-ethereum' for status."
-
-      - name: Verify deployment health
-        uses: appleboy/ssh-action@v1
-        with:
-          host: ${{ secrets.SSH_HOST }}
-          username: ${{ secrets.SSH_USER }}
-          key: ${{ secrets.SSH_KEY }}
-          script_stop: true
-          script: |
-            set -eux -o pipefail
-
-            # Wait for services to become healthy (poll health endpoint)
-            # The nginx service routes to chain backends, so /health aggregates all chains
-            MAX_RETRIES=30
-            RETRY_INTERVAL=10
-
-            for i in $(seq 1 $MAX_RETRIES); do
-              if curl -sf http://localhost:8000/health > /dev/null 2>&1; then
-                echo "Health check passed on attempt $i"
-                exit 0
-              fi
-              echo "Health check attempt $i/$MAX_RETRIES failed, retrying in ${RETRY_INTERVAL}s..."
-              sleep $RETRY_INTERVAL
-            done
-
-            echo "Health check failed after $MAX_RETRIES attempts"
-            # Print service status for debugging
-            docker service ls
-            docker service logs ypm_nginx --tail 20
-            exit 1
+          context: ./frontend
+          push: true
+          tags: ${{ steps.meta-frontend.outputs.tags }}
+          labels: ${{ steps.meta-frontend.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          platforms: linux/amd64
