@@ -185,8 +185,8 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 24px;
-  padding: 16px 20px;
+  margin-bottom: 14px;
+  padding: 12px 16px;
   background: var(--bg-secondary);
   border-radius: 8px;
   border-bottom: 2px solid var(--accent);
@@ -291,7 +291,7 @@ html:not([data-theme]) .theme-icon-system { display: inline; }
 
 /* Chain Selector */
 .chain-selector {
-  margin-bottom: 24px;
+  margin-bottom: 14px;
 }
 
 .chain-selector label {
@@ -331,23 +331,28 @@ html:not([data-theme]) .theme-icon-system { display: inline; }
   text-decoration: underline;
 }
 
+.chain-selector-sep {
+  color: var(--text-muted);
+  margin: 0 2px;
+}
+
 /* Section headings */
 section {
-  margin-bottom: 20px;
+  margin-bottom: 14px;
 }
 
 h2 {
-  margin: 30px 0 15px;
+  margin: 16px 0 10px;
   color: var(--text-primary);
   font-size: 20px;
   border-bottom: 2px solid var(--border-color);
-  padding-bottom: 8px;
+  padding-bottom: 6px;
   transition: color 0.2s, border-color 0.2s;
 }
 
 /* Forms */
 .form-group {
-  margin-bottom: 16px;
+  margin-bottom: 10px;
 }
 
 label {
@@ -361,7 +366,7 @@ input,
 select,
 textarea {
   width: 100%;
-  padding: 10px;
+  padding: 8px 10px;
   font-size: 14px;
   border: 1px solid var(--input-border);
   border-radius: 4px;
@@ -396,7 +401,7 @@ textarea:focus {
 
 /* Buttons */
 button {
-  padding: 10px 18px;
+  padding: 8px 16px;
   font-size: 14px;
   font-weight: 600;
   border-radius: 4px;
@@ -430,15 +435,15 @@ button.btn-secondary:hover:not(:disabled) {
 .form-section {
   background: var(--bg-secondary);
   border-radius: 8px;
-  padding: 20px;
-  margin-bottom: 20px;
+  padding: 14px 16px;
+  margin-bottom: 14px;
   border: 1px solid var(--border-color);
 }
 
 .form-actions {
   display: flex;
   gap: 10px;
-  margin-top: 8px;
+  margin-top: 6px;
 }
 
 /* Hints */
@@ -482,18 +487,18 @@ button.btn-secondary:hover:not(:disabled) {
 
 /* Result card */
 .result-card {
-  margin-top: 20px;
+  margin-top: 14px;
   background: var(--result-bg);
   border: 1px solid var(--result-border);
   border-radius: 6px;
-  padding: 16px;
+  padding: 12px 14px;
 }
 
 .result-section-title {
   font-weight: 700;
   font-size: 14px;
   color: var(--result-header);
-  margin-bottom: 12px;
+  margin-bottom: 8px;
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
@@ -511,7 +516,7 @@ button.btn-secondary:hover:not(:disabled) {
 .result-grid {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 4px;
 }
 
 .result-row {
@@ -547,6 +552,15 @@ button.btn-secondary:hover:not(:disabled) {
 
 .result-value-muted {
   color: var(--text-muted);
+}
+
+.block-link {
+  color: var(--field-value-number);
+  text-decoration: none;
+}
+
+.block-link:hover {
+  text-decoration: underline;
 }
 
 /* Route list */
@@ -723,5 +737,74 @@ button.btn-secondary:hover:not(:disabled) {
 
 /* Results table */
 table { width: 100%; border-collapse: collapse; margin-top: 8px; }
-th, td { text-align: left; padding: 8px 12px; border-bottom: 1px solid var(--border); }
+th, td { text-align: left; padding: 6px 10px; border-bottom: 1px solid var(--border); }
 th { font-weight: 600; color: var(--text-secondary); }
+
+/* Mobile responsiveness */
+@media (max-width: 600px) {
+  body {
+    padding: 10px;
+  }
+
+  .page-header {
+    padding: 10px 12px;
+    margin-bottom: 10px;
+  }
+
+  h1 {
+    font-size: 22px;
+  }
+
+  .header-tagline {
+    font-size: 11px;
+  }
+
+  .form-section {
+    padding: 10px 12px;
+  }
+
+  .result-label {
+    flex: 0 0 120px;
+    font-size: 11px;
+  }
+
+  .result-row {
+    gap: 8px;
+    font-size: 12px;
+  }
+
+  .result-value {
+    font-size: 12px;
+    word-break: break-all;
+  }
+
+  .modal {
+    width: 95%;
+    padding: 16px;
+  }
+
+  .modal-buttons {
+    flex-direction: column;
+  }
+
+  table {
+    font-size: 12px;
+  }
+
+  th, td {
+    padding: 4px 6px;
+  }
+
+  .monospace {
+    font-size: 11px;
+    word-break: break-all;
+  }
+
+  .token-row {
+    flex-wrap: wrap;
+  }
+
+  .token-row .autocomplete-wrapper {
+    flex: 1 1 100%;
+  }
+}

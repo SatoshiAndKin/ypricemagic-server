@@ -15,7 +15,7 @@ for (const chain of chains) {
 }
 
 export default defineConfig({
-  plugins: [svelte({ hot: !process.env.VITEST })],
+  plugins: [svelte({ compilerOptions: { hmr: !process.env.VITEST } })],
   server: {
     proxy: proxyConfig,
   },

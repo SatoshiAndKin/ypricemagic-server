@@ -44,6 +44,9 @@
     null
   );
 
+  // Abort controller for in-flight requests
+  let abortController: AbortController | null = null;
+
   // Age / timestamp state
   let ageInterval: ReturnType<typeof setInterval> | null = null;
   let blockTimestamp = $state<number | null>(null);
@@ -54,6 +57,13 @@
   // ---------------------------------------------------------------------------
 
   const HEX_ADDR = /^0x[0-9a-fA-F]{40}$/;
+
+  const BLOCK_EXPLORER: Record<string, string> = {
+    ethereum: 'https://etherscan.io',
+    arbitrum: 'https://arbiscan.io',
+    optimism: 'https://optimistic.etherscan.io',
+    base: 'https://basescan.org',
+  };
 
   function isValidAddress(addr: string): boolean {
     return HEX_ADDR.test(addr);
@@ -164,8 +174,16 @@
     blockInput = '';
   }
 
+  function abortPending() {
+    if (abortController) {
+      abortController.abort();
+      abortController = null;
+    }
+  }
+
   async function handleSubmit(e: Event) {
     e.preventDefault();
+    abortPending();
     stopAgeInterval();
     result = null;
     error = null;
@@ -184,9 +202,17 @@
     const blockParam = getBlockParam() || undefined;
     const amountParam = amount.trim() || undefined;
 
+    abortController = new AbortController();
     loading = true;
     try {
-      const quoteData = await fetchQuote(chain, fromAddr, toAddr, blockParam, amountParam);
+      const quoteData = await fetchQuote(
+        chain,
+        fromAddr,
+        toAddr,
+        blockParam,
+        amountParam,
+        abortController.signal,
+      );
 
       result = { quote: quoteData };
 
@@ -198,6 +224,7 @@
         startAgeInterval(quoteData.block_timestamp);
       }
     } catch (err) {
+      if (err instanceof DOMException && err.name === 'AbortError') return;
       error = err instanceof Error ? err.message : String(err);
     } finally {
       loading = false;
@@ -213,6 +240,12 @@
     const _chainId = chainId;
     // Only access refs in untrack to avoid tracking them
     untrack(() => {
+      abortPending();
+      loading = false;
+      result = null;
+      error = null;
+      stopAgeInterval();
+
       const pair = getEffectivePair(_chain as Chain);
       fromAddress = pair.from;
       toAddress = pair.to;
@@ -222,9 +255,12 @@
     });
   });
 
-  // Cleanup interval on unmount
+  // Cleanup on unmount
   $effect(() => {
-    return stopAgeInterval;
+    return () => {
+      stopAgeInterval();
+      abortPending();
+    };
   });
 
   // ---------------------------------------------------------------------------
@@ -410,7 +446,9 @@
 
         <div class="result-row">
           <span class="result-label">Block</span>
-          <span class="result-value result-value-number">{q.block}</span>
+          <span class="result-value result-value-number">
+            <a href="{(BLOCK_EXPLORER[q.chain] ?? BLOCK_EXPLORER['ethereum'])}/block/{q.block}" target="_blank" rel="noreferrer" class="block-link">{q.block}</a>
+          </span>
         </div>
 
         {#if q.block_timestamp != null}
@@ -420,14 +458,22 @@
           </div>
 
           <div class="result-row">
-            <span class="result-label">Age</span>
+            <span class="result-label">Block Age</span>
             <span class="result-value result-value-muted">{ageDisplay}</span>
           </div>
         {/if}
 
         <div class="result-row">
           <span class="result-label">Route</span>
-          <span class="result-value result-value-muted">{q.route}</span>
+          <span class="result-value result-value-muted">
+            {#if q.route === 'divide'}
+              {getSymbol(q.from)} → USD ÷ {getSymbol(q.to)} → USD
+            {:else if q.route === 'identity'}
+              identity (same token)
+            {:else}
+              {q.route}
+            {/if}
+          </span>
         </div>
       </div>
     </div>
