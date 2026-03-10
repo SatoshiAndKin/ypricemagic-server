@@ -20,7 +20,7 @@ class TestTimestampResolution:
         from src.server import app
 
         mock_get_block_at_timestamp = AsyncMock(return_value=18000000)
-        mock_get_price = AsyncMock(return_value=1.0)
+        mock_get_price = AsyncMock(side_effect=[1.0, 1.0])
         mock_get_block_timestamp = AsyncMock(return_value=1700000000)
         mock_chain = type("MockChain", (), {"height": 19000000})()
 
@@ -39,7 +39,7 @@ class TestTimestampResolution:
             assert response.status_code == 200
             data = response.json()
             assert data["block"] == 18000000
-            assert data["price"] == 1.0
+            assert data["from_price"] == 1.0
             # get_block_at_timestamp should be called with the timestamp
             mock_get_block_at_timestamp.assert_called_once()
 
@@ -220,7 +220,7 @@ class TestTimestampResolution:
         from src.server import app
 
         mock_get_block_at_timestamp = AsyncMock(return_value=18000000)
-        mock_get_price = AsyncMock(return_value=1.0)
+        mock_get_price = AsyncMock(side_effect=[1.0, 1.0])
         mock_get_block_timestamp = AsyncMock(return_value=1700000000)
         mock_chain = type("MockChain", (), {"height": 19000000})()
 
@@ -239,8 +239,7 @@ class TestTimestampResolution:
             assert response.status_code == 200
             data = response.json()
             assert data["block"] == 18000000
-            assert "price" in data
-            assert data["cached"] is False
+            assert "output_amount" in data
 
 
 class TestFetchPriceNoneReturn:
@@ -1799,14 +1798,14 @@ class TestCrossAreaSkipCacheAmount:
 
     @pytest.mark.asyncio
     async def test_amount_request_not_cached(self, mock_y_module: None) -> None:
-        """After an amount request, subsequent non-amount request is not cached:true."""
+        """Quote mode requests (default when no to) do not use the diskcache layer."""
         from unittest.mock import patch
 
         from fastapi.testclient import TestClient
 
         from src.server import app
 
-        mock_get_price = AsyncMock(return_value=1.0)
+        mock_get_price = AsyncMock(side_effect=[1.0, 1.0, 1.0, 1.0])
         mock_get_block_timestamp = AsyncMock(return_value=1700000000)
         mock_chain = type("MockChain", (), {"height": 19000000})()
 
@@ -1831,27 +1830,21 @@ class TestCrossAreaSkipCacheAmount:
         ):
             client = TestClient(app)
 
-            # First request with amount (should NOT be cached)
+            # First request with amount (quote mode, no cache interaction)
             response1 = client.get(
                 "/price",
                 params={"token": DAI, "block": "18000000", "amount": "1000"},
             )
             assert response1.status_code == 200
-            assert response1.json()["cached"] is False
+            assert "output_amount" in response1.json()
 
-            # Cache should be empty
-            assert len(cached_data) == 0
-
-            # Second request without amount (should be fresh, not cached)
+            # Second request without amount (still quote mode, no cache interaction)
             response2 = client.get(
                 "/price",
                 params={"token": DAI, "block": "18000000"},
             )
             assert response2.status_code == 200
-            assert response2.json()["cached"] is False
-
-            # Now cache should have the entry
-            assert len(cached_data) == 1
+            assert "output_amount" in response2.json()
 
 
 class TestCrossAreaBackwardsCompat:
@@ -1859,12 +1852,12 @@ class TestCrossAreaBackwardsCompat:
 
     @pytest.mark.asyncio
     async def test_price_response_has_all_original_fields(self, mock_y_module: None) -> None:
-        """GET /price with only original params returns existing fields + additive block_timestamp."""
+        """GET /price without to defaults to USDC quote mode with expected fields."""
         from fastapi.testclient import TestClient
 
         from src.server import app
 
-        mock_get_price = AsyncMock(return_value=1.0)
+        mock_get_price = AsyncMock(side_effect=[1.0, 1.0])
         mock_get_block_timestamp = AsyncMock(return_value=1700000000)
         mock_chain = type("MockChain", (), {"height": 19000000})()
 
@@ -1882,32 +1875,38 @@ class TestCrossAreaBackwardsCompat:
             assert response.status_code == 200
             data = response.json()
 
-            # All original fields must be present
-            assert "chain" in data
-            assert "token" in data
+            # Quote mode fields must be present
+            assert "from" in data
+            assert "to" in data
+            assert "amount" in data
+            assert "output_amount" in data
             assert "block" in data
-            assert "price" in data
-            assert "cached" in data
-
-            # Additive field should be present
+            assert "chain" in data
             assert "block_timestamp" in data
+            assert "route" in data
+            assert "from_price" in data
+            assert "to_price" in data
+            assert "from_trade_path" in data
+            assert "to_trade_path" in data
 
             # Verify values
             assert data["chain"] == "ethereum"
-            assert data["token"] == DAI
+            assert data["from"] == DAI
+            assert data["to"] == USDC
             assert data["block"] == 18000000
-            assert data["price"] == 1.0
-            assert data["cached"] is False
+            assert data["from_price"] == 1.0
+            assert data["to_price"] == 1.0
+            assert data["route"] == "divide"
             assert data["block_timestamp"] == 1700000000
 
     @pytest.mark.asyncio
     async def test_price_response_no_new_fields_removed(self, mock_y_module: None) -> None:
-        """Response shape is a superset - no fields removed."""
+        """Response shape has all required quote mode fields."""
         from fastapi.testclient import TestClient
 
         from src.server import app
 
-        mock_get_price = AsyncMock(return_value=1.0)
+        mock_get_price = AsyncMock(side_effect=[1.0, 1.0])
         mock_get_block_timestamp = AsyncMock(return_value=1700000000)
         mock_chain = type("MockChain", (), {"height": 19000000})()
 
@@ -1922,18 +1921,31 @@ class TestCrossAreaBackwardsCompat:
             assert response.status_code == 200
             data = response.json()
 
-            # Response should have these required keys
-            required_keys = {"chain", "token", "block", "price", "cached", "block_timestamp"}
+            # Response should have these required keys for quote mode
+            required_keys = {
+                "from",
+                "to",
+                "amount",
+                "output_amount",
+                "block",
+                "chain",
+                "block_timestamp",
+                "route",
+                "from_price",
+                "to_price",
+                "from_trade_path",
+                "to_trade_path",
+            }
             assert required_keys.issubset(data.keys())
 
     @pytest.mark.asyncio
     async def test_amount_field_conditional(self, mock_y_module: None) -> None:
-        """Amount field is only present when amount parameter is provided."""
+        """Amount field is always present in quote mode (defaults to 1.0 when not provided)."""
         from fastapi.testclient import TestClient
 
         from src.server import app
 
-        mock_get_price = AsyncMock(return_value=1.0)
+        mock_get_price = AsyncMock(side_effect=[1.0, 1.0, 1.0, 1.0])
         mock_get_block_timestamp = AsyncMock(return_value=1700000000)
         mock_chain = type("MockChain", (), {"height": 19000000})()
 
@@ -1944,17 +1956,16 @@ class TestCrossAreaBackwardsCompat:
         ):
             client = TestClient(app)
 
-            # Without amount - should NOT have amount field
+            # Without explicit amount - defaults to 1.0 in quote mode
             response1 = client.get("/price", params={"token": DAI, "block": "18000000"})
             assert response1.status_code == 200
-            assert "amount" not in response1.json()
+            assert response1.json()["amount"] == 1.0
 
-            # With amount - should have amount field
+            # With amount - should have explicit amount
             response2 = client.get(
                 "/price", params={"token": DAI, "block": "18000000", "amount": "1000"}
             )
             assert response2.status_code == 200
-            assert "amount" in response2.json()
             assert response2.json()["amount"] == 1000.0
 
 
@@ -2000,12 +2011,13 @@ class TestPriceQuoteMode:
         }
 
     @pytest.mark.asyncio
-    async def test_price_without_to_remains_usd_response(self, mock_y_module: None) -> None:
+    async def test_price_without_to_defaults_to_usdc_quote(self, mock_y_module: None) -> None:
+        """When to is not provided, defaults to USDC quote mode."""
         from fastapi.testclient import TestClient
 
         from src.server import app
 
-        mock_get_price = AsyncMock(return_value=1.0)
+        mock_get_price = AsyncMock(side_effect=[1.0, 1.0])
         mock_get_block_timestamp = AsyncMock(return_value=1700000000)
         mock_chain = type("MockChain", (), {"height": 19000000})()
 
@@ -2019,17 +2031,19 @@ class TestPriceQuoteMode:
 
         assert response.status_code == 200
         data = response.json()
-        assert data["price"] == 1.0
-        for key in ["from", "to", "output_amount", "route", "from_price", "to_price"]:
-            assert key not in data
+        assert data["to"] == USDC
+        assert data["from_price"] == 1.0
+        assert data["route"] == "divide"
+        assert "output_amount" in data
 
     @pytest.mark.asyncio
-    async def test_price_with_empty_to_uses_usd_mode(self, mock_y_module: None) -> None:
+    async def test_price_with_empty_to_defaults_to_usdc_quote(self, mock_y_module: None) -> None:
+        """Empty to parameter defaults to USDC quote mode."""
         from fastapi.testclient import TestClient
 
         from src.server import app
 
-        mock_get_price = AsyncMock(return_value=1.0)
+        mock_get_price = AsyncMock(side_effect=[1.0, 1.0])
         mock_get_block_timestamp = AsyncMock(return_value=1700000000)
         mock_chain = type("MockChain", (), {"height": 19000000})()
 
@@ -2042,8 +2056,10 @@ class TestPriceQuoteMode:
             response = client.get("/price", params={"token": DAI, "to": ""})
 
         assert response.status_code == 200
-        assert "price" in response.json()
-        mock_get_price.assert_called_once()
+        data = response.json()
+        assert "from_price" in data
+        assert data["to"] == USDC
+        assert mock_get_price.call_count == 2
 
     @pytest.mark.asyncio
     async def test_price_with_to_defaults_amount_to_one(self, mock_y_module: None) -> None:
@@ -2272,7 +2288,7 @@ class TestPriceQuoteMode:
 
         from src.server import app
 
-        mock_get_price = AsyncMock(return_value=1.0)
+        mock_get_price = AsyncMock(side_effect=[1.0, 1.0])
         mock_get_block_timestamp = AsyncMock(return_value=1700000000)
         mock_chain = type("MockChain", (), {"height": 19000000})()
 
@@ -2285,7 +2301,7 @@ class TestPriceQuoteMode:
             response = client.get("/price", params={"token": DAI})
 
         assert response.status_code == 200
-        assert response.json()["price"] == 1.0
+        assert response.json()["from_price"] == 1.0
 
     @pytest.mark.asyncio
     async def test_quote_endpoint_returns_404(self, mock_y_module: None) -> None:
@@ -2425,7 +2441,7 @@ class TestPriceCacheHit:
 
     @pytest.mark.asyncio
     async def test_cache_hit_returns_cached_response(self, mock_y_module: None) -> None:
-        """When cache has the price, returns cached response without calling get_price."""
+        """When USDC_BY_CHAIN has no entry for the chain, USD mode is used and cache works."""
         from fastapi.testclient import TestClient
 
         from src.server import app
@@ -2442,6 +2458,7 @@ class TestPriceCacheHit:
             patch("y.get_price", mock_get_price),
             patch("brownie.chain", mock_chain),
             patch("src.server.get_cached_price", mock_get_cached_price),
+            patch("src.server.USDC_BY_CHAIN", {}),
         ):
             client = TestClient(app)
             response = client.get("/price", params={"token": DAI, "block": "18000000"})
@@ -2465,12 +2482,12 @@ class TestEndpointSchemaRegression:
 
     @pytest.mark.asyncio
     async def test_price_endpoint_schema_fields(self, mock_y_module: None) -> None:
-        """GET /price returns exactly the expected fields: chain, token, block, price, cached, block_timestamp."""
+        """GET /price without to returns quote mode fields defaulting to USDC."""
         from fastapi.testclient import TestClient
 
         from src.server import app
 
-        mock_get_price = AsyncMock(return_value=1.0)
+        mock_get_price = AsyncMock(side_effect=[1.0, 1.0])
         mock_get_block_timestamp = AsyncMock(return_value=1700000000)
         mock_chain = type("MockChain", (), {"height": 19000000})()
 
@@ -2485,15 +2502,20 @@ class TestEndpointSchemaRegression:
             assert response.status_code == 200
             data = response.json()
 
-            # Expected fields for /price endpoint
+            # Expected fields for /price endpoint in quote mode
             expected_fields = {
-                "chain",
-                "token",
+                "from",
+                "to",
+                "amount",
+                "output_amount",
                 "block",
-                "price",
-                "cached",
+                "chain",
                 "block_timestamp",
-                "trade_path",
+                "route",
+                "from_price",
+                "to_price",
+                "from_trade_path",
+                "to_trade_path",
             }
             actual_fields = set(data.keys())
 
@@ -2504,14 +2526,19 @@ class TestEndpointSchemaRegression:
 
             # Verify field types
             assert isinstance(data["chain"], str)
-            assert isinstance(data["token"], str)
+            assert isinstance(data["from"], str)
+            assert isinstance(data["to"], str)
             assert isinstance(data["block"], int)
-            assert isinstance(data["price"], int | float)
-            assert isinstance(data["cached"], bool)
+            assert isinstance(data["amount"], int | float)
+            assert isinstance(data["output_amount"], int | float)
+            assert isinstance(data["route"], str)
+            assert isinstance(data["from_price"], int | float)
+            assert isinstance(data["to_price"], int | float)
             # block_timestamp can be int or None
             assert data["block_timestamp"] is None or isinstance(data["block_timestamp"], int)
-            # trade_path can be list or None
-            assert data["trade_path"] is None or isinstance(data["trade_path"], list)
+            # trade paths can be list or None
+            assert data["from_trade_path"] is None or isinstance(data["from_trade_path"], list)
+            assert data["to_trade_path"] is None or isinstance(data["to_trade_path"], list)
 
     @pytest.mark.asyncio
     async def test_price_endpoint_includes_block_timestamp(self, mock_y_module: None) -> None:
@@ -2677,7 +2704,7 @@ class TestEndpointSchemaRegression:
 
         from src.server import app
 
-        mock_get_price = AsyncMock(return_value=1.0)
+        mock_get_price = AsyncMock(side_effect=[1.0, 1.0])
         mock_get_block_timestamp = AsyncMock(return_value=1700000000)
         mock_chain = type("MockChain", (), {"height": 19000000})()
 
@@ -2692,8 +2719,8 @@ class TestEndpointSchemaRegression:
             assert response.status_code == 200
             data = response.json()
 
-            # Exact field count (no more, no less)
-            assert len(data) == 7, f"Expected 7 fields, got {len(data)}: {list(data.keys())}"
+            # Exact field count (no more, no less) - quote mode has 12 fields
+            assert len(data) == 12, f"Expected 12 fields, got {len(data)}: {list(data.keys())}"
 
     @pytest.mark.asyncio
     async def test_health_endpoint_no_extra_fields(self, mock_y_module: None) -> None:
@@ -2758,12 +2785,12 @@ class TestEndpointSchemaRegression:
 
     @pytest.mark.asyncio
     async def test_price_endpoint_with_amount_optional_field(self, mock_y_module: None) -> None:
-        """GET /price with amount param includes 'amount' as optional field (not part of base schema)."""
+        """GET /price always includes 'amount' in quote mode (defaults to 1.0)."""
         from fastapi.testclient import TestClient
 
         from src.server import app
 
-        mock_get_price = AsyncMock(return_value=1.0)
+        mock_get_price = AsyncMock(side_effect=[1.0, 1.0, 1.0, 1.0])
         mock_get_block_timestamp = AsyncMock(return_value=1700000000)
         mock_chain = type("MockChain", (), {"height": 19000000})()
 
@@ -2774,18 +2801,19 @@ class TestEndpointSchemaRegression:
         ):
             client = TestClient(app)
 
-            # Without amount: 7 fields
+            # Without amount: 12 fields (amount defaults to 1.0 in quote mode)
             response = client.get("/price", params={"token": DAI})
             assert response.status_code == 200
             data_no_amount = response.json()
-            assert len(data_no_amount) == 7
+            assert len(data_no_amount) == 12
+            assert data_no_amount["amount"] == 1.0
 
-            # With amount: 8 fields (includes 'amount')
+            # With amount: also 12 fields (amount=1000.0 explicit)
             response = client.get("/price", params={"token": DAI, "amount": "1000"})
             assert response.status_code == 200
             data_with_amount = response.json()
-            assert len(data_with_amount) == 8
-            assert "amount" in data_with_amount
+            assert len(data_with_amount) == 12
+            assert data_with_amount["amount"] == 1000.0
             assert isinstance(data_with_amount["amount"], int | float)
 
 

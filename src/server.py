@@ -41,6 +41,14 @@ logger = get_logger("server")
 
 CHAIN_NAME = os.environ.get("CHAIN_NAME", "ethereum")
 
+# Native USDC address per chain (used as default quote currency)
+USDC_BY_CHAIN: dict[str, str] = {
+    "ethereum": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+    "arbitrum": "0xaf88d065e77c8cC2239327C5EDb3A432268e5831",
+    "optimism": "0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85",
+    "base": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+}
+
 try:
     _VERSION = _pkg_version("ypricemagic-server")
 except PackageNotFoundError:
@@ -741,7 +749,7 @@ async def price(
         return _make_error_response(400, result.error)
 
     params = result.data
-    quote_to = params.to
+    quote_to = params.to if params.to is not None else USDC_BY_CHAIN.get(CHAIN_NAME)
     quote_amount = params.amount if params.amount is not None else 1.0
     actual_block = await _resolve_price_block(params)
     if isinstance(actual_block, JSONResponse):
