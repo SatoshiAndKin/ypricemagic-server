@@ -1,5 +1,5 @@
 networks:
-  proxy:
+  traefik-proxy:
     external: true
     name: traefik-proxy
 
@@ -13,7 +13,7 @@ x-ypm-service: &ypm-service
     retries: 3
     start_period: 60s
   networks:
-    - proxy
+    - traefik-proxy
   restart: unless-stopped
   stop_grace_period: 30s
 
@@ -32,12 +32,12 @@ services:
     labels:
       traefik.enable: "true"
       docker-rollout.pre-stop-hook: "touch /tmp/drain && sleep 10"
-      traefik.http.routers.ypm-ethereum.rule: "Host(`${YPM_HOST:-localhost}`) && PathPrefix(`/ethereum`)"
+      traefik.http.routers.ypm-ethereum.rule: "Host(`${DOMAIN:-localhost}`) && PathPrefix(`/ethereum`)"
       traefik.http.routers.ypm-ethereum.entrypoints: web
       traefik.http.middlewares.ypm-strip-ethereum.stripprefix.prefixes: /ethereum
       traefik.http.routers.ypm-ethereum.middlewares: ypm-strip-ethereum
       traefik.http.services.ypm-ethereum.loadbalancer.server.port: "8001"
-      traefik.http.routers.ypm-health.rule: "Host(`${YPM_HOST:-localhost}`) && Path(`/health`)"
+      traefik.http.routers.ypm-health.rule: "Host(`${DOMAIN:-localhost}`) && Path(`/health`)"
       traefik.http.routers.ypm-health.entrypoints: web
       traefik.http.routers.ypm-health.service: ypm-ethereum
 
@@ -51,12 +51,12 @@ services:
     labels:
       traefik.enable: "true"
       docker-rollout.pre-stop-hook: "touch /tmp/drain && sleep 10"
-      traefik.http.routers.ypm-frontend.rule: "Host(`${YPM_HOST:-localhost}`) && PathPrefix(`/`)"
+      traefik.http.routers.ypm-frontend.rule: "Host(`${DOMAIN:-localhost}`) && PathPrefix(`/`)"
       traefik.http.routers.ypm-frontend.entrypoints: web
       traefik.http.routers.ypm-frontend.priority: "1"
       traefik.http.services.ypm-frontend.loadbalancer.server.port: "8080"
     networks:
-      - proxy
+      - traefik-proxy
     healthcheck:
       test: ["CMD", "curl", "-sf", "http://localhost:8080/"]
       interval: 30s
