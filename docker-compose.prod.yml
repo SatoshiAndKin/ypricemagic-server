@@ -32,12 +32,12 @@ services:
     labels:
       traefik.enable: "true"
       docker-rollout.pre-stop-hook: "touch /tmp/drain && sleep 10"
-      traefik.http.routers.ypm-ethereum.rule: "Host(`${DOMAIN:-localhost}`) && PathPrefix(`/ethereum`)"
+      traefik.http.routers.ypm-ethereum.rule: "Host(`${VIRTUAL_HOST:-localhost}`) && PathPrefix(`/ethereum`)"
       traefik.http.routers.ypm-ethereum.entrypoints: web
       traefik.http.middlewares.ypm-strip-ethereum.stripprefix.prefixes: /ethereum
       traefik.http.routers.ypm-ethereum.middlewares: ypm-strip-ethereum
       traefik.http.services.ypm-ethereum.loadbalancer.server.port: "8001"
-      traefik.http.routers.ypm-health.rule: "Host(`${DOMAIN:-localhost}`) && Path(`/health`)"
+      traefik.http.routers.ypm-health.rule: "Host(`${VIRTUAL_HOST:-localhost}`) && Path(`/health`)"
       traefik.http.routers.ypm-health.entrypoints: web
       traefik.http.routers.ypm-health.service: ypm-ethereum
 
@@ -55,7 +55,7 @@ services:
     labels:
       traefik.enable: "true"
       docker-rollout.pre-stop-hook: "touch /tmp/drain && sleep 10"
-      traefik.http.routers.ypm-arbitrum.rule: "Host(`${DOMAIN:-localhost}`) && PathPrefix(`/arbitrum`)"
+      traefik.http.routers.ypm-arbitrum.rule: "Host(`${VIRTUAL_HOST:-localhost}`) && PathPrefix(`/arbitrum`)"
       traefik.http.routers.ypm-arbitrum.entrypoints: web
       traefik.http.middlewares.ypm-strip-arbitrum.stripprefix.prefixes: /arbitrum
       traefik.http.routers.ypm-arbitrum.middlewares: ypm-strip-arbitrum
@@ -75,7 +75,7 @@ services:
     labels:
       traefik.enable: "true"
       docker-rollout.pre-stop-hook: "touch /tmp/drain && sleep 10"
-      traefik.http.routers.ypm-optimism.rule: "Host(`${DOMAIN:-localhost}`) && PathPrefix(`/optimism`)"
+      traefik.http.routers.ypm-optimism.rule: "Host(`${VIRTUAL_HOST:-localhost}`) && PathPrefix(`/optimism`)"
       traefik.http.routers.ypm-optimism.entrypoints: web
       traefik.http.middlewares.ypm-strip-optimism.stripprefix.prefixes: /optimism
       traefik.http.routers.ypm-optimism.middlewares: ypm-strip-optimism
@@ -95,7 +95,7 @@ services:
     labels:
       traefik.enable: "true"
       docker-rollout.pre-stop-hook: "touch /tmp/drain && sleep 10"
-      traefik.http.routers.ypm-base.rule: "Host(`${DOMAIN:-localhost}`) && PathPrefix(`/base`)"
+      traefik.http.routers.ypm-base.rule: "Host(`${VIRTUAL_HOST:-localhost}`) && PathPrefix(`/base`)"
       traefik.http.routers.ypm-base.entrypoints: web
       traefik.http.middlewares.ypm-strip-base.stripprefix.prefixes: /base
       traefik.http.routers.ypm-base.middlewares: ypm-strip-base
@@ -106,7 +106,7 @@ services:
     labels:
       traefik.enable: "true"
       docker-rollout.pre-stop-hook: "touch /tmp/drain && sleep 10"
-      traefik.http.routers.ypm-frontend.rule: "Host(`${DOMAIN:-localhost}`) && PathPrefix(`/`)"
+      traefik.http.routers.ypm-frontend.rule: "Host(`${VIRTUAL_HOST:-localhost}`) && PathPrefix(`/`)"
       traefik.http.routers.ypm-frontend.entrypoints: web
       traefik.http.routers.ypm-frontend.priority: "1"
       traefik.http.services.ypm-frontend.loadbalancer.server.port: "8080"
