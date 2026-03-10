@@ -1,8 +1,11 @@
 name: CD
 
 on:
-  push:
+  # Use pull_request closed instead of push:main because auto-merges via
+  # GITHUB_TOKEN don't fire push events (GitHub anti-recursion).
+  pull_request:
     branches: [main]
+    types: [closed]
   workflow_dispatch:
 
 concurrency:
@@ -15,6 +18,7 @@ env:
 
 jobs:
   build-and-push:
+    if: github.event_name != 'pull_request' || github.event.pull_request.merged == true
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
