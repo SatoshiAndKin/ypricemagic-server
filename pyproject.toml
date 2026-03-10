@@ -11,7 +11,7 @@ dependencies = [
     "prometheus-client",
     "tenacity",
     "setuptools<82",
-    "sentry-sdk>=3.0.0a7",
+    "sentry-sdk>=2.0,<3",
 ]
 
 [project.optional-dependencies]
@@ -33,7 +33,6 @@ prerelease = "allow"
 extra-build-dependencies = { ypricemagic = ["cchecksum==0.3.7.dev0"] }
 build-constraint-dependencies = ["cchecksum==0.3.7.dev0"]
 override-dependencies = [
-    "dank-mids==4.20.202",
     "pytest>=8.0",
     "pytest-xdist>=3.0",
     "pytest-forked>=1.6",
