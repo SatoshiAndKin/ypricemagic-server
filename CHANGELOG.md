@@ -1,5 +1,35 @@
 # Changelog
 
+## [0.7.0](https://github.com/SatoshiAndKin/ypricemagic-server/compare/v0.6.0...v0.7.0) (2026-03-10)
+
+
+### Features
+
+* add Sentry error tracking to backend and frontend ([#67](https://github.com/SatoshiAndKin/ypricemagic-server/issues/67)) ([5544f16](https://github.com/SatoshiAndKin/ypricemagic-server/commit/5544f16f2e89b24a983ebf0ea7a2a7ea06e85263))
+* default /price endpoint to USDC quote mode per chain ([#75](https://github.com/SatoshiAndKin/ypricemagic-server/issues/75)) ([a7698a1](https://github.com/SatoshiAndKin/ypricemagic-server/commit/a7698a15a502284aa435805973af7624b5054f81))
+* frontend UX improvements and dependency updates ([#76](https://github.com/SatoshiAndKin/ypricemagic-server/issues/76)) ([8b583c7](https://github.com/SatoshiAndKin/ypricemagic-server/commit/8b583c73bb21dd14d4fa5002c6058d7682e0d2ef))
+* streamline quote form layout and move docs to header ([#77](https://github.com/SatoshiAndKin/ypricemagic-server/issues/77)) ([d6f5ef0](https://github.com/SatoshiAndKin/ypricemagic-server/commit/d6f5ef05df4be2f0c70d8bffeede2dafc4b1bb21))
+
+
+### Bug Fixes
+
+* chain docs routing and upgrade deps (pytest 6→9) ([#60](https://github.com/SatoshiAndKin/ypricemagic-server/issues/60)) ([bada814](https://github.com/SatoshiAndKin/ypricemagic-server/commit/bada8147204a35a90198d07abd41bb303f69f324))
+* defer sentry init until after dank_mids loads ([#69](https://github.com/SatoshiAndKin/ypricemagic-server/issues/69)) ([b189732](https://github.com/SatoshiAndKin/ypricemagic-server/commit/b18973223dc4c9e0f2ad0c601d9b9b27e56f5666))
+* init tokenlist on mount, route quotes to /price, remove reset button ([#66](https://github.com/SatoshiAndKin/ypricemagic-server/issues/66)) ([ebb5371](https://github.com/SatoshiAndKin/ypricemagic-server/commit/ebb5371a6359bf5615cf8caec4484eb445986cd5))
+* pin dank-mids to 4.20.202 to fix stats.logger AttributeError ([#70](https://github.com/SatoshiAndKin/ypricemagic-server/issues/70)) ([30661eb](https://github.com/SatoshiAndKin/ypricemagic-server/commit/30661eb29a4685a238d9197010e2e6a44134a97e))
+* pin sentry-sdk&lt;3 (dank_mids needs set_measurement) ([#72](https://github.com/SatoshiAndKin/ypricemagic-server/issues/72)) ([b45ac73](https://github.com/SatoshiAndKin/ypricemagic-server/commit/b45ac732372d8713b834e42328ba7721f0926f22))
+* prefix traefik router names with ypm- to avoid conflicts ([#71](https://github.com/SatoshiAndKin/ypricemagic-server/issues/71)) ([24f64d6](https://github.com/SatoshiAndKin/ypricemagic-server/commit/24f64d6d4bf97eb36a169da95f75f92430b8b27a))
+* remove tokenlist proxy (SSRF surface), add server.py to coverage ([#68](https://github.com/SatoshiAndKin/ypricemagic-server/issues/68)) ([be7890c](https://github.com/SatoshiAndKin/ypricemagic-server/commit/be7890c6939e892cbda283568a42494775c991f8))
+* rename network key to traefik-proxy, standardize DOMAIN env var ([#73](https://github.com/SatoshiAndKin/ypricemagic-server/issues/73)) ([5391c1b](https://github.com/SatoshiAndKin/ypricemagic-server/commit/5391c1be79f6b6f7a3134a5736b76cfab15816da))
+* scrub RPC URLs and API keys from error responses ([#64](https://github.com/SatoshiAndKin/ypricemagic-server/issues/64)) ([21c2dfc](https://github.com/SatoshiAndKin/ypricemagic-server/commit/21c2dfc427fefef69ff2a92c55caed5bb4e903c3))
+* switch validate_prices to DefiLlama with diskcache and consolidate API ([#58](https://github.com/SatoshiAndKin/ypricemagic-server/issues/58)) ([f528a6e](https://github.com/SatoshiAndKin/ypricemagic-server/commit/f528a6eae0eac18d6701f38b3717c18041b07582))
+* trigger CI on release-please branch pushes ([#78](https://github.com/SatoshiAndKin/ypricemagic-server/issues/78)) ([33bc1ad](https://github.com/SatoshiAndKin/ypricemagic-server/commit/33bc1ad1452d9d1481a9d9568b4c9bf27be5b8e2))
+
+
+### Documentation
+
+* fix stale references in README/AGENTS + fix CI for docs-only PRs ([#65](https://github.com/SatoshiAndKin/ypricemagic-server/issues/65)) ([35c66c1](https://github.com/SatoshiAndKin/ypricemagic-server/commit/35c66c142afe9cb7a19dab078a225cd471e79064))
+
 ## [0.6.0](https://github.com/SatoshiAndKin/ypricemagic-server/compare/v0.5.1...v0.6.0) (2026-03-09)
 
 
