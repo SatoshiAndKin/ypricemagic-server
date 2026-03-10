@@ -2,7 +2,6 @@
   import { onMount } from 'svelte';
   import './app.css';
   import Header from './lib/components/Header.svelte';
-  import ChainSelector from './lib/components/ChainSelector.svelte';
   import QuoteForm from './lib/components/QuoteForm.svelte';
   import TokenlistModal from './lib/components/TokenlistModal.svelte';
   import { selectedChain, type Chain } from './lib/stores/chain';
@@ -43,13 +42,12 @@
   });
 </script>
 
-<Header onopenModal={() => { showTokenlistModal = true; }} />
+<Header onopenModal={() => { showTokenlistModal = true; }} chain={$selectedChain} />
 <TokenlistModal
   isOpen={showTokenlistModal}
   onclose={() => showTokenlistModal = false}
   chain={$selectedChain}
   chainId={CHAIN_IDS[$selectedChain]}
 />
-<ChainSelector />
 
 <QuoteForm bind:this={quoteFormRef} chain={$selectedChain} chainId={CHAIN_IDS[$selectedChain]} />

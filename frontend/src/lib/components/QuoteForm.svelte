@@ -13,6 +13,7 @@
   } from '../stores/tokenlist';
   import { getTokenFromIndex } from '../stores/tokenlist';
   import { formatRelativeAge, formatTimestamp } from '../utils';
+  import ChainSelector from './ChainSelector.svelte';
 
   let { chain, chainId }: { chain: string; chainId: number } = $props();
 
@@ -314,8 +315,9 @@
 </script>
 
 <section class="form-section">
-  <h2>Quote</h2>
   <form onsubmit={handleSubmit}>
+    <ChainSelector />
+
     <div class="form-group">
       <label for="from-token">From Token</label>
       <Autocomplete
@@ -377,7 +379,7 @@
     </div>
 
     <div class="form-actions">
-      <button type="submit" disabled={loading}>
+      <button type="submit" class="btn-wide" disabled={loading}>
         {loading ? 'Fetching...' : 'Get Quote'}
       </button>
     </div>

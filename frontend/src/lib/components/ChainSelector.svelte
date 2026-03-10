@@ -15,9 +15,5 @@
     <option value="optimism">Optimism</option>
     <option value="base">Base</option>
   </select>
-  <p class="chain-selector-link">
-    <a href={`/${$selectedChain}/docs`} target="_blank" rel="noreferrer">API Docs</a>
-    <span class="chain-selector-sep">/</span>
-    <a href={`/${$selectedChain}/redoc`} target="_blank" rel="noreferrer">ReDoc</a>
-  </p>
+
 </div>

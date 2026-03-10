@@ -260,6 +260,32 @@ h1 {
 /* When no data-theme is set, treat as system mode */
 html:not([data-theme]) .theme-icon-system { display: inline; }
 
+/* Docs Button */
+.docs-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  padding: 8px 10px;
+  cursor: pointer;
+  min-width: auto;
+  color: var(--text-secondary);
+  text-decoration: none;
+  transition: all 0.2s;
+}
+
+.docs-btn:hover {
+  background: var(--bg-tertiary);
+  border-color: var(--border-secondary);
+  color: var(--text-primary);
+}
+
+.docs-icon {
+  display: block;
+}
+
 /* Gear Button */
 .gear-btn {
   background: var(--bg-secondary);
@@ -444,6 +470,10 @@ button.btn-secondary:hover:not(:disabled) {
   display: flex;
   gap: 10px;
   margin-top: 6px;
+}
+
+.btn-wide {
+  width: 100%;
 }
 
 /* Hints */
