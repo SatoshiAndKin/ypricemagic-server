@@ -32,12 +32,12 @@ services:
     labels:
       traefik.enable: "true"
       docker-rollout.pre-stop-hook: "touch /tmp/drain && sleep 10"
-      traefik.http.routers.ypm-ethereum.rule: "Host(`${DOMAIN:-localhost}`) && PathPrefix(`/ethereum`)"
+      traefik.http.routers.ypm-ethereum.rule: "Host(`${VIRTUAL_HOST:-localhost}`) && PathPrefix(`/ethereum`)"
       traefik.http.routers.ypm-ethereum.entrypoints: web
       traefik.http.middlewares.ypm-strip-ethereum.stripprefix.prefixes: /ethereum
       traefik.http.routers.ypm-ethereum.middlewares: ypm-strip-ethereum
       traefik.http.services.ypm-ethereum.loadbalancer.server.port: "8001"
-      traefik.http.routers.ypm-health.rule: "Host(`${DOMAIN:-localhost}`) && Path(`/health`)"
+      traefik.http.routers.ypm-health.rule: "Host(`${VIRTUAL_HOST:-localhost}`) && Path(`/health`)"
       traefik.http.routers.ypm-health.entrypoints: web
       traefik.http.routers.ypm-health.service: ypm-ethereum
 
@@ -51,7 +51,7 @@ services:
     labels:
       traefik.enable: "true"
       docker-rollout.pre-stop-hook: "touch /tmp/drain && sleep 10"
-      traefik.http.routers.ypm-frontend.rule: "Host(`${DOMAIN:-localhost}`) && PathPrefix(`/`)"
+      traefik.http.routers.ypm-frontend.rule: "Host(`${VIRTUAL_HOST:-localhost}`) && PathPrefix(`/`)"
       traefik.http.routers.ypm-frontend.entrypoints: web
       traefik.http.routers.ypm-frontend.priority: "1"
       traefik.http.services.ypm-frontend.loadbalancer.server.port: "8080"
