@@ -32,14 +32,14 @@ services:
     labels:
       traefik.enable: "true"
       docker-rollout.pre-stop-hook: "touch /tmp/drain && sleep 10"
-      traefik.http.routers.ethereum.rule: "Host(`${YPM_HOST:-localhost}`) && PathPrefix(`/ethereum`)"
-      traefik.http.routers.ethereum.entrypoints: web
-      traefik.http.middlewares.strip-ethereum.stripprefix.prefixes: /ethereum
-      traefik.http.routers.ethereum.middlewares: strip-ethereum
-      traefik.http.services.ethereum.loadbalancer.server.port: "8001"
-      traefik.http.routers.health.rule: "Host(`${YPM_HOST:-localhost}`) && Path(`/health`)"
-      traefik.http.routers.health.entrypoints: web
-      traefik.http.routers.health.service: ethereum
+      traefik.http.routers.ypm-ethereum.rule: "Host(`${YPM_HOST:-localhost}`) && PathPrefix(`/ethereum`)"
+      traefik.http.routers.ypm-ethereum.entrypoints: web
+      traefik.http.middlewares.ypm-strip-ethereum.stripprefix.prefixes: /ethereum
+      traefik.http.routers.ypm-ethereum.middlewares: ypm-strip-ethereum
+      traefik.http.services.ypm-ethereum.loadbalancer.server.port: "8001"
+      traefik.http.routers.ypm-health.rule: "Host(`${YPM_HOST:-localhost}`) && Path(`/health`)"
+      traefik.http.routers.ypm-health.entrypoints: web
+      traefik.http.routers.ypm-health.service: ypm-ethereum
 
   ypm-arbitrum:
     <<: *ypm-service
@@ -55,11 +55,11 @@ services:
     labels:
       traefik.enable: "true"
       docker-rollout.pre-stop-hook: "touch /tmp/drain && sleep 10"
-      traefik.http.routers.arbitrum.rule: "Host(`${YPM_HOST:-localhost}`) && PathPrefix(`/arbitrum`)"
-      traefik.http.routers.arbitrum.entrypoints: web
-      traefik.http.middlewares.strip-arbitrum.stripprefix.prefixes: /arbitrum
-      traefik.http.routers.arbitrum.middlewares: strip-arbitrum
-      traefik.http.services.arbitrum.loadbalancer.server.port: "8001"
+      traefik.http.routers.ypm-arbitrum.rule: "Host(`${YPM_HOST:-localhost}`) && PathPrefix(`/arbitrum`)"
+      traefik.http.routers.ypm-arbitrum.entrypoints: web
+      traefik.http.middlewares.ypm-strip-arbitrum.stripprefix.prefixes: /arbitrum
+      traefik.http.routers.ypm-arbitrum.middlewares: ypm-strip-arbitrum
+      traefik.http.services.ypm-arbitrum.loadbalancer.server.port: "8001"
 
   ypm-optimism:
     <<: *ypm-service
@@ -75,11 +75,11 @@ services:
     labels:
       traefik.enable: "true"
       docker-rollout.pre-stop-hook: "touch /tmp/drain && sleep 10"
-      traefik.http.routers.optimism.rule: "Host(`${YPM_HOST:-localhost}`) && PathPrefix(`/optimism`)"
-      traefik.http.routers.optimism.entrypoints: web
-      traefik.http.middlewares.strip-optimism.stripprefix.prefixes: /optimism
-      traefik.http.routers.optimism.middlewares: strip-optimism
-      traefik.http.services.optimism.loadbalancer.server.port: "8001"
+      traefik.http.routers.ypm-optimism.rule: "Host(`${YPM_HOST:-localhost}`) && PathPrefix(`/optimism`)"
+      traefik.http.routers.ypm-optimism.entrypoints: web
+      traefik.http.middlewares.ypm-strip-optimism.stripprefix.prefixes: /optimism
+      traefik.http.routers.ypm-optimism.middlewares: ypm-strip-optimism
+      traefik.http.services.ypm-optimism.loadbalancer.server.port: "8001"
 
   ypm-base:
     <<: *ypm-service
@@ -95,21 +95,21 @@ services:
     labels:
       traefik.enable: "true"
       docker-rollout.pre-stop-hook: "touch /tmp/drain && sleep 10"
-      traefik.http.routers.base.rule: "Host(`${YPM_HOST:-localhost}`) && PathPrefix(`/base`)"
-      traefik.http.routers.base.entrypoints: web
-      traefik.http.middlewares.strip-base.stripprefix.prefixes: /base
-      traefik.http.routers.base.middlewares: strip-base
-      traefik.http.services.base.loadbalancer.server.port: "8001"
+      traefik.http.routers.ypm-base.rule: "Host(`${YPM_HOST:-localhost}`) && PathPrefix(`/base`)"
+      traefik.http.routers.ypm-base.entrypoints: web
+      traefik.http.middlewares.ypm-strip-base.stripprefix.prefixes: /base
+      traefik.http.routers.ypm-base.middlewares: ypm-strip-base
+      traefik.http.services.ypm-base.loadbalancer.server.port: "8001"
 
   frontend:
     image: ghcr.io/satoshiandkin/ypricemagic-server-frontend:latest
     labels:
       traefik.enable: "true"
       docker-rollout.pre-stop-hook: "touch /tmp/drain && sleep 10"
-      traefik.http.routers.frontend.rule: "Host(`${YPM_HOST:-localhost}`) && PathPrefix(`/`)"
-      traefik.http.routers.frontend.entrypoints: web
-      traefik.http.routers.frontend.priority: "1"
-      traefik.http.services.frontend.loadbalancer.server.port: "8080"
+      traefik.http.routers.ypm-frontend.rule: "Host(`${YPM_HOST:-localhost}`) && PathPrefix(`/`)"
+      traefik.http.routers.ypm-frontend.entrypoints: web
+      traefik.http.routers.ypm-frontend.priority: "1"
+      traefik.http.services.ypm-frontend.loadbalancer.server.port: "8080"
     networks:
       - proxy
     healthcheck:

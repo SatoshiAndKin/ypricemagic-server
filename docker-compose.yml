@@ -32,14 +32,14 @@ services:
     labels:
       traefik.enable: "true"
       docker-rollout.pre-stop-hook: "touch /tmp/drain && sleep 10"
-      traefik.http.routers.ethereum.rule: "Host(`${YPM_HOST:-localhost}`) && PathPrefix(`/ethereum`)"
-      traefik.http.routers.ethereum.entrypoints: web
-      traefik.http.middlewares.strip-ethereum.stripprefix.prefixes: /ethereum
-      traefik.http.routers.ethereum.middlewares: strip-ethereum
-      traefik.http.services.ethereum.loadbalancer.server.port: "8001"
-      traefik.http.routers.health.rule: "Host(`${YPM_HOST:-localhost}`) && Path(`/health`)"
-      traefik.http.routers.health.entrypoints: web
-      traefik.http.routers.health.service: ethereum
+      traefik.http.routers.ypm-ethereum.rule: "Host(`${YPM_HOST:-localhost}`) && PathPrefix(`/ethereum`)"
+      traefik.http.routers.ypm-ethereum.entrypoints: web
+      traefik.http.middlewares.ypm-strip-ethereum.stripprefix.prefixes: /ethereum
+      traefik.http.routers.ypm-ethereum.middlewares: ypm-strip-ethereum
+      traefik.http.services.ypm-ethereum.loadbalancer.server.port: "8001"
+      traefik.http.routers.ypm-health.rule: "Host(`${YPM_HOST:-localhost}`) && Path(`/health`)"
+      traefik.http.routers.ypm-health.entrypoints: web
+      traefik.http.routers.ypm-health.service: ypm-ethereum
 
 
   frontend:
@@ -51,10 +51,10 @@ services:
     labels:
       traefik.enable: "true"
       docker-rollout.pre-stop-hook: "touch /tmp/drain && sleep 10"
-      traefik.http.routers.frontend.rule: "Host(`${YPM_HOST:-localhost}`) && PathPrefix(`/`)"
-      traefik.http.routers.frontend.entrypoints: web
-      traefik.http.routers.frontend.priority: "1"
-      traefik.http.services.frontend.loadbalancer.server.port: "8080"
+      traefik.http.routers.ypm-frontend.rule: "Host(`${YPM_HOST:-localhost}`) && PathPrefix(`/`)"
+      traefik.http.routers.ypm-frontend.entrypoints: web
+      traefik.http.routers.ypm-frontend.priority: "1"
+      traefik.http.services.ypm-frontend.loadbalancer.server.port: "8080"
     networks:
       - proxy
     healthcheck:
