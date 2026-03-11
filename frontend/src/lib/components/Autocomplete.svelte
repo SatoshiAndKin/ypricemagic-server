@@ -27,8 +27,6 @@
   let highlightIndex = $state(-1);
   let isOpen = $state(false);
   let wasUserEdited = $state(false);
-  let logoSrc = $state<string | undefined>(undefined);
-  let logoError = $state(false);
   // Track local suppressModal override (can be set imperatively via setSuppressModal).
   // Initialized via $effect to avoid "captures initial value only" warning.
   let _suppressModal = $state(false);
@@ -105,8 +103,6 @@
   function selectToken(token: MatchToken): void {
     inputValue = formatTokenDisplay(token.symbol, token.address);
     inputAddress = token.address;
-    logoSrc = token.logoURI;
-    logoError = false;
     isOpen = false;
     highlightIndex = -1;
     onselect?.(token, token.address);
@@ -117,8 +113,6 @@
     inputValue = target.value;
     wasUserEdited = true;
     inputAddress = '';
-    logoSrc = undefined;
-    logoError = false;
 
     if (debounceTimer !== null) clearTimeout(debounceTimer);
     debounceTimer = setTimeout(() => {
@@ -177,13 +171,9 @@
     if (token) {
       inputValue = formatTokenDisplay(token.symbol, token.address);
       inputAddress = token.address;
-      logoSrc = token.logoURI;
-      logoError = false;
     } else {
       inputValue = address;
       inputAddress = address;
-      logoSrc = undefined;
-      logoError = false;
     }
     isOpen = false;
     highlightIndex = -1;
@@ -192,8 +182,6 @@
   export function clear(): void {
     inputValue = '';
     inputAddress = '';
-    logoSrc = undefined;
-    logoError = false;
     matches = [];
     isOpen = false;
     highlightIndex = -1;
@@ -214,8 +202,7 @@
 </script>
 
 <div class="autocomplete-wrapper {className}">
-  <div class="token-input-wrapper" class:no-icon={!logoSrc || logoError}>
-    <img class="token-input-icon" src={logoSrc} alt="" onerror={() => (logoError = true)} />
+  <div class="token-input-wrapper">
     <input
       bind:this={inputEl}
       type="text"

@@ -151,14 +151,30 @@
   // ---------------------------------------------------------------------------
 
   function handleFromSelect(_token: unknown, address: string) {
-    fromAddress = address;
+    if (address.toLowerCase() === toAddress.toLowerCase()) {
+      const oldFromAddress = fromAddress;
+      fromAddress = address;
+      toAddress = oldFromAddress;
+      toRef?.setFromAddress(oldFromAddress);
+    } else {
+      fromAddress = address;
+    }
+
     if (isValidAddress(fromAddress) && isValidAddress(toAddress)) {
       saveCustomPair(chain, fromAddress, toAddress);
     }
   }
 
   function handleToSelect(_token: unknown, address: string) {
-    toAddress = address;
+    if (address.toLowerCase() === fromAddress.toLowerCase()) {
+      const oldToAddress = toAddress;
+      toAddress = address;
+      fromAddress = oldToAddress;
+      fromRef?.setFromAddress(oldToAddress);
+    } else {
+      toAddress = address;
+    }
+
     if (isValidAddress(fromAddress) && isValidAddress(toAddress)) {
       saveCustomPair(chain, fromAddress, toAddress);
     }

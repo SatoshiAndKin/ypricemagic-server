@@ -324,6 +324,12 @@ describe('getCustomPairs / saveCustomPair / resetCustomPair', () => {
     expect(pairs['ethereum']).toEqual({ from: '0xNewFrom', to: '0xNewTo' });
   });
 
+  it('saves swapped pairs as long as the final pair is not identity', () => {
+    saveCustomPair('ethereum', '0xToAddr', '0xFromAddr');
+    const pairs = getCustomPairs();
+    expect(pairs['ethereum']).toEqual({ from: '0xToAddr', to: '0xFromAddr' });
+  });
+
   it('does not save identity pairs', () => {
     saveCustomPair('arbitrum', '0xABCDEF', '0xabcdef');
     expect(getCustomPairs()).toEqual({});
@@ -412,6 +418,23 @@ describe('getEffectivePair', () => {
     expect(getEffectivePair('arbitrum')).toEqual({
       from: '0xaf88d065e77c8cC2239327C5EDb3A432268e5831',
       to: '0x82aF49447D8a07e3bd95BD0d56f35241523fBab1',
+    });
+  });
+
+  it('returns a swapped custom pair unchanged when addresses differ', () => {
+    localStorage.setItem(
+      'defaultPairs',
+      JSON.stringify({
+        base: {
+          from: '0x4200000000000000000000000000000000000006',
+          to: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',
+        },
+      })
+    );
+
+    expect(getEffectivePair('base')).toEqual({
+      from: '0x4200000000000000000000000000000000000006',
+      to: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',
     });
   });
 

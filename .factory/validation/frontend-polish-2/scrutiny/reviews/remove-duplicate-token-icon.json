@@ -1,0 +1,26 @@
+{
+  "featureId": "remove-duplicate-token-icon",
+  "reviewedAt": "2026-03-11T18:00:00.000Z",
+  "commitId": "9de70a4",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "pass",
+  "codeReview": {
+    "summary": "The implementation fully and correctly covers every requirement in the feature description. In Autocomplete.svelte the <img class=\"token-input-icon\"> element was removed from the token-input-wrapper div, the class:no-icon binding was removed, and all six assignment sites for logoSrc and logoError (selectToken, handleInput, setFromAddress×2, clear) plus both $state declarations were removed. In app.css the two rules (.token-input-icon and .token-input-wrapper.no-icon) were deleted while .autocomplete-logo was preserved intact. QuoteForm.svelte was not modified and continues to render the label-row icon via token-label-icon and the dropdown still uses autocomplete-logo via token.logoURI. A follow-up grep confirms zero remaining references to logoSrc, logoError, token-input-icon, or class:no-icon anywhere in frontend/src. No dead code, no unintended style regressions, no TypeScript errors. Build and svelte-check both passed (exit 0). Browser verification confirmed icon absent from input wrapper and present on label row and in dropdown.",
+    "issues": []
+  },
+  "sharedStateObservations": [
+    {
+      "area": "skills",
+      "observation": "The frontend-worker SKILL.md Step 7 says to start the dev server on port 5173 (`npm run dev`), but the worker used port 5199 from the mission services manifest instead. The skill does not acknowledge that a services.yaml / mission-level port override may exist. The deviation was harmless and well-reasoned (the manifest port prevents collisions across concurrent workers), but the skill text is now misleading.",
+      "evidence": "Transcript shows Execute: npx vite --host 127.0.0.1 --strictPort --port 5199; SKILL.md Step 7 says 'Start the dev server: cd frontend && npm run dev (port 5173)'. skillFeedback.deviations[0] documents the PyYAML absence which caused the worker to call the command text directly — the skill's prescribed YAML-parsing helper silently broke."
+    },
+    {
+      "area": "skills",
+      "observation": "The frontend-worker skill prescribes re-running validators (npm run build, svelte-check, npm test) after editing. The worker skipped the post-edit Vitest re-run, arguing (correctly) that only markup/style was removed and the feature's verification contract did not require it. The skill should explicitly carve out this exception so future workers don't feel they are deviating.",
+      "evidence": "skillFeedback.followedProcedure=false; deviations[1].step='6. Run Validators' documents the skip. The feature verificationSteps list only 'npm run build' and 'npx svelte-check' plus manual browser check — not npm test."
+    }
+  ],
+  "addressesFailureFrom": null,
+  "summary": "Full pass. Every removal mandated by the feature description was made cleanly and completely: the input-wrapper icon element, its class:no-icon binding, the logoSrc/logoError state variables, all their assignment sites, and the two CSS rules (.token-input-icon, .token-input-wrapper.no-icon). Preserved items (.autocomplete-logo, QuoteForm label-row icons) are untouched. Build, type-check, and browser verification all confirmed correct behavior. No blocking issues found."
+}
