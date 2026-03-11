@@ -51,6 +51,9 @@ export interface BucketResponse {
 export interface HealthResponse {
   status: string;
   chain: string;
+  block?: number;
+  synced?: boolean | null;
+  error?: string;
 }
 
 export interface TokenlistToken {

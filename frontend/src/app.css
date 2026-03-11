@@ -204,6 +204,20 @@ body {
   gap: 8px;
 }
 
+.health-indicator {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  font-size: 16px;
+  cursor: default;
+}
+
+.health-ok { color: var(--accent, #0066cc); }
+.health-warning { color: #e6a700; }
+.health-error { color: #cc3333; }
+
 h1 {
   margin: 0;
   color: var(--text-primary);
