@@ -227,6 +227,7 @@ h1 {
 /* Header Action Buttons (shared) */
 .theme-toggle,
 .docs-btn,
+.github-btn,
 .gear-btn {
   display: flex;
   align-items: center;
@@ -247,6 +248,7 @@ h1 {
 
 .theme-toggle:hover,
 .docs-btn:hover,
+.github-btn:hover,
 .gear-btn:hover {
   background: var(--bg-tertiary);
   border-color: var(--border-secondary);
@@ -349,10 +351,31 @@ h2 {
 }
 
 label {
-  display: block;
   font-weight: 600;
   margin-bottom: 6px;
   color: var(--text-secondary);
+}
+
+.token-field-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.token-label-info {
+  display: inline-flex;
+  gap: 4px;
+  align-items: center;
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.token-label-icon {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  flex-shrink: 0;
 }
 
 input,
@@ -380,6 +403,9 @@ textarea:focus {
 .token-input-wrapper { position: relative; display: flex; align-items: center; }
 .token-input-icon { width: 20px; height: 20px; border-radius: 50%; margin-right: 8px; flex-shrink: 0; }
 .token-input-wrapper.no-icon .token-input-icon { display: none; }
+.token-input-wrapper input { padding-right: 34px; }
+.token-clear-btn { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); width: 22px; height: 22px; padding: 0; border: none; background: none; color: var(--text-muted); font-size: 18px; line-height: 1; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; }
+.token-clear-btn:hover { background: none; color: var(--text-primary); }
 .autocomplete-dropdown { position: absolute; top: 100%; left: 0; right: 0; background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 6px; max-height: 300px; overflow-y: auto; z-index: 100; box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
 .autocomplete-item { display: flex; align-items: center; gap: 8px; padding: 8px 12px; cursor: pointer; }
 .autocomplete-item.highlighted, .autocomplete-item:hover { background: var(--bg-hover); }

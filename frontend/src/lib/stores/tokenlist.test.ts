@@ -324,6 +324,12 @@ describe('getCustomPairs / saveCustomPair / resetCustomPair', () => {
     expect(pairs['ethereum']).toEqual({ from: '0xNewFrom', to: '0xNewTo' });
   });
 
+  it('does not save identity pairs', () => {
+    saveCustomPair('arbitrum', '0xABCDEF', '0xabcdef');
+    expect(getCustomPairs()).toEqual({});
+    expect(localStorage.getItem('defaultPairs')).toBeNull();
+  });
+
   it('resetCustomPair removes a chain entry', () => {
     saveCustomPair('ethereum', '0xFromAddr', '0xToAddr');
     resetCustomPair('ethereum');
@@ -376,6 +382,37 @@ describe('getEffectivePair', () => {
     saveCustomPair('arbitrum', '0xArbFrom', '0xArbTo');
     expect(getEffectivePair('arbitrum')).toEqual({ from: '0xArbFrom', to: '0xArbTo' });
     expect(getEffectivePair('ethereum')).toEqual(DEFAULT_PAIRS.ethereum);
+  });
+
+  it('falls back to default pair when stored custom pair is an identity pair', () => {
+    localStorage.setItem(
+      'defaultPairs',
+      JSON.stringify({
+        arbitrum: {
+          from: '0xaf88d065e77c8cC2239327C5EDb3A432268e5831',
+          to: '0xAF88D065E77C8CC2239327C5EDB3A432268E5831',
+        },
+      })
+    );
+
+    expect(getEffectivePair('arbitrum')).toEqual(DEFAULT_PAIRS.arbitrum);
+  });
+
+  it('keeps using normal custom pairs when from and to differ', () => {
+    localStorage.setItem(
+      'defaultPairs',
+      JSON.stringify({
+        arbitrum: {
+          from: '0xaf88d065e77c8cC2239327C5EDb3A432268e5831',
+          to: '0x82aF49447D8a07e3bd95BD0d56f35241523fBab1',
+        },
+      })
+    );
+
+    expect(getEffectivePair('arbitrum')).toEqual({
+      from: '0xaf88d065e77c8cC2239327C5EDb3A432268e5831',
+      to: '0x82aF49447D8a07e3bd95BD0d56f35241523fBab1',
+    });
   });
 
   it('returns default again after custom pair is reset', () => {

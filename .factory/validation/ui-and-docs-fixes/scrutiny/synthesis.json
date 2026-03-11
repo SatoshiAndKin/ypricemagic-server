@@ -1,0 +1,59 @@
+{
+  "milestone": "ui-and-docs-fixes",
+  "round": 1,
+  "status": "pass",
+  "validatorsRun": {
+    "test-backend": { "passed": true, "command": "uv run pytest -x -q --tb=short", "exitCode": 0, "note": "272 passed" },
+    "lint": { "passed": true, "command": "uv run ruff check .", "exitCode": 0, "note": "All checks passed" },
+    "typecheck-backend": { "passed": true, "command": "uv run mypy src/", "exitCode": 0, "note": "No issues found in 12 source files" },
+    "test-frontend": { "passed": true, "command": "cd frontend && npm test -- --run", "exitCode": 0, "note": "78 passed (3 test files)" },
+    "check-frontend": { "passed": true, "command": "cd frontend && npx svelte-check --tsconfig ./tsconfig.json", "exitCode": 0, "note": "0 errors, 0 warnings" }
+  },
+  "reviewsSummary": {
+    "total": 4,
+    "passed": 4,
+    "failed": 0,
+    "failedFeatures": []
+  },
+  "blockingIssues": [],
+  "appliedUpdates": [
+    {
+      "target": "library/user-testing.md",
+      "description": "Added 'Playwright Screenshot Workaround' section documenting that playwright___browser_take_screenshot writes to a temp dir and that page.screenshot({ path }) in playwright___browser_run_code is needed to write directly to the repo.",
+      "sourceFeature": "readme-screenshot-update"
+    }
+  ],
+  "suggestedGuidanceUpdates": [
+    {
+      "target": "skills/frontend-worker",
+      "suggestion": "Add a note in the skill description or preconditions that `frontend-worker` is intended for tasks involving Svelte/TypeScript/CSS code changes, NOT for pure markdown/documentation tasks. For doc-only tasks, the orchestrator should use a more general worker or create a doc-specific skill.",
+      "evidence": "readme-ypm-host-fix used frontend-worker for a pure README markdown change. Worker correctly deviated from Steps 4 (TDD/Vitest) and 6 (npm run build/svelte-check) — but the skill mismatch added noise to the transcript and required the worker to justify why frontend procedures didn't apply.",
+      "isSystemic": false
+    },
+    {
+      "target": "skills/frontend-worker",
+      "suggestion": "Clarify that the TDD requirement (Step 4, 'Write Tests First') applies to logic functions and stores, not to markup/CSS changes. For UI-only changes (HTML structure, CSS, Svelte template changes), verification via `svelte-check` + `npm run build` + browser inspection is the appropriate substitute.",
+      "evidence": "Both arbitrum-default-pair-bug and ui-improvements workers noted in skillFeedback that TDD was skipped for justified reasons (tiny fix in well-covered file; no component test harness for Svelte markup). The repo's test files confirm only pure-logic unit tests exist — no component rendering tests.",
+      "isSystemic": true
+    },
+    {
+      "target": "skills/frontend-worker",
+      "suggestion": "In Step 7 ('Manual Verification with agent-browser'), add a note that the built-in Playwright browser tools (playwright___browser_navigate, playwright___browser_snapshot, playwright___browser_run_code) are a valid substitute when agent-browser is unavailable. Also document the screenshot path workaround: use playwright___browser_run_code with page.screenshot({ path: '/abs/repo/path.png' }) to save screenshots directly to the repo (playwright___browser_take_screenshot writes to a temp dir).",
+      "evidence": "readme-screenshot-update worker could not use agent-browser and fell back to Playwright tools. Worker needed multiple attempts to locate the screenshot file before discovering the page.screenshot({ path }) workaround.",
+      "isSystemic": false
+    },
+    {
+      "target": "AGENTS.md",
+      "suggestion": "Add a CSS convention note: prefer scoped CSS classes for component-specific layout variants rather than broadening global selectors. Specifically, avoid changing global element selectors (like `label`) in app.css for changes that only apply to specific components. Use component-scoped or feature-class selectors instead.",
+      "evidence": "ui-improvements changed the global `label` CSS selector from `display: block` to `display: flex` to support token field label layout. All other layout overrides in app.css use class selectors. This could unintentionally affect future labels with multi-word content or nested elements.",
+      "isSystemic": false
+    }
+  ],
+  "rejectedObservations": [
+    {
+      "observation": "README screenshot shows empty form state, not a completed quote result, which doesn't match the caption 'Latest-block USDC→crvUSD quote result with price age in seconds'.",
+      "reason": "The feature description for readme-screenshot-update explicitly scoped the deliverable to 'showing updated layout (GitHub button, restructured token fields, clear buttons)'. The caption mismatch is pre-existing and out of scope for this milestone. If the caption matters, a separate task should update it."
+    }
+  ],
+  "previousRound": null
+}

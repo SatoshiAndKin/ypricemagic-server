@@ -1,0 +1,36 @@
+{
+  "milestone": "ui-and-docs-fixes",
+  "round": 1,
+  "status": "fail",
+  "assertionsSummary": {
+    "total": 9,
+    "passed": 8,
+    "failed": 1,
+    "blocked": 0
+  },
+  "passedAssertions": [
+    "VAL-DOC-001",
+    "VAL-DOC-002",
+    "VAL-BUG-001",
+    "VAL-BUG-002",
+    "VAL-UI-001",
+    "VAL-UI-002",
+    "VAL-UI-003",
+    "VAL-CROSS-001"
+  ],
+  "failedAssertions": [
+    {
+      "id": "VAL-DOC-003",
+      "reason": "README screenshot (docs/readme-quote-latest-block.png) was captured before the final 'reactively resolve quote form token labels' fix (commit 16a6d8a). The screenshot shows the token icon inside the input field row (old layout) rather than on the label row next to 'From Token'/'To Token' text. The live app correctly shows the icon+symbol on the label row, but the screenshot does not reflect this."
+    }
+  ],
+  "blockedAssertions": [],
+  "appliedUpdates": [
+    {
+      "target": "user-testing.md",
+      "description": "Added 'Flow Validator Guidance: Documentation and Unit Tests' and 'Flow Validator Guidance: Browser UI' sections with isolation rules, commands, and constraints",
+      "source": "setup"
+    }
+  ],
+  "previousRound": null
+}

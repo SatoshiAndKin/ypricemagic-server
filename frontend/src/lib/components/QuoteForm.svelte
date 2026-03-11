@@ -9,6 +9,7 @@
     saveCustomPair,
     isTokenInIndex,
     addLocalToken,
+    tokenIndex,
     type Chain,
   } from '../stores/tokenlist';
   import { getTokenFromIndex } from '../stores/tokenlist';
@@ -28,6 +29,14 @@
   // Internal address tracking
   let fromAddress = $state('');
   let toAddress = $state('');
+  let fromTokenInfo = $derived.by(() => {
+    void $tokenIndex;
+    return fromAddress ? getTokenFromIndex(fromAddress, chainId) ?? null : null;
+  });
+  let toTokenInfo = $derived.by(() => {
+    void $tokenIndex;
+    return toAddress ? getTokenFromIndex(toAddress, chainId) ?? null : null;
+  });
 
   // Form state
   let blockInput = $state('');
@@ -238,7 +247,6 @@
 
   $effect(() => {
     const _chain = chain;
-    const _chainId = chainId;
     // Only access refs in untrack to avoid tracking them
     untrack(() => {
       abortPending();
@@ -252,7 +260,6 @@
       toAddress = pair.to;
       fromRef?.setFromAddress(pair.from);
       toRef?.setFromAddress(pair.to);
-      void _chainId; // suppress unused variable warning
     });
   });
 
@@ -273,6 +280,7 @@
       fromRef.setFromAddress(address);
       if (suppress) fromRef.setSuppressModal(true);
     }
+    fromAddress = address;
   }
 
   export function setToAddress(address: string, suppress = true): void {
@@ -280,6 +288,7 @@
       toRef.setFromAddress(address);
       if (suppress) toRef.setSuppressModal(true);
     }
+    toAddress = address;
   }
 
   export function setBlock(block: string): void {
@@ -319,7 +328,17 @@
     <ChainSelector />
 
     <div class="form-group">
-      <label for="from-token">From Token</label>
+      <label for="from-token" class="token-field-label">
+        From Token
+        {#if fromTokenInfo?.symbol}
+          <span class="token-label-info">
+            {#if fromTokenInfo.logoURI}
+              <img src={fromTokenInfo.logoURI} alt="" class="token-label-icon" />
+            {/if}
+            <span>{fromTokenInfo.symbol}</span>
+          </span>
+        {/if}
+      </label>
       <Autocomplete
         bind:this={fromRef}
         chain={chainId}
@@ -330,7 +349,17 @@
     </div>
 
     <div class="form-group">
-      <label for="to-token">To Token</label>
+      <label for="to-token" class="token-field-label">
+        To Token
+        {#if toTokenInfo?.symbol}
+          <span class="token-label-info">
+            {#if toTokenInfo.logoURI}
+              <img src={toTokenInfo.logoURI} alt="" class="token-label-icon" />
+            {/if}
+            <span>{toTokenInfo.symbol}</span>
+          </span>
+        {/if}
+      </label>
       <Autocomplete
         bind:this={toRef}
         chain={chainId}

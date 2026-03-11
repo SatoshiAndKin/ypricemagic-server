@@ -1,0 +1,24 @@
+{
+  "flowId": "val-doc-003-retest",
+  "milestone": "ui-and-docs-fixes",
+  "round": 2,
+  "assertionsTested": ["VAL-DOC-003"],
+  "results": {
+    "VAL-DOC-003": {
+      "status": "pass",
+      "evidence": [
+        "docs/readme-quote-latest-block.png exists (42075 bytes, 1280x720 PNG)",
+        "README.md line 220 references the screenshot file",
+        "Screenshot shows GitHub button in header (4th icon in header-actions)",
+        "Screenshot shows 'From Token [USDC icon] USDC' on label row (icon+symbol on label row)",
+        "Screenshot shows 'To Token crvUSD' on label row",
+        "Screenshot shows address-only input fields with × clear buttons on both token inputs",
+        "Live app at http://localhost:5199 confirms: GitHub Repository link in header, USDC label on From Token row, crvUSD on To Token row, clear buttons present",
+        "Screenshot taken in commit 0f21cad (docs: retake README screenshot) after ui-improvements-scrutiny-fixes fix"
+      ]
+    }
+  },
+  "frictions": [],
+  "blockers": [],
+  "toolsUsed": ["playwright___browser_navigate", "playwright___browser_snapshot", "Read (image)"]
+}

@@ -26,6 +26,46 @@
 - **pytest**: For backend unit/integration tests
 - **vitest**: For frontend unit tests
 
+## Playwright Screenshot Workaround
+
+`playwright___browser_take_screenshot` writes to a temporary output directory (not the repo). To save a screenshot directly to the repo, use `playwright___browser_run_code` with `page.screenshot({ path: '/abs/path/to/file.png' })`.
+
+Example:
+```js
+async (page) => {
+  await page.screenshot({ path: '/Users/bryan/code/ypricemagic-server/docs/readme-quote-latest-block.png', fullPage: false });
+}
+```
+
+## Flow Validator Guidance: Documentation and Unit Tests
+
+This surface covers file-based checks (grep, file existence) and unit test execution. No browser is needed.
+
+**Isolation:** No isolation needed — tests are fully read-only or isolated to test runner.
+
+**Commands:**
+- Grep README.md: `grep -n "YPM_HOST\|VIRTUAL_HOST" /Users/bryan/code/ypricemagic-server/README.md`
+- Grep traefik README: `grep -n "YPM_HOST\|VIRTUAL_HOST" /Users/bryan/code/ypricemagic-server/traefik-proxy/README.md`
+- Run frontend unit tests: `cd /Users/bryan/code/ypricemagic-server/frontend && npm test -- --run`
+- Shared state to avoid: none
+
+## Flow Validator Guidance: Browser UI
+
+This surface uses agent-browser against the Vite dev server at http://localhost:5199.
+
+**Isolation:** Assign unique session IDs per subagent. Avoid modifying localStorage in ways that affect other agents — use `window.localStorage.clear()` at start of test to reset state, then use a fresh session.
+
+**Session IDs:** Use worker session prefix from mission worker session ID.
+
+**What to test:**
+- GitHub button presence in header, correct href, opens in new tab
+- Clear button on token input fields (appears when value non-empty, clears on click)
+- Token field layout (icon+symbol on label row, address-only in input)
+- Arbitrum defaults to USDC→WETH (not USDC→USDC) when localStorage is clean
+- Screenshot shows updated UI
+
+**Shared state to avoid:** Don't leave localStorage in a broken state; always reset at test start.
+
 ## Known Quirks
 
 - Backend containers take 30-60s to start (brownie network registration)

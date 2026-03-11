@@ -29,7 +29,7 @@ RPC_URL_ARBITRUM=https://...
 RPC_URL_OPTIMISM=https://...
 RPC_URL_BASE=https://...
 ETHERSCAN_TOKEN=your_etherscan_api_key
-YPM_HOST=localhost
+VIRTUAL_HOST=localhost
 ```
 
 Proxy `traefik-proxy/.env`:
@@ -47,10 +47,10 @@ docker compose up --build
 
 For local usage, open `http://localhost:<PORT>` from `traefik-proxy/.env`.
 
-For a deployed host-based setup, set `YPM_HOST` in `.env` (for example `YPM_HOST=ypricemagic.stytt.com`) and access:
+For a deployed host-based setup, set `VIRTUAL_HOST` in `.env` (for example `VIRTUAL_HOST=ypricemagic.stytt.com`) and access:
 
-- `https://<YPM_HOST>/` — frontend UI
-- `https://<YPM_HOST>/ethereum/docs` — Swagger for ethereum backend
+- `https://<VIRTUAL_HOST>/` — frontend UI
+- `https://<VIRTUAL_HOST>/ethereum/docs` — Swagger for ethereum backend
 
 The Traefik proxy lives in `traefik-proxy/docker-compose.yml` and has its own `.env` so port binding is managed separately from app settings.
 
@@ -219,7 +219,7 @@ The root path (`/`) is a browser UI for the API.
 
 ![Latest-block USDC→crvUSD quote result with price age in seconds](docs/readme-quote-latest-block.png)
 
-The UI has a theme toggle (system/light/dark, saved in local storage) and token autocomplete on all address inputs. Autocomplete searches by symbol, name, or address across loaded tokenlists, filtered by the selected chain.
+The UI has a theme toggle (system/light/dark, saved in local storage), a GitHub link, and token autocomplete on all address inputs. Autocomplete searches by symbol, name, or address across loaded tokenlists, filtered by the selected chain.
 
 The gear icon (⚙) opens a tokenlist manager where you can toggle lists on/off, add lists by URL, import/export JSON files, or delete custom lists. All tokenlist state lives in `localStorage`. The [Uniswap Default tokenlist](https://tokens.uniswap.org) is bundled and always available.
 
@@ -257,7 +257,7 @@ docker compose up --build
 
 - `traefik-proxy/docker-compose.yml` starts the repo-local shared proxy on the `PORT` defined in `traefik-proxy/.env`
 - root `docker-compose.yml` starts only the ypricemagic app services and joins the external `traefik-proxy` Docker network
-- all Traefik routes are scoped to `YPM_HOST`, so this app does not capture traffic for other apps on the same server
+- all Traefik routes are scoped to `VIRTUAL_HOST`, so this app does not capture traffic for other apps on the same server
 
 Brownie cache volumes (`brownie-<chain>`) persist across deploys so contract metadata doesn't need to be re-fetched.
 
@@ -267,6 +267,6 @@ A GitHub Actions workflow (`.github/workflows/cd.yml`) runs on every push to `ma
 
 1. Starts or reuses the shared Traefik stack from `traefik-proxy/`
 2. Builds and updates the ypricemagic app services
-3. Polls `/health` on `YPM_HOST` to verify the deployment succeeded
+3. Polls `/health` on `VIRTUAL_HOST` to verify the deployment succeeded
 
 Required GitHub Actions variables: `SSH_HOST`, `SSH_USER`, `SSH_KEY`.

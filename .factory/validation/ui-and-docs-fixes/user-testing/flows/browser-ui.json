@@ -1,0 +1,45 @@
+{
+  "flowId": "browser-ui",
+  "testedAt": "2026-03-10T22:35:00Z",
+  "credentials": {
+    "account": "d63aa19d9449__u2",
+    "namespace": "d63aa19d9449__u2"
+  },
+  "toolsUsed": ["agent-browser"],
+  "testedAssertions": [
+    {
+      "id": "VAL-DOC-003",
+      "status": "fail",
+      "evidence": "File docs/readme-quote-latest-block.png exists (30KB, modified 2026-03-10 22:29) and is referenced in README.md at line 220. The screenshot shows the GitHub button in the header ✅ and clear (×) buttons on token fields ✅. However, it does NOT show the restructured token field layout with icon+symbol on the label row. In the screenshot, the USDC icon is inside the input field row (as a prefix before the address), while the 'From Token' label row shows only plain text. The live app now shows 'From Token [🔵] [USDC]' all on the label row. The README screenshot was refreshed in commit 55fa59b before the most recent commit 16a6d8a ('fix: reactively resolve quote form token labels'), which implements the reactive icon+symbol-on-label-row behavior.",
+      "reason": "Screenshot was taken before the 'reactively resolve quote form token labels' fix (16a6d8a) was applied. The current screenshot shows the USDC icon in the input row (old layout), not on the label row alongside the token symbol. The README screenshot does not reflect the current UI for the token field layout requirement."
+    },
+    {
+      "id": "VAL-BUG-001",
+      "status": "pass",
+      "evidence": "Cleared localStorage with window.localStorage.clear(), reloaded, verified Ethereum defaults, then switched to Arbitrum via the Chain dropdown. From token field showed USDC (icon + symbol on label row, address 0xaf88d065e77c8cC2239327C5EDb3A432268e5831 in input row). To token field showed WETH (icon + symbol on label row, address 0x82aF49447D8a07e3bd95BD0d56f35241523fBab1 in input row). Not USDC→USDC. Screenshot: ypm-arbitrum.png."
+    },
+    {
+      "id": "VAL-UI-001",
+      "status": "pass",
+      "evidence": "Snapshot shows 'GitHub Repository' link (@e2) in the header alongside API Docs link (@e1), settings button (@e3), and theme toggle. href attribute: 'https://github.com/SatoshiAndKin/ypricemagic-server'. target attribute: '_blank'. Computed styles show box size 36×36px at position (974, 40), matching the settings button (36×36px at 1018, 40). Both have matching border-radius: 4px, font-size: 18px, and background color. Screenshot: ypm-initial-state.png."
+    },
+    {
+      "id": "VAL-UI-002",
+      "status": "pass",
+      "evidence": "Initial page load with Ethereum default (USDC→crvUSD) shows clear/X buttons visible on both token fields (@e10 and @e12 in annotated snapshot). From token field value was '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48'. After clicking the X button (@e10), the from token field was cleared: value empty, icon removed from label row, symbol 'USDC' removed from label row, and the clear button itself disappeared (not present in subsequent snapshot since field was empty). Screenshot before: ypm-initial-state.png, after: ypm-after-clear.png. Console errors: none."
+    },
+    {
+      "id": "VAL-UI-003",
+      "status": "pass",
+      "evidence": "Initial page load shows 'From Token [🔵] USDC' on the label row (accessible name in snapshot: label+icon+symbol together), with address-only '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48' in the input field below. Similarly, 'To Token crvUSD' on the label row with address-only '0xf939E0A03FB07F59A73314E73794Be0E57ac1b4E' in the input field below. The two-line layout is clearly visible in screenshot ypm-initial-state.png. Console errors: none."
+    },
+    {
+      "id": "VAL-CROSS-001",
+      "status": "pass",
+      "evidence": "After clearing from token field with X button (field emptied, label shows 'From Token' with no icon/symbol), typed 'WBTC' in the from token field which triggered autocomplete showing 'WBTC Wrapped BTC 0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599'. Clicked the WBTC option. After selection: label row shows 'From Token [₿/Bitcoin icon] WBTC', input field contains only '0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599', and a clear button reappeared. Clear button (@e10) also appeared while typing (field had content). Screenshot: ypm-after-select.png. Console errors: none."
+    }
+  ],
+  "frictions": [],
+  "blockers": [],
+  "summary": "Tested 6 assertions: 5 passed, 1 failed. VAL-DOC-003 fails because the README screenshot (docs/readme-quote-latest-block.png) was refreshed before the final 'reactively resolve quote form token labels' fix (commit 16a6d8a) and does not show the icon+symbol-on-label-row layout in the current UI — only the GitHub button and clear buttons match, but the token field layout does not. All other UI assertions (VAL-BUG-001, VAL-UI-001, VAL-UI-002, VAL-UI-003, VAL-CROSS-001) pass with the live app correctly implementing all specified behaviors."
+}

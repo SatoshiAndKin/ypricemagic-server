@@ -1,0 +1,84 @@
+{
+  "flowId": "docs-and-unit",
+  "testedAt": "2026-03-10T22:44:45Z",
+  "credentials": {
+    "account": "n/a",
+    "namespace": "n/a"
+  },
+  "toolsUsed": ["Execute", "Read"],
+  "assertions": [
+    {
+      "id": "VAL-DOC-001",
+      "title": "README uses VIRTUAL_HOST instead of YPM_HOST",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "grep -n 'YPM_HOST' /Users/bryan/code/ypricemagic-server/README.md",
+          "expected": "0 matches",
+          "observed": "0 matches — no output returned"
+        },
+        {
+          "action": "grep -n 'VIRTUAL_HOST' /Users/bryan/code/ypricemagic-server/README.md",
+          "expected": "Multiple matches in env var section, deployment instructions, and routing description",
+          "observed": "5 matches: line 32 (VIRTUAL_HOST=localhost env default), line 50 (deployment instructions: set VIRTUAL_HOST in .env), lines 52-53 (frontend UI and Swagger URLs using VIRTUAL_HOST), line 260 (Traefik routing scoped to VIRTUAL_HOST), line 270 (deploy script polls /health on VIRTUAL_HOST)"
+        }
+      ],
+      "evidence": {
+        "grepYPM_HOST": "0 matches",
+        "grepVIRTUAL_HOST": "5 matches at lines 32, 50, 52, 53, 260, 270 — covering env block, deployment instructions, and Traefik routing description",
+        "consoleErrors": "n/a",
+        "network": "n/a"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-DOC-002",
+      "title": "traefik-proxy README uses VIRTUAL_HOST",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "grep -n 'YPM_HOST' /Users/bryan/code/ypricemagic-server/traefik-proxy/README.md",
+          "expected": "0 matches",
+          "observed": "0 matches — no output returned"
+        },
+        {
+          "action": "grep -n 'VIRTUAL_HOST' /Users/bryan/code/ypricemagic-server/traefik-proxy/README.md",
+          "expected": "At least one match",
+          "observed": "1 match at line 24: '- `ypricemagic-server` routes are scoped by `VIRTUAL_HOST`.'"
+        }
+      ],
+      "evidence": {
+        "grepYPM_HOST": "0 matches",
+        "grepVIRTUAL_HOST": "1 match at line 24",
+        "consoleErrors": "n/a",
+        "network": "n/a"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-BUG-002",
+      "title": "Identity pairs are rejected",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "cd /Users/bryan/code/ypricemagic-server/frontend && npm test -- --run",
+          "expected": "All tests pass including 'does not save identity pairs' and 'falls back to default pair when stored custom pair is an identity pair'",
+          "observed": "78 tests passed across 3 test files. Both specific identity-pair tests found and passing: tokenlist.test.ts line 327 'does not save identity pairs' (saveCustomPair rejects from===to) and line 387 'falls back to default pair when stored custom pair is an identity pair' (getEffectivePair ignores identity pairs)"
+        }
+      ],
+      "evidence": {
+        "testOutput": "3 test files passed (utils.test.ts: 22 tests, api.test.ts: 12 tests, tokenlist.test.ts: 44 tests). Total: 78 tests passed, 0 failed.",
+        "specificTests": [
+          "tokenlist.test.ts:327 - 'does not save identity pairs' — saveCustomPair('arbitrum', '0xABCDEF', '0xabcdef') is rejected (case-insensitive same address)",
+          "tokenlist.test.ts:387 - 'falls back to default pair when stored custom pair is an identity pair' — getEffectivePair returns DEFAULT_PAIRS when stored pair has from===to"
+        ],
+        "consoleErrors": "n/a",
+        "network": "n/a"
+      },
+      "issues": null
+    }
+  ],
+  "frictions": [],
+  "blockers": [],
+  "summary": "Tested 3 assertions: all 3 passed. VAL-DOC-001: README.md has 0 YPM_HOST references and 5 VIRTUAL_HOST references in correct sections. VAL-DOC-002: traefik-proxy/README.md has 0 YPM_HOST references. VAL-BUG-002: All 78 frontend unit tests pass, including specific tests for saveCustomPair rejecting identity pairs and getEffectivePair falling back to defaults for identity pairs."
+}

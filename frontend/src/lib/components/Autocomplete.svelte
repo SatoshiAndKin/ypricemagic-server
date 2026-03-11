@@ -37,10 +37,7 @@
   let dropdownEl = $state<HTMLDivElement | undefined>(undefined);
   let debounceTimer: ReturnType<typeof setTimeout> | null = null;
 
-  function formatTokenDisplay(symbol: string | undefined, address: string): string {
-    if (symbol) {
-      return `${symbol} (${address})`;
-    }
+  function formatTokenDisplay(_symbol: string | undefined, address: string): string {
     return address;
   }
 
@@ -229,6 +226,20 @@
       onblur={handleBlur}
       onkeydown={handleKeydown}
     />
+    {#if inputValue}
+      <button
+        type="button"
+        class="token-clear-btn"
+        onclick={() => {
+          clear();
+          onselect?.(null, '');
+        }}
+        aria-label="Clear token"
+        title="Clear token"
+      >
+        ×
+      </button>
+    {/if}
   </div>
   {#if isOpen}
     <div bind:this={dropdownEl} class="autocomplete-dropdown" role="listbox">
