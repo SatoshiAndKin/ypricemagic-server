@@ -524,7 +524,7 @@
                   <div class="route-step">
                     <span class="route-step-num">{i + 1}.</span>
                     <span class="route-step-tokens">{getSymbol(step.input_token)} → {getSymbol(step.output_token)}</span>
-                    <span class="route-step-pool">{step.source} <code>{step.pool.slice(0, 10)}…</code></span>
+                    <span class="route-step-pool">{step.source}{#if step.pool} <code>{step.pool.slice(0, 10)}…</code>{/if}</span>
                   </div>
                 {/each}
               </span>
@@ -538,7 +538,7 @@
                   <div class="route-step">
                     <span class="route-step-num">{i + 1}.</span>
                     <span class="route-step-tokens">{getSymbol(step.input_token)} → {getSymbol(step.output_token)}</span>
-                    <span class="route-step-pool">{step.source} <code>{step.pool.slice(0, 10)}…</code></span>
+                    <span class="route-step-pool">{step.source}{#if step.pool} <code>{step.pool.slice(0, 10)}…</code>{/if}</span>
                   </div>
                 {/each}
               </span>
