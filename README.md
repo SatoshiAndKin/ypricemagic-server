@@ -219,7 +219,7 @@ The root path (`/`) is a browser UI for the API.
 
 ![Latest-block USDC→crvUSD quote result with price age in seconds](docs/readme-quote-latest-block.png)
 
-The UI has a theme toggle (system/light/dark, saved in local storage) and token autocomplete on all address inputs. Autocomplete searches by symbol, name, or address across loaded tokenlists, filtered by the selected chain.
+The UI has a theme toggle (system/light/dark, saved in local storage), a GitHub link, and token autocomplete on all address inputs. Autocomplete searches by symbol, name, or address across loaded tokenlists, filtered by the selected chain.
 
 The gear icon (⚙) opens a tokenlist manager where you can toggle lists on/off, add lists by URL, import/export JSON files, or delete custom lists. All tokenlist state lives in `localStorage`. The [Uniswap Default tokenlist](https://tokens.uniswap.org) is bundled and always available.
 
