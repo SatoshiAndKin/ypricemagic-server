@@ -9,6 +9,7 @@
     saveCustomPair,
     isTokenInIndex,
     addLocalToken,
+    tokenIndex,
     type Chain,
   } from '../stores/tokenlist';
   import { getTokenFromIndex } from '../stores/tokenlist';
@@ -28,8 +29,14 @@
   // Internal address tracking
   let fromAddress = $state('');
   let toAddress = $state('');
-  let fromTokenInfo = $state<{ symbol?: string; logoURI?: string } | null>(null);
-  let toTokenInfo = $state<{ symbol?: string; logoURI?: string } | null>(null);
+  let fromTokenInfo = $derived.by(() => {
+    void $tokenIndex;
+    return fromAddress ? getTokenFromIndex(fromAddress, chainId) ?? null : null;
+  });
+  let toTokenInfo = $derived.by(() => {
+    void $tokenIndex;
+    return toAddress ? getTokenFromIndex(toAddress, chainId) ?? null : null;
+  });
 
   // Form state
   let blockInput = $state('');
@@ -145,7 +152,6 @@
 
   function handleFromSelect(_token: unknown, address: string) {
     fromAddress = address;
-    fromTokenInfo = address ? getTokenFromIndex(address, chainId) ?? null : null;
     if (isValidAddress(fromAddress) && isValidAddress(toAddress)) {
       saveCustomPair(chain, fromAddress, toAddress);
     }
@@ -153,7 +159,6 @@
 
   function handleToSelect(_token: unknown, address: string) {
     toAddress = address;
-    toTokenInfo = address ? getTokenFromIndex(address, chainId) ?? null : null;
     if (isValidAddress(fromAddress) && isValidAddress(toAddress)) {
       saveCustomPair(chain, fromAddress, toAddress);
     }
@@ -242,7 +247,6 @@
 
   $effect(() => {
     const _chain = chain;
-    const _chainId = chainId;
     // Only access refs in untrack to avoid tracking them
     untrack(() => {
       abortPending();
@@ -254,8 +258,6 @@
       const pair = getEffectivePair(_chain as Chain);
       fromAddress = pair.from;
       toAddress = pair.to;
-      fromTokenInfo = getTokenFromIndex(pair.from, _chainId) ?? null;
-      toTokenInfo = getTokenFromIndex(pair.to, _chainId) ?? null;
       fromRef?.setFromAddress(pair.from);
       toRef?.setFromAddress(pair.to);
     });
@@ -279,7 +281,6 @@
       if (suppress) fromRef.setSuppressModal(true);
     }
     fromAddress = address;
-    fromTokenInfo = getTokenFromIndex(address, chainId) ?? null;
   }
 
   export function setToAddress(address: string, suppress = true): void {
@@ -288,7 +289,6 @@
       if (suppress) toRef.setSuppressModal(true);
     }
     toAddress = address;
-    toTokenInfo = getTokenFromIndex(address, chainId) ?? null;
   }
 
   export function setBlock(block: string): void {
@@ -328,7 +328,7 @@
     <ChainSelector />
 
     <div class="form-group">
-      <label for="from-token">
+      <label for="from-token" class="token-field-label">
         From Token
         {#if fromTokenInfo?.symbol}
           <span class="token-label-info">
@@ -349,7 +349,7 @@
     </div>
 
     <div class="form-group">
-      <label for="to-token">
+      <label for="to-token" class="token-field-label">
         To Token
         {#if toTokenInfo?.symbol}
           <span class="token-label-info">

@@ -37,10 +37,7 @@
   let dropdownEl = $state<HTMLDivElement | undefined>(undefined);
   let debounceTimer: ReturnType<typeof setTimeout> | null = null;
 
-  function formatTokenDisplay(symbol: string | undefined, address: string): string {
-    if (symbol) {
-      return address;
-    }
+  function formatTokenDisplay(_symbol: string | undefined, address: string): string {
     return address;
   }
 

@@ -351,13 +351,16 @@ h2 {
 }
 
 label {
+  font-weight: 600;
+  margin-bottom: 6px;
+  color: var(--text-secondary);
+}
+
+.token-field-label {
   display: flex;
   align-items: center;
   gap: 8px;
   flex-wrap: wrap;
-  font-weight: 600;
-  margin-bottom: 6px;
-  color: var(--text-secondary);
 }
 
 .token-label-info {
