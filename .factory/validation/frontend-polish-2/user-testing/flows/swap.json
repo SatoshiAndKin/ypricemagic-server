@@ -1,0 +1,150 @@
+{
+  "groupId": "swap",
+  "testedAt": "2026-03-11T00:00:00Z",
+  "credentials": {
+    "account": "none (frontend-only app)",
+    "namespace": "no isolation needed"
+  },
+  "toolsUsed": ["agent-browser"],
+  "assertions": [
+    {
+      "id": "VAL-SWAP-001",
+      "title": "Setting from to current to value swaps them",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "Navigate to http://localhost:5199, clear localStorage, select chain=arbitrum",
+          "expected": "Default state: From=USDC (0xaf88d065e77c8cC2239327C5EDb3A432268e5831), To=WETH (0x82aF49447D8a07e3bd95BD0d56f35241523fBab1)",
+          "observed": "From=USDC, To=WETH — confirmed by reading field values"
+        },
+        {
+          "action": "Type 'WETH' in the from field, select WETH from dropdown",
+          "expected": "Swap triggered: from becomes WETH, to becomes previous from (USDC)",
+          "observed": "Dropdown showed WETH option; after clicking, From=WETH (0x82aF49447D8a07e3bd95BD0d56f35241523fBab1), To=USDC (0xaf88d065e77c8cC2239327C5EDb3A432268e5831)"
+        },
+        {
+          "action": "Verify label rows",
+          "expected": "From label shows WETH icon+symbol, To label shows USDC icon+symbol",
+          "observed": "From Token label: '♦ WETH', To Token label: '🔵 USDC' — both updated correctly"
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          ".factory/validation/frontend-polish-2/user-testing/flows/swap-arbitrum.png",
+          ".factory/validation/frontend-polish-2/user-testing/flows/swap-001-dropdown.png",
+          ".factory/validation/frontend-polish-2/user-testing/flows/swap-001-after.png"
+        ],
+        "consoleErrors": "none",
+        "network": "n/a — pure frontend state operation, no API call for swap",
+        "fieldValuesAfter": {
+          "from": "0x82aF49447D8a07e3bd95BD0d56f35241523fBab1 (WETH)",
+          "to": "0xaf88d065e77c8cC2239327C5EDb3A432268e5831 (USDC)"
+        }
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-SWAP-002",
+      "title": "Setting to to current from value swaps them",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "Reset localStorage, reload, select chain=arbitrum",
+          "expected": "Default state: From=USDC, To=WETH",
+          "observed": "From=USDC (0xaf88d065e77c8cC2239327C5EDb3A432268e5831), To=WETH (0x82aF49447D8a07e3bd95BD0d56f35241523fBab1)"
+        },
+        {
+          "action": "Type 'USDC' in the to field, select USDC from dropdown",
+          "expected": "Swap triggered: to becomes USDC, from becomes previous to (WETH)",
+          "observed": "After selecting USDC in to field: From=WETH (0x82aF49447D8a07e3bd95BD0d56f35241523fBab1), To=USDC (0xaf88d065e77c8cC2239327C5EDb3A432268e5831)"
+        },
+        {
+          "action": "Verify label rows",
+          "expected": "From label shows WETH icon+symbol, To label shows USDC icon+symbol",
+          "observed": "From Token: '♦ WETH', To Token: '🔵 USDC' — both updated correctly"
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          ".factory/validation/frontend-polish-2/user-testing/flows/swap-002-dropdown.png",
+          ".factory/validation/frontend-polish-2/user-testing/flows/swap-002-after.png"
+        ],
+        "consoleErrors": "none",
+        "network": "n/a — pure frontend state operation",
+        "fieldValuesAfter": {
+          "from": "0x82aF49447D8a07e3bd95BD0d56f35241523fBab1 (WETH)",
+          "to": "0xaf88d065e77c8cC2239327C5EDb3A432268e5831 (USDC)"
+        }
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-SWAP-003",
+      "title": "Normal selection (no conflict) unchanged",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "Reset localStorage, reload, select chain=arbitrum",
+          "expected": "Default state: From=USDC, To=WETH",
+          "observed": "From=USDC (0xaf88d065e77c8cC2239327C5EDb3A432268e5831), To=WETH (0x82aF49447D8a07e3bd95BD0d56f35241523fBab1)"
+        },
+        {
+          "action": "Type 'ARB' in the from field, select ARB (Arbitrum token) from dropdown",
+          "expected": "Only from changes to ARB; to remains WETH (no swap, since ARB ≠ WETH)",
+          "observed": "From=ARB (0x912CE59144191C1204E64559FE8253a0e49E6548), To=WETH (0x82aF49447D8a07e3bd95BD0d56f35241523fBab1) — to unchanged"
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          ".factory/validation/frontend-polish-2/user-testing/flows/swap-003-dropdown.png",
+          ".factory/validation/frontend-polish-2/user-testing/flows/swap-003-after.png"
+        ],
+        "consoleErrors": "none",
+        "network": "n/a — pure frontend state operation",
+        "fieldValuesAfter": {
+          "from": "0x912CE59144191C1204E64559FE8253a0e49E6548 (ARB)",
+          "to": "0x82aF49447D8a07e3bd95BD0d56f35241523fBab1 (WETH — unchanged)"
+        }
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-CROSS-001",
+      "title": "Swap preserves label row display",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "Reset localStorage, reload, select chain=arbitrum; read initial labels via JS",
+          "expected": "From label: 'From Token  USDC', To label: 'To Token  WETH'",
+          "observed": "allLabels: ['Chain', 'From Token  USDC', 'To Token  WETH', 'Amount', 'Block']"
+        },
+        {
+          "action": "Select WETH in the from field (current to value) to trigger swap",
+          "expected": "Swap occurs; from becomes WETH, to becomes USDC",
+          "observed": "Swap occurred as expected"
+        },
+        {
+          "action": "Read label text after swap via JS",
+          "expected": "From label: 'From Token  WETH' (with icon), To label: 'To Token  USDC' (with icon)",
+          "observed": "allLabels: ['Chain', 'From Token  WETH', 'To Token  USDC', 'Amount', 'Block'] — both labels updated with correct token symbol and icon"
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          ".factory/validation/frontend-polish-2/user-testing/flows/cross-001-labels.png",
+          ".factory/validation/frontend-polish-2/user-testing/flows/swap-001-after.png"
+        ],
+        "consoleErrors": "none",
+        "network": "n/a — pure frontend state operation",
+        "labelTextAfterSwap": {
+          "fromLabel": "From Token  WETH",
+          "toLabel": "To Token  USDC"
+        }
+      },
+      "issues": null
+    }
+  ],
+  "frictions": [],
+  "blockers": [],
+  "summary": "Tested 4 assertions: all 4 passed. Token swap behavior works correctly in both directions (from→to conflict and to→from conflict). Normal (non-conflicting) selection does not trigger a swap. Label rows correctly reflect the new tokens (icon + symbol) after any swap."
+}

@@ -1,0 +1,87 @@
+{
+  "groupId": "visual",
+  "testedAt": "2026-03-11T00:00:00.000Z",
+  "credentials": {
+    "account": "none (frontend-only app)",
+    "namespace": "none (frontend-only state)"
+  },
+  "toolsUsed": ["agent-browser"],
+  "assertions": [
+    {
+      "id": "VAL-FAV-001",
+      "title": "Favicon renders in browser tab",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "Navigate to http://localhost:5199",
+          "expected": "Page loads successfully",
+          "observed": "Page loaded: title 'ypricemagic · Multi-Chain Token Prices'"
+        },
+        {
+          "action": "Check HTML head for favicon link tag",
+          "expected": "link[rel='icon'] with href='/favicon.png'",
+          "observed": "Found: { found: true, href: '/favicon.png', rel: 'icon', type: 'image/png' }"
+        },
+        {
+          "action": "Fetch http://localhost:5199/favicon.png",
+          "expected": "HTTP 200 with image/png content-type",
+          "observed": "{ status: 200, contentType: 'image/png', ok: true }"
+        }
+      ],
+      "evidence": {
+        "screenshots": [],
+        "consoleErrors": "none (0 errors)",
+        "network": "GET /favicon.png -> 200 image/png",
+        "domEval": "document.querySelector('link[rel=\"icon\"]').href = '/favicon.png', type='image/png'"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-ICON-001",
+      "title": "Token icon appears only on label row",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "Clear localStorage and navigate to http://localhost:5199",
+          "expected": "Clean state, app loads",
+          "observed": "App loaded with Ethereum chain, USDC→crvUSD defaults"
+        },
+        {
+          "action": "Switch to Arbitrum chain to get two tokens with logos (USDC + WETH)",
+          "expected": "Both USDC and WETH shown with logos on label rows",
+          "observed": "Arbitrum chain selected, From Token: USDC, To Token: WETH"
+        },
+        {
+          "action": "Evaluate document.querySelectorAll('.token-input-icon').length",
+          "expected": "0 (no icons inside input wrappers)",
+          "observed": "0"
+        },
+        {
+          "action": "Evaluate document.querySelectorAll('.token-label-icon').length",
+          "expected": ">0 (icons exist on label rows)",
+          "observed": "2 (one for USDC on From Token label, one for WETH on To Token label)"
+        },
+        {
+          "action": "Check imgs inside input wrappers (.token-input-wrapper)",
+          "expected": "imgCount: 0 for both input wrappers",
+          "observed": "{ parentClass: 'token-input-wrapper', imgCount: 0 } for both inputs"
+        },
+        {
+          "action": "Verify img element hierarchy",
+          "expected": "Icons have parentClass='token-label-info', grandparentClass='token-field-label'",
+          "observed": "Both token-label-icon imgs: parentClass='token-label-info', grandparentClass='token-field-label'"
+        }
+      ],
+      "evidence": {
+        "screenshots": ["icon-test.png (viewport screenshot showing USDC and WETH icons on label rows only, input fields contain only addresses)"],
+        "consoleErrors": "none (0 errors)",
+        "network": "n/a",
+        "domEval": "tokenInputIconCount: 0, tokenLabelIconCount: 2, all token-input-wrapper elements have imgCount: 0"
+      },
+      "issues": null
+    }
+  ],
+  "frictions": [],
+  "blockers": [],
+  "summary": "Tested 2 assertions: both passed. VAL-FAV-001: favicon link tag present in HTML with href='/favicon.png', HTTP 200 on fetch. VAL-ICON-001: token icons appear only on label rows (token-label-icon class, inside token-field-label), zero icons inside input wrappers (token-input-icon count=0, all token-input-wrapper imgCount=0)."
+}
