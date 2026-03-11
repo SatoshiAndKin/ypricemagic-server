@@ -3,7 +3,7 @@
   import Autocomplete from './Autocomplete.svelte';
   import UnknownTokenModal from './UnknownTokenModal.svelte';
   import { fetchQuote } from '../api';
-  import type { QuoteResponse } from '../types';
+  import type { QuoteResponse, TradeStep } from '../types';
   import {
     getEffectivePair,
     saveCustomPair,
@@ -465,18 +465,47 @@
           </div>
         {/if}
 
-        <div class="result-row">
-          <span class="result-label">Route</span>
-          <span class="result-value result-value-muted">
-            {#if q.route === 'divide'}
-              {getSymbol(q.from)} → USD ÷ {getSymbol(q.to)} → USD
-            {:else if q.route === 'identity'}
-              identity (same token)
-            {:else}
-              {q.route}
-            {/if}
-          </span>
-        </div>
+        {#if q.route === 'identity'}
+          <div class="result-row">
+            <span class="result-label">Route</span>
+            <span class="result-value result-value-muted">identity (same token)</span>
+          </div>
+        {:else}
+          {#if q.from_trade_path?.length}
+            <div class="result-row result-row-route">
+              <span class="result-label">{getSymbol(q.from)} Route</span>
+              <span class="result-value">
+                {#each q.from_trade_path as step, i}
+                  <div class="route-step">
+                    <span class="route-step-num">{i + 1}.</span>
+                    <span class="route-step-tokens">{getSymbol(step.input_token)} → {getSymbol(step.output_token)}</span>
+                    <span class="route-step-pool">{step.source} <code>{step.pool.slice(0, 10)}…</code></span>
+                  </div>
+                {/each}
+              </span>
+            </div>
+          {/if}
+          {#if q.to_trade_path?.length}
+            <div class="result-row result-row-route">
+              <span class="result-label">{getSymbol(q.to)} Route</span>
+              <span class="result-value">
+                {#each q.to_trade_path as step, i}
+                  <div class="route-step">
+                    <span class="route-step-num">{i + 1}.</span>
+                    <span class="route-step-tokens">{getSymbol(step.input_token)} → {getSymbol(step.output_token)}</span>
+                    <span class="route-step-pool">{step.source} <code>{step.pool.slice(0, 10)}…</code></span>
+                  </div>
+                {/each}
+              </span>
+            </div>
+          {/if}
+          {#if !q.from_trade_path?.length && !q.to_trade_path?.length}
+            <div class="result-row">
+              <span class="result-label">Route</span>
+              <span class="result-value result-value-muted">{q.route}</span>
+            </div>
+          {/if}
+        {/if}
       </div>
     </div>
   {/if}

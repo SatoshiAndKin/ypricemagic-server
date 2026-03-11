@@ -20,9 +20,11 @@ export interface BatchPriceResponse {
 }
 
 export interface TradeStep {
+  source: string;
+  input_token: string;
+  output_token: string;
   pool: string;
-  from: string;
-  to: string;
+  price: number;
 }
 
 export interface QuoteResponse {
@@ -36,8 +38,8 @@ export interface QuoteResponse {
   route: string;
   from_price: number;
   to_price: number;
-  from_trade_path: string[] | null;
-  to_trade_path: string[] | null;
+  from_trade_path: TradeStep[] | null;
+  to_trade_path: TradeStep[] | null;
 }
 
 export interface BucketResponse {
