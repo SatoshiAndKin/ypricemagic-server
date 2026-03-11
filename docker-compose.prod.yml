@@ -29,6 +29,10 @@ services:
     volumes:
       - cache-ethereum:/data/cache
       - brownie-ethereum:/root/.brownie
+      - solcx:/root/.solcx
+      - vvm:/root/.vvm
+      - ypricemagic-ethereum:/root/.ypricemagic
+      - appcache-ethereum:/app/cache
     labels:
       traefik.enable: "true"
       docker-rollout.pre-stop-hook: "touch /tmp/drain && sleep 10"
@@ -52,6 +56,10 @@ services:
     volumes:
       - cache-arbitrum:/data/cache
       - brownie-arbitrum:/root/.brownie
+      - solcx:/root/.solcx
+      - vvm:/root/.vvm
+      - ypricemagic-arbitrum:/root/.ypricemagic
+      - appcache-arbitrum:/app/cache
     labels:
       traefik.enable: "true"
       docker-rollout.pre-stop-hook: "touch /tmp/drain && sleep 10"
@@ -72,6 +80,10 @@ services:
     volumes:
       - cache-optimism:/data/cache
       - brownie-optimism:/root/.brownie
+      - solcx:/root/.solcx
+      - vvm:/root/.vvm
+      - ypricemagic-optimism:/root/.ypricemagic
+      - appcache-optimism:/app/cache
     labels:
       traefik.enable: "true"
       docker-rollout.pre-stop-hook: "touch /tmp/drain && sleep 10"
@@ -92,6 +104,10 @@ services:
     volumes:
       - cache-base:/data/cache
       - brownie-base:/root/.brownie
+      - solcx:/root/.solcx
+      - vvm:/root/.vvm
+      - ypricemagic-base:/root/.ypricemagic
+      - appcache-base:/app/cache
     labels:
       traefik.enable: "true"
       docker-rollout.pre-stop-hook: "touch /tmp/drain && sleep 10"
@@ -124,9 +140,19 @@ services:
 volumes:
   cache-ethereum:
   brownie-ethereum:
+  solcx:
+  vvm:
+  ypricemagic-ethereum:
+  appcache-ethereum:
   cache-arbitrum:
   brownie-arbitrum:
+  ypricemagic-arbitrum:
+  appcache-arbitrum:
   cache-optimism:
   brownie-optimism:
+  ypricemagic-optimism:
+  appcache-optimism:
   cache-base:
   brownie-base:
+  ypricemagic-base:
+  appcache-base:
