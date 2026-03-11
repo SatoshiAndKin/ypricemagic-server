@@ -21,5 +21,5 @@ docker compose up --build
 ## Notes
 
 - This proxy is intentionally separated from the app stack so one Traefik instance can serve multiple apps on the same server.
-- `ypricemagic-server` routes are scoped by `YPM_HOST`.
+- `ypricemagic-server` routes are scoped by `VIRTUAL_HOST`.
 - Other apps can join the same `traefik-proxy` network and add their own Traefik labels.
