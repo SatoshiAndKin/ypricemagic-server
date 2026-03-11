@@ -1,0 +1,41 @@
+{
+  "groupId": "code-analysis",
+  "milestone": "dep-and-health",
+  "testedAt": "2026-03-11T10:46:30Z",
+  "assertionsTested": [
+    "VAL-DEP-001",
+    "VAL-DEP-002",
+    "VAL-HEALTH-002",
+    "VAL-HEALTH-003",
+    "VAL-HEALTH-004",
+    "VAL-HEALTH-005"
+  ],
+  "results": {
+    "VAL-DEP-001": {
+      "status": "pass",
+      "evidence": "uv.lock contains ypricemagic at commit hash 35eba38cb3343a83c5dd4491793d3902cfdcf65f (via grep on 'name = \"ypricemagic\"'). This differs from the old hash d1dfd45636935f7f7884c5730e337d5731d0aa94. Source: https://github.com/SatoshiAndKin/ypricemagic.git?rev=master#35eba38cb3343a83c5dd4491793d3902cfdcf65f"
+    },
+    "VAL-DEP-002": {
+      "status": "pass",
+      "evidence": "uv run pytest -x -q --tb=short exited with code 0. All 272 backend tests passed with 4 warnings in 14.12s. No test failures."
+    },
+    "VAL-HEALTH-002": {
+      "status": "pass",
+      "evidence": "frontend/src/lib/health.ts: mapHealthResponseToState() returns 'warning' when synced !== true (covers synced=false and synced=null). Unit tests in health.test.ts confirm: 'maps ok and synced=false to warning' and 'maps ok and synced=null to warning' both pass. Header.svelte shows triangle (▲) symbol for warning state."
+    },
+    "VAL-HEALTH-003": {
+      "status": "pass",
+      "evidence": "frontend/src/lib/health.ts: mapHealthResponseToState() returns 'error' when status !== 'ok'. Header.svelte catch block sets healthState = 'error' on fetch exceptions (network error/timeout). Unit test 'maps non-ok status to error' passes. Header.svelte shows ✕ symbol for error state. All 5 health.test.ts tests pass."
+    },
+    "VAL-HEALTH-004": {
+      "status": "pass",
+      "evidence": "frontend/src/lib/components/Header.svelte uses setInterval with 30_000ms (30s): 'healthPollInterval = setInterval(() => { void updateHealth(targetChain); }, 30_000);'. Polling restarts when chain prop changes via $effect. stopHealthPolling() cleans up on unmount. Polling pattern confirmed by code review."
+    },
+    "VAL-HEALTH-005": {
+      "status": "pass",
+      "evidence": "frontend/src/lib/types.ts HealthResponse interface includes: 'synced?: boolean | null;'. The field is present with the correct type (boolean | null, optional)."
+    }
+  },
+  "frictions": [],
+  "blockers": []
+}

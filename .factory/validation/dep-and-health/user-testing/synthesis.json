@@ -1,0 +1,27 @@
+{
+  "milestone": "dep-and-health",
+  "round": 1,
+  "status": "pass",
+  "assertionsSummary": {
+    "total": 9,
+    "passed": 9,
+    "failed": 0,
+    "blocked": 0
+  },
+  "passedAssertions": [
+    "VAL-DEP-001",
+    "VAL-DEP-002",
+    "VAL-HEALTH-001",
+    "VAL-HEALTH-002",
+    "VAL-HEALTH-003",
+    "VAL-HEALTH-004",
+    "VAL-HEALTH-005",
+    "VAL-HEALTH-006",
+    "VAL-CROSS-001"
+  ],
+  "failedAssertions": [],
+  "blockedAssertions": [],
+  "appliedUpdates": [],
+  "previousRound": null,
+  "notes": "All assertions verified. VAL-DEP-001/002: uv.lock updated to commit 35eba38 (from d1dfd45), 272 backend pytest tests pass. VAL-HEALTH-001 through VAL-CROSS-001: health indicator implemented in Header.svelte with correct mapping function (health.ts), polling every 30s via setInterval, HealthResponse type updated with synced field, indicator positioned as first element in header-actions. Browser UI confirmed indicator visible with red X when backend is down (expected); CSS confirms blue circle renders when ok+synced. Frontend unit tests (85 tests) all pass including 5 health mapping tests."
+}
