@@ -1,0 +1,51 @@
+{
+  "featureId": "health-status-indicator",
+  "reviewedAt": "2026-03-11T18:00:00.000Z",
+  "commitId": "b9a376323dd08287cbc6238b24cada39c2ef37b2",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "pass",
+  "codeReview": {
+    "summary": "Implementation is complete and correct. All five spec requirements are met: HealthResponse type updated, pure mapHealthResponseToState helper extracted to health.ts, Header.svelte polls fetchHealth on mount and on chain change with 30-second interval and cleanup, CSS indicator styles match spec, and indicator is placed first in .header-actions. Tests cover all four mapping branches (ok+synced=true, ok+synced=false, ok+synced=null, ok+synced=undefined, non-ok→error). All validators passed: 85 frontend tests, svelte-check clean, Vite build successful, live browser verification confirmed blue ● indicator in the correct position.",
+    "issues": [
+      {
+        "file": "frontend/src/lib/components/Header.svelte",
+        "line": 82,
+        "severity": "non_blocking",
+        "description": "Double startHealthPolling on mount: both onMount and $effect call startHealthPolling(chain) on component initialization, causing two immediate health fetches and the onMount-created interval being immediately stopped and replaced. startHealthPolling always calls stopHealthPolling() first so no interval leaks, but the redundant initial fetch is wasteful. The idiomatic Svelte 5 approach would be to use only $effect (which fires on mount and on change) and remove the startHealthPolling call from onMount, keeping only the cleanup return in onMount."
+      },
+      {
+        "file": "frontend/src/lib/components/Header.svelte",
+        "line": 87,
+        "severity": "non_blocking",
+        "description": "The explicit 'chain;' read at the top of $effect is redundant: startHealthPolling(chain) on the following line already reads the reactive chain prop, which is sufficient to register the dependency. Harmless, but could be confusing."
+      },
+      {
+        "file": "frontend/src/lib/components/Header.svelte",
+        "line": 22,
+        "severity": "non_blocking",
+        "description": "No AbortController passed to fetchHealth when the interval fires. If a health request is in-flight when startHealthPolling is called again (chain change or re-mount), the old request is not cancelled. A stale response from the old chain could transiently set healthState after the chain has changed. fetchHealth already accepts an optional signal parameter (see api.ts:98). The race window is small since health checks complete quickly, and the next poll corrects state, but a per-request abort signal would be cleaner."
+      },
+      {
+        "file": "frontend/src/lib/health.test.ts",
+        "line": null,
+        "severity": "non_blocking",
+        "description": "The catch block in updateHealth (fetch failure → healthState = 'error') is not unit-tested. Tests cover mapHealthResponseToState comprehensively, which satisfies the spec's 'tests verifying health state mapping logic' requirement, but a brief test for the async error path (or a note that it's covered by browser verification) would improve confidence. Not a spec gap."
+      }
+    ]
+  },
+  "sharedStateObservations": [
+    {
+      "area": "skills",
+      "observation": "frontend-worker SKILL.md (Step 7: Manual Verification) says to start the dev server at port 5173 ('cd frontend && npm run dev (port 5173)'), but services.yaml defines the vite-dev service on port 5199. The worker attempted port 5199 (from services.yaml), hit a conflict, tried --strictPort on 5199 (failed), then succeeded on 5205. Three tool calls were spent finding a working port. The skill should either reference services.yaml for the canonical port, or note that the port in vite.config.ts may override the default.",
+      "evidence": "SKILL.md step 7 says 'port 5173'. services.yaml vite-dev.port = 5199. Transcript shows: vite --port 5199 (started but crashed), vite --port 5199 --strictPort (failed), vite --port 5205 --strictPort (succeeded). Worker read vite.config.ts between the second and third attempts."
+    },
+    {
+      "area": "conventions",
+      "observation": "The fetchHealth function in api.ts uses the global FETCH_TIMEOUT_MS constant (300_000 ms / 5 minutes) — appropriate for long-running price queries but excessive for a health-check poller that runs every 30 seconds. Keeping a 5-minute timeout for health checks means a hanging server could accumulate up to 10 in-flight health requests before any of them timeout. This pattern (shared timeout constant across all fetch calls) isn't documented in AGENTS.md or library/architecture.md. A convention note recommending shorter timeouts for polling calls, or an API-specific timeout override, would help future workers.",
+      "evidence": "frontend/src/lib/api.ts:11 — FETCH_TIMEOUT_MS = 300_000. frontend/src/lib/api.ts:96-100 — fetchHealth calls fetchWithTimeout with no custom timeout. frontend/src/lib/components/Header.svelte:22 — updateHealth calls fetchHealth without a signal or custom timeout."
+    }
+  ],
+  "addressesFailureFrom": null,
+  "summary": "PASS. All required functionality is implemented and verified: HealthResponse type extended, mapHealthResponseToState pure helper with full test coverage, 30-second polling with immediate fetch on mount and chain change, proper interval cleanup, correct indicator rendering (●/▲/✕) as first element in header-actions, and matching CSS. Four non-blocking issues noted: redundant double startHealthPolling call on mount (onMount + $effect), a redundant 'chain;' dependency read, no AbortController for stale in-flight requests on chain change, and no unit test for the async error catch path. None are blocking. Two shared-state observations: skill port mismatch (5173 vs 5199) caused wasted tool calls during verification; and the shared 5-minute fetch timeout is undocumented and sub-optimal for health polling."
+}
