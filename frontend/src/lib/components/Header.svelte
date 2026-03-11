@@ -1,6 +1,9 @@
 <script lang="ts">
   import { onMount } from 'svelte';
 
+  import { fetchHealth } from '../api';
+  import { mapHealthResponseToState } from '../health';
+
   type Theme = 'light' | 'dark' | 'system';
 
   interface Props {
@@ -11,6 +14,33 @@
   let { onopenModal, chain = 'ethereum' }: Props = $props();
 
   let currentTheme = $state<Theme>('system');
+  let healthState = $state<'ok' | 'warning' | 'error'>('error');
+
+  let healthPollInterval: ReturnType<typeof setInterval> | undefined;
+
+  async function updateHealth(targetChain: string) {
+    try {
+      const response = await fetchHealth(targetChain);
+      healthState = mapHealthResponseToState(response);
+    } catch {
+      healthState = 'error';
+    }
+  }
+
+  function stopHealthPolling() {
+    if (healthPollInterval) {
+      clearInterval(healthPollInterval);
+      healthPollInterval = undefined;
+    }
+  }
+
+  function startHealthPolling(targetChain: string) {
+    stopHealthPolling();
+    void updateHealth(targetChain);
+    healthPollInterval = setInterval(() => {
+      void updateHealth(targetChain);
+    }, 30_000);
+  }
 
   function applyTheme(theme: Theme) {
     currentTheme = theme;
@@ -50,6 +80,22 @@
       currentTheme = 'system';
       document.documentElement.removeAttribute('data-theme');
     }
+
+    startHealthPolling(chain);
+
+    return () => {
+      stopHealthPolling();
+    };
+  });
+
+  $effect(() => {
+    chain;
+
+    startHealthPolling(chain);
+
+    return () => {
+      stopHealthPolling();
+    };
   });
 </script>
 
@@ -59,6 +105,13 @@
     <p class="header-tagline">Multi-chain ERC-20 token price API</p>
   </div>
   <div class="header-actions">
+    {#if healthState === 'ok'}
+      <span class="health-indicator health-ok" title="API healthy and synced">●</span>
+    {:else if healthState === 'warning'}
+      <span class="health-indicator health-warning" title="API running but not synced">▲</span>
+    {:else}
+      <span class="health-indicator health-error" title="API unavailable">✕</span>
+    {/if}
     <button
       type="button"
       class="theme-toggle"
