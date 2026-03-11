@@ -28,6 +28,8 @@
   // Internal address tracking
   let fromAddress = $state('');
   let toAddress = $state('');
+  let fromTokenInfo = $state<{ symbol?: string; logoURI?: string } | null>(null);
+  let toTokenInfo = $state<{ symbol?: string; logoURI?: string } | null>(null);
 
   // Form state
   let blockInput = $state('');
@@ -143,6 +145,7 @@
 
   function handleFromSelect(_token: unknown, address: string) {
     fromAddress = address;
+    fromTokenInfo = address ? getTokenFromIndex(address, chainId) ?? null : null;
     if (isValidAddress(fromAddress) && isValidAddress(toAddress)) {
       saveCustomPair(chain, fromAddress, toAddress);
     }
@@ -150,6 +153,7 @@
 
   function handleToSelect(_token: unknown, address: string) {
     toAddress = address;
+    toTokenInfo = address ? getTokenFromIndex(address, chainId) ?? null : null;
     if (isValidAddress(fromAddress) && isValidAddress(toAddress)) {
       saveCustomPair(chain, fromAddress, toAddress);
     }
@@ -250,9 +254,10 @@
       const pair = getEffectivePair(_chain as Chain);
       fromAddress = pair.from;
       toAddress = pair.to;
+      fromTokenInfo = getTokenFromIndex(pair.from, _chainId) ?? null;
+      toTokenInfo = getTokenFromIndex(pair.to, _chainId) ?? null;
       fromRef?.setFromAddress(pair.from);
       toRef?.setFromAddress(pair.to);
-      void _chainId; // suppress unused variable warning
     });
   });
 
@@ -273,6 +278,8 @@
       fromRef.setFromAddress(address);
       if (suppress) fromRef.setSuppressModal(true);
     }
+    fromAddress = address;
+    fromTokenInfo = getTokenFromIndex(address, chainId) ?? null;
   }
 
   export function setToAddress(address: string, suppress = true): void {
@@ -280,6 +287,8 @@
       toRef.setFromAddress(address);
       if (suppress) toRef.setSuppressModal(true);
     }
+    toAddress = address;
+    toTokenInfo = getTokenFromIndex(address, chainId) ?? null;
   }
 
   export function setBlock(block: string): void {
@@ -319,7 +328,17 @@
     <ChainSelector />
 
     <div class="form-group">
-      <label for="from-token">From Token</label>
+      <label for="from-token">
+        From Token
+        {#if fromTokenInfo?.symbol}
+          <span class="token-label-info">
+            {#if fromTokenInfo.logoURI}
+              <img src={fromTokenInfo.logoURI} alt="" class="token-label-icon" />
+            {/if}
+            <span>{fromTokenInfo.symbol}</span>
+          </span>
+        {/if}
+      </label>
       <Autocomplete
         bind:this={fromRef}
         chain={chainId}
@@ -330,7 +349,17 @@
     </div>
 
     <div class="form-group">
-      <label for="to-token">To Token</label>
+      <label for="to-token">
+        To Token
+        {#if toTokenInfo?.symbol}
+          <span class="token-label-info">
+            {#if toTokenInfo.logoURI}
+              <img src={toTokenInfo.logoURI} alt="" class="token-label-icon" />
+            {/if}
+            <span>{toTokenInfo.symbol}</span>
+          </span>
+        {/if}
+      </label>
       <Autocomplete
         bind:this={toRef}
         chain={chainId}
