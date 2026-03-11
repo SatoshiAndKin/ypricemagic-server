@@ -1,5 +1,23 @@
 # Changelog
 
+## [0.8.0](https://github.com/SatoshiAndKin/ypricemagic-server/compare/v0.7.0...v0.8.0) (2026-03-11)
+
+
+### Features
+
+* update ypricemagic and add health indicator ([#85](https://github.com/SatoshiAndKin/ypricemagic-server/issues/85)) ([b7db497](https://github.com/SatoshiAndKin/ypricemagic-server/commit/b7db497a7720ea3aa0a70f89dca184db1d0f728a))
+
+
+### Bug Fixes
+
+* frontend polish round 2 ([#84](https://github.com/SatoshiAndKin/ypricemagic-server/issues/84)) ([7b6294d](https://github.com/SatoshiAndKin/ypricemagic-server/commit/7b6294d77f128b38e239584eb2385d6b3ec02309))
+* handle null pool in trade path rendering ([#86](https://github.com/SatoshiAndKin/ypricemagic-server/issues/86)) ([6239bb6](https://github.com/SatoshiAndKin/ypricemagic-server/commit/6239bb673eef0d475c522e67c3824dbf393c1d15))
+* persist all cache volumes (solcx, vvm, ypricemagic, app/cache) ([#87](https://github.com/SatoshiAndKin/ypricemagic-server/issues/87)) ([0a875f2](https://github.com/SatoshiAndKin/ypricemagic-server/commit/0a875f2d0c3ef3b7392bdcd6a354b26316804487))
+* show actual trade path in quote route display ([#82](https://github.com/SatoshiAndKin/ypricemagic-server/issues/82)) ([1ea86ca](https://github.com/SatoshiAndKin/ypricemagic-server/commit/1ea86ca19878f7be6c40ca7084cd932cd527acaa))
+* UI polish and documentation fixes ([#83](https://github.com/SatoshiAndKin/ypricemagic-server/issues/83)) ([ea4d041](https://github.com/SatoshiAndKin/ypricemagic-server/commit/ea4d041303062611aa8c1531cdbc506c340e6d22))
+* unify header button sizes for consistent layout ([#79](https://github.com/SatoshiAndKin/ypricemagic-server/issues/79)) ([9ce74fe](https://github.com/SatoshiAndKin/ypricemagic-server/commit/9ce74fe5bb625dc0d93599e8432b01a746def923))
+* use pull_request closed as sole main-branch CD trigger ([#81](https://github.com/SatoshiAndKin/ypricemagic-server/issues/81)) ([ed8381d](https://github.com/SatoshiAndKin/ypricemagic-server/commit/ed8381d5afcbd66f9526078d031e847ed8f10420))
+
 ## [0.7.0](https://github.com/SatoshiAndKin/ypricemagic-server/compare/v0.6.0...v0.7.0) (2026-03-10)
 
 
