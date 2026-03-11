@@ -34,7 +34,12 @@ async function parseResponse<T>(res: Response): Promise<T> {
     }
     throw new Error(`HTTP ${res.status}: ${message}`);
   }
-  return res.json() as Promise<T>;
+  try {
+    return await res.json() as T;
+  } catch {
+    const text = await res.text().catch(() => '');
+    throw new Error(`Expected JSON response but got: ${text.slice(0, 100)}`);
+  }
 }
 
 export async function fetchQuote(
