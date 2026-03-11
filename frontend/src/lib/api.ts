@@ -8,7 +8,7 @@ import type {
 } from './types';
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? '';
-const FETCH_TIMEOUT_MS = 30_000;
+const FETCH_TIMEOUT_MS = 300_000;
 
 function fetchWithTimeout(
   url: string,
