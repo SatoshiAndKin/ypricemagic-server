@@ -1,0 +1,21 @@
+{
+  "featureId": "readme-ypm-host-fix",
+  "reviewedAt": "2026-03-11T05:35:00.000Z",
+  "commitId": "c061ea227247a0d4516fb2c3ec5508b6ee4c9e77",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "pass",
+  "codeReview": {
+    "summary": "All six YPM_HOST→VIRTUAL_HOST replacements were made correctly across the two files. The diff is precise and surgical: README.md lines 32, 50 (two occurrences), 52, 53, 260, and 270 were updated; traefik-proxy/README.md line 24 was updated. No surrounding text or formatting was altered. Post-commit verification confirms zero YPM_HOST occurrences remain in either file, and VIRTUAL_HOST appears at all expected locations (7 occurrences in README.md, 1 in traefik-proxy/README.md). All repository validators (pytest, ruff check, ruff format, mypy) passed. The feature's expectedBehavior and verificationSteps are fully satisfied.",
+    "issues": []
+  },
+  "sharedStateObservations": [
+    {
+      "area": "skills",
+      "observation": "The `frontend-worker` skill was assigned to a pure documentation (markdown) task, causing the worker to deviate from steps 4 (TDD/Vitest) and 6 (frontend build validators). The deviations were correct and justified, but the skill mismatch added noise to the transcript and required the worker to explicitly explain why frontend procedures didn't apply. A documentation-specific skill (or a note in `frontend-worker` SKILL.md clarifying it should not be assigned to doc-only tasks) would avoid this mismatch for future missions.",
+      "evidence": "Handoff skillFeedback.followedProcedure=false with deviations for steps 4 and 6. Transcript shows worker invoked `frontend-worker` skill then ran only backend validators (`pytest`, `ruff`, `mypy`), not `npm run build` or `svelte-check`."
+    }
+  ],
+  "addressesFailureFrom": null,
+  "summary": "Feature passes review. All six YPM_HOST references in README.md and the one in traefik-proxy/README.md were correctly replaced with VIRTUAL_HOST, with no unintended changes to surrounding text or formatting. Post-commit verification confirms zero YPM_HOST occurrences remain. The only observation is a skill assignment mismatch (frontend-worker used for a doc-only task), which the worker handled correctly but warrants a note for future mission planning."
+}

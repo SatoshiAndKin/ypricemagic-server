@@ -26,6 +26,17 @@
 - **pytest**: For backend unit/integration tests
 - **vitest**: For frontend unit tests
 
+## Playwright Screenshot Workaround
+
+`playwright___browser_take_screenshot` writes to a temporary output directory (not the repo). To save a screenshot directly to the repo, use `playwright___browser_run_code` with `page.screenshot({ path: '/abs/path/to/file.png' })`.
+
+Example:
+```js
+async (page) => {
+  await page.screenshot({ path: '/Users/bryan/code/ypricemagic-server/docs/readme-quote-latest-block.png', fullPage: false });
+}
+```
+
 ## Known Quirks
 
 - Backend containers take 30-60s to start (brownie network registration)
