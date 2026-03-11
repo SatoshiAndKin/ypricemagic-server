@@ -257,6 +257,10 @@ export function getCustomPairs(): Record<string, { from: string; to: string }> {
 }
 
 export function saveCustomPair(chain: string, from: string, to: string): void {
+  if (from.toLowerCase() === to.toLowerCase()) {
+    return;
+  }
+
   const pairs = getCustomPairs();
   pairs[chain] = { from, to };
   writeLocalStorage('defaultPairs', JSON.stringify(pairs));
@@ -270,7 +274,13 @@ export function resetCustomPair(chain: string): void {
 
 export function getEffectivePair(chain: Chain): { from: string; to: string } {
   const custom = getCustomPairs();
-  return custom[chain] ?? DEFAULT_PAIRS[chain];
+  const pair = custom[chain];
+
+  if (pair && pair.from.toLowerCase() !== pair.to.toLowerCase()) {
+    return pair;
+  }
+
+  return DEFAULT_PAIRS[chain];
 }
 
 // ---------------------------------------------------------------------------
