@@ -29,6 +29,10 @@ services:
     volumes:
       - cache-ethereum:/data/cache
       - brownie-ethereum:/root/.brownie
+      - solcx:/root/.solcx
+      - vvm:/root/.vvm
+      - ypricemagic-ethereum:/root/.ypricemagic
+      - appcache-ethereum:/app/cache
     labels:
       traefik.enable: "true"
       docker-rollout.pre-stop-hook: "touch /tmp/drain && sleep 10"
@@ -69,3 +73,7 @@ services:
 volumes:
   cache-ethereum:
   brownie-ethereum:
+  solcx:
+  vvm:
+  ypricemagic-ethereum:
+  appcache-ethereum:
