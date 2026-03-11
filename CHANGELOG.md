@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.8.1](https://github.com/SatoshiAndKin/ypricemagic-server/compare/v0.8.0...v0.8.1) (2026-03-11)
+
+
+### Bug Fixes
+
+* use GitHub App token for release-please to trigger CI ([#88](https://github.com/SatoshiAndKin/ypricemagic-server/issues/88)) ([b991aa0](https://github.com/SatoshiAndKin/ypricemagic-server/commit/b991aa0c4b4f2c16f295fe0986beee8a150b0a45))
+
 ## [0.8.0](https://github.com/SatoshiAndKin/ypricemagic-server/compare/v0.7.0...v0.8.0) (2026-03-11)
 
 
