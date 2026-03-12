@@ -281,15 +281,35 @@ class TestParsePriceParamsNewFields:
         assert isinstance(result, ParseSuccess)
         assert result.data.to == USDC
 
-    def test_to_empty_string_becomes_none(self) -> None:
+    def test_to_empty_string_becomes_usd(self) -> None:
         result = parse_price_params(DAI, "", "18000000")
         assert isinstance(result, ParseSuccess)
-        assert result.data.to is None
+        assert result.data.to == "USD"
 
-    def test_to_whitespace_becomes_none(self) -> None:
+    def test_to_whitespace_becomes_usd(self) -> None:
         result = parse_price_params(DAI, "   ", "18000000")
         assert isinstance(result, ParseSuccess)
-        assert result.data.to is None
+        assert result.data.to == "USD"
+
+    def test_to_none_becomes_usd(self) -> None:
+        result = parse_price_params(DAI, None, "18000000")
+        assert isinstance(result, ParseSuccess)
+        assert result.data.to == "USD"
+
+    def test_to_usd_literal(self) -> None:
+        result = parse_price_params(DAI, "USD", "18000000")
+        assert isinstance(result, ParseSuccess)
+        assert result.data.to == "USD"
+
+    def test_to_usd_case_insensitive(self) -> None:
+        result = parse_price_params(DAI, "usd", "18000000")
+        assert isinstance(result, ParseSuccess)
+        assert result.data.to == "USD"
+
+    def test_to_usd_with_whitespace(self) -> None:
+        result = parse_price_params(DAI, "  USD  ", "18000000")
+        assert isinstance(result, ParseSuccess)
+        assert result.data.to == "USD"
 
     def test_to_invalid_address(self) -> None:
         result = parse_price_params(DAI, "notanaddress", "18000000")
@@ -339,11 +359,11 @@ class TestParsePriceParamsNewFields:
         assert result.data.ignore_pools == (USDC, WETH)
 
     def test_backwards_compat_no_new_params(self) -> None:
-        """Omitting new params preserves existing behavior exactly."""
+        """Omitting new params defaults to USD."""
         result = parse_price_params(DAI, None, "18000000", "1000")
         assert isinstance(result, ParseSuccess)
         assert result.data.token == DAI
-        assert result.data.to is None
+        assert result.data.to == "USD"
         assert result.data.block == 18000000
         assert result.data.amount == 1000.0
         assert result.data.skip_cache is False

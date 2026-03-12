@@ -81,8 +81,9 @@ describe('buildTokenIndex', () => {
     const list = makeList('Multi', [ethToken, arbToken]);
     const index = buildTokenIndex([list]);
 
-    expect(index.get(ETH)!.size).toBe(1);
-    expect(index.get(ARB)!.size).toBe(1);
+    // +1 for synthetic USD entry injected into each chain
+    expect(index.get(ETH)!.size).toBe(2);
+    expect(index.get(ARB)!.size).toBe(2);
   });
 
   it('returns empty map for empty input', () => {
@@ -127,14 +128,16 @@ describe('searchTokens', () => {
     expect(results[0].symbol).toBe('USDC');
   });
 
-  it('prefix match ranks before symbol-contains match', () => {
-    // 'USD' matches USDC and USDT as symbol prefix (rank 1)
+  it('USD sentinel ranks first, then prefix, then contains', () => {
+    // 'USD' matches synthetic USD (exact, boosted), USDC and USDT as symbol prefix (rank 1),
     // 'CUSD' contains 'USD' but does not start with it (rank 2)
     const results = searchTokens(index, 'USD', ETH);
     const symbols = results.map((t) => t.symbol);
+    const usdIdx = symbols.indexOf('USD');
     const usdcIdx = symbols.indexOf('USDC');
     const usdtIdx = symbols.indexOf('USDT');
     const cusdIdx = symbols.indexOf('CUSD');
+    expect(usdIdx).toBe(0); // USD sentinel is first
     expect(usdcIdx).toBeGreaterThanOrEqual(0);
     expect(usdtIdx).toBeGreaterThanOrEqual(0);
     expect(cusdIdx).toBeGreaterThanOrEqual(0);
@@ -191,16 +194,15 @@ describe('DEFAULT_PAIRS', () => {
     expect(DEFAULT_PAIRS.ethereum.from).toBe('0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48');
   });
 
-  it('has correct Ethereum crvUSD address', () => {
-    expect(DEFAULT_PAIRS.ethereum.to).toBe('0xf939E0A03FB07F59A73314E73794Be0E57ac1b4E');
+  it('defaults all chains to USD', () => {
+    expect(DEFAULT_PAIRS.ethereum.to).toBe('USD');
+    expect(DEFAULT_PAIRS.arbitrum.to).toBe('USD');
+    expect(DEFAULT_PAIRS.optimism.to).toBe('USD');
+    expect(DEFAULT_PAIRS.base.to).toBe('USD');
   });
 
   it('has correct Arbitrum USDC address', () => {
     expect(DEFAULT_PAIRS.arbitrum.from).toBe('0xaf88d065e77c8cC2239327C5EDb3A432268e5831');
-  });
-
-  it('has correct Arbitrum WETH address', () => {
-    expect(DEFAULT_PAIRS.arbitrum.to).toBe('0x82aF49447D8a07e3bd95BD0d56f35241523fBab1');
   });
 
   it('has correct Optimism USDC address', () => {

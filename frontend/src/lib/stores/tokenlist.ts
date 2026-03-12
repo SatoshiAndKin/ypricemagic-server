@@ -26,23 +26,34 @@ export interface TokenlistEntry {
   version?: { major: number; minor: number; patch: number };
 }
 
+export const USD_SENTINEL = 'USD';
+
 export const DEFAULT_PAIRS: Record<Chain, { from: string; to: string }> = {
   ethereum: {
     from: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48',
-    to: '0xf939E0A03FB07F59A73314E73794Be0E57ac1b4E',
+    to: USD_SENTINEL,
   },
   arbitrum: {
     from: '0xaf88d065e77c8cC2239327C5EDb3A432268e5831',
-    to: '0x82aF49447D8a07e3bd95BD0d56f35241523fBab1',
+    to: USD_SENTINEL,
   },
   optimism: {
     from: '0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85',
-    to: '0x4200000000000000000000000000000000000006',
+    to: USD_SENTINEL,
   },
   base: {
     from: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',
-    to: '0x4200000000000000000000000000000000000006',
+    to: USD_SENTINEL,
   },
+};
+
+// Synthetic USD entry — appears in every chain's autocomplete as first result
+export const USD_TOKEN: TokenlistToken = {
+  chainId: 0, // sentinel; added to every chain in buildTokenIndex
+  address: USD_SENTINEL,
+  symbol: 'USD',
+  name: 'US Dollar (ypricemagic native)',
+  decimals: 0,
 };
 
 // Built-in default pair tokens (always available in index)
@@ -160,6 +171,13 @@ export function buildTokenIndex(
     }
   }
 
+  // Inject synthetic USD entry into every chain
+  for (const chainMap of index.values()) {
+    if (!chainMap.has(USD_SENTINEL.toLowerCase())) {
+      chainMap.set(USD_SENTINEL.toLowerCase(), { ...USD_TOKEN, sourceList: 'builtin' });
+    }
+  }
+
   return index;
 }
 
@@ -198,7 +216,9 @@ export function searchTokens(
     }
 
     if (rank >= 0) {
-      results.push({ token, rank });
+      // USD sentinel always sorts first within its rank tier
+      const isUsd = addrLower === USD_SENTINEL.toLowerCase();
+      results.push({ token, rank: isUsd ? rank - 0.5 : rank });
     }
   }
 
@@ -494,6 +514,7 @@ export function addLocalToken(token: TokenlistToken): void {
 }
 
 export function isTokenInIndex(address: string, chainId: number): boolean {
+  if (address.toUpperCase() === USD_SENTINEL) return true;
   const chainMap = _tokenIndex.get(chainId);
   return chainMap?.has(address.toLowerCase()) ?? false;
 }
@@ -502,6 +523,9 @@ export function getTokenFromIndex(
   address: string,
   chainId: number
 ): (TokenlistToken & { sourceList: string }) | undefined {
+  if (address.toUpperCase() === USD_SENTINEL) {
+    return { ...USD_TOKEN, sourceList: 'builtin' };
+  }
   const chainMap = _tokenIndex.get(chainId);
   return chainMap?.get(address.toLowerCase());
 }

@@ -90,7 +90,7 @@ def fetch_ypm_price(base_url: str, token: Token, timestamp: int) -> tuple[float 
         data = _http_get_json(url)
         if not isinstance(data, dict):
             return None, f"unexpected response: {data!r}"
-        price = data.get("price")
+        price = data.get("from_price") or data.get("price")
         if price is None:
             error_msg = data.get("error", "no price in response")
             return None, f"server error: {error_msg} body={data!r}"

@@ -41,14 +41,6 @@ logger = get_logger("server")
 
 CHAIN_NAME = os.environ.get("CHAIN_NAME", "ethereum")
 
-# Native USDC address per chain (used as default quote currency)
-USDC_BY_CHAIN: dict[str, str] = {
-    "ethereum": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
-    "arbitrum": "0xaf88d065e77c8cC2239327C5EDb3A432268e5831",
-    "optimism": "0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85",
-    "base": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
-}
-
 try:
     _VERSION = _pkg_version("ypricemagic-server")
 except PackageNotFoundError:
@@ -548,20 +540,7 @@ async def _handle_quote_mode(
     }
 
 
-def _make_cached_price_response(
-    token: str, actual_block: int, cached: dict[str, Any]
-) -> dict[str, Any]:
-    return {
-        "chain": CHAIN_NAME,
-        "token": token,
-        "block": actual_block,
-        "price": cached["price"],
-        "cached": True,
-        "block_timestamp": cached.get("block_timestamp"),
-    }
-
-
-async def _handle_usd_price_mode(params: Any, actual_block: int) -> Any:
+async def _handle_usd_mode(params: Any, actual_block: int, quote_amount: float) -> Any:
     if params.amount is None and not params.skip_cache:
         cached = get_cached_price(params.token, actual_block)
         if cached is not None:
@@ -573,7 +552,21 @@ async def _handle_usd_price_mode(params: Any, actual_block: int) -> Any:
                 price=cached["price"],
             )
             price_requests_total.labels(chain=CHAIN_NAME, status="cache_hit").inc()
-            return _make_cached_price_response(params.token, actual_block, cached)
+            cached_price = float(cached["price"])  # type: ignore[arg-type]
+            return {
+                "from": params.token,
+                "to": "USD",
+                "amount": quote_amount,
+                "output_amount": cached_price * quote_amount,
+                "block": actual_block,
+                "chain": CHAIN_NAME,
+                "block_timestamp": cached.get("block_timestamp"),
+                "route": "usd",
+                "from_price": cached_price,
+                "to_price": 1.0,
+                "from_trade_path": None,
+                "to_trade_path": None,
+            }
 
     start = time.monotonic()
     try:
@@ -614,18 +607,20 @@ async def _handle_usd_price_mode(params: Any, actual_block: int) -> Any:
         duration_ms=duration_ms,
     )
 
-    response: dict[str, Any] = {
-        "chain": CHAIN_NAME,
-        "token": params.token,
+    return {
+        "from": params.token,
+        "to": "USD",
+        "amount": quote_amount,
+        "output_amount": price_float * quote_amount,
         "block": actual_block,
-        "price": price_float,
-        "cached": False,
+        "chain": CHAIN_NAME,
         "block_timestamp": block_timestamp,
-        "trade_path": trade_path,
+        "route": "usd",
+        "from_price": price_float,
+        "to_price": 1.0,
+        "from_trade_path": trade_path,
+        "to_trade_path": None,
     }
-    if params.amount is not None:
-        response["amount"] = params.amount
-    return response
 
 
 async def _resolve_batch_block(
@@ -749,16 +744,16 @@ async def price(
         return _make_error_response(400, result.error)
 
     params = result.data
-    quote_to = params.to if params.to is not None else USDC_BY_CHAIN.get(CHAIN_NAME)
+    quote_to = params.to
     quote_amount = params.amount if params.amount is not None else 1.0
     actual_block = await _resolve_price_block(params)
     if isinstance(actual_block, JSONResponse):
         return actual_block
 
-    if quote_to is not None:
-        return await _handle_quote_mode(params, actual_block, quote_to, quote_amount)
+    if quote_to == "USD":
+        return await _handle_usd_mode(params, actual_block, quote_amount)
 
-    return await _handle_usd_price_mode(params, actual_block)
+    return await _handle_quote_mode(params, actual_block, quote_to, quote_amount)
 
 
 @app.get("/prices")
