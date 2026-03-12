@@ -1,26 +1,7 @@
 commands:
-  test-backend: uv run pytest -x -q --tb=short
-  test-backend-coverage: uv run pytest --cov=src --cov-report=term-missing
-  lint: uv run ruff check .
-  format: uv run ruff format .
-  format-check: uv run ruff format --check .
-  typecheck-backend: uv run mypy src/
-  sync: uv sync --extra dev
-  test-frontend: cd frontend && npm test -- --run
-  build-frontend: cd frontend && npm run build
-  check-frontend: cd frontend && npx svelte-check --tsconfig ./tsconfig.json
-
-services:
-  docker-compose:
-    start: cd /Users/bryan/code/ypricemagic-server && docker compose up -d --build
-    stop: cd /Users/bryan/code/ypricemagic-server && docker compose down
-    healthcheck: curl -sf http://localhost:8000/ethereum/health
-    port: 8000
-    depends_on: []
-
-  vite-dev:
-    start: cd /Users/bryan/code/ypricemagic-server/frontend && npx vite --port 5199
-    stop: lsof -ti :5199 | xargs kill 2>/dev/null || true
-    healthcheck: curl -sf http://localhost:5199/
-    port: 5199
-    depends_on: []
+  install: uv sync
+  test: uv run pytest src/tests/ -x -q
+  test_params: uv run pytest src/tests/test_params.py -x -q
+  test_server: uv run pytest src/tests/test_server.py -x -q
+  lint: uv run ruff check src/
+  format: uv run ruff format src/
