@@ -49,8 +49,6 @@ class _HealthAccessFilter(logging.Filter):
         return not ("/health" in msg and (" 200 " in msg or '"200"' in msg))
 
 
-logging.getLogger("uvicorn.access").addFilter(_HealthAccessFilter())
-
 CHAIN_NAME = os.environ.get("CHAIN_NAME", "ethereum")
 
 try:
@@ -95,6 +93,9 @@ check_bucket_request_duration_seconds = Histogram(
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> Any:
+    # Install after uvicorn has configured its loggers (CLI resets them at startup).
+    logging.getLogger("uvicorn.access").addFilter(_HealthAccessFilter())
+
     logger.info("startup", chain=CHAIN_NAME)
     try:
         from brownie import network
