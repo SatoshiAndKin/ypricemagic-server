@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.8.2](https://github.com/SatoshiAndKin/ypricemagic-server/compare/v0.8.1...v0.8.2) (2026-03-12)
+
+
+### Bug Fixes
+
+* shorten page title to just 'ypricemagic' ([#90](https://github.com/SatoshiAndKin/ypricemagic-server/issues/90)) ([1ae768a](https://github.com/SatoshiAndKin/ypricemagic-server/commit/1ae768ab1b05d2bdf914fd38fc54e60f466198fa))
+* unify /price response to always use quote-mode envelope ([#92](https://github.com/SatoshiAndKin/ypricemagic-server/issues/92)) ([84362fb](https://github.com/SatoshiAndKin/ypricemagic-server/commit/84362fb369e10d71b1381d88419b0a0014e4905b))
+
 ## [0.8.1](https://github.com/SatoshiAndKin/ypricemagic-server/compare/v0.8.0...v0.8.1) (2026-03-11)
 
 
