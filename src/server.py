@@ -157,7 +157,7 @@ async def lifespan(app: FastAPI) -> Any:
     yield
 
 
-_CHAINS = ["ethereum", "arbitrum", "optimism", "base"]
+_CHAINS = ["ethereum", "arbitrum", "optimism", "base", "bsc", "polygon", "fantom"]
 
 app = FastAPI(
     title="ypricemagic API",
