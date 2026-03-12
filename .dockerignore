@@ -1,0 +1,51 @@
+# Git
+.git/
+.gitignore
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+.eggs/
+*.egg
+*.so
+.pytest_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+.ruff_cache/
+.venv/
+venv/
+
+# Environment / secrets
+.env
+.secrets.baseline
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Caches
+cache/
+
+# Node / frontend (backend image doesn't need these)
+node_modules/
+frontend/
+
+# Old static UI
+static/
+
+# Docs / non-runtime
+docs/
+runbooks/
+*.md
+.github/
+.factory/

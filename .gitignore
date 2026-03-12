@@ -29,6 +29,9 @@ Thumbs.db
 # Old static UI (replaced by frontend/)
 static/
 
+# Caches
+cache/
+
 # Node / frontend
 node_modules/
 frontend/node_modules/

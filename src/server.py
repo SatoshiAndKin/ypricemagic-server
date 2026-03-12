@@ -1,4 +1,5 @@
 import asyncio
+import logging
 import math
 import os
 import time
@@ -38,6 +39,17 @@ if TYPE_CHECKING:
 
 configure_logging()
 logger = get_logger("server")
+
+
+class _HealthAccessFilter(logging.Filter):
+    """Drop uvicorn access-log lines for successful /health requests."""
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        msg = record.getMessage()
+        return not ("/health" in msg and (" 200 " in msg or '"200"' in msg))
+
+
+logging.getLogger("uvicorn.access").addFilter(_HealthAccessFilter())
 
 CHAIN_NAME = os.environ.get("CHAIN_NAME", "ethereum")
 
