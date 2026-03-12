@@ -117,6 +117,78 @@ services:
       traefik.http.routers.ypm-base.middlewares: ypm-strip-base
       traefik.http.services.ypm-base.loadbalancer.server.port: "8001"
 
+  ypm-bsc:
+    <<: *ypm-service
+    environment:
+      CHAIN_NAME: bsc
+      CHAIN_ID: 56
+      RPC_URL: ${RPC_URL_BSC}
+      ETHERSCAN_TOKEN: ${ETHERSCAN_TOKEN}
+      SENTRY_DSN: ${SENTRY_DSN:-}
+    volumes:
+      - cache-bsc:/data/cache
+      - brownie-bsc:/root/.brownie
+      - solcx:/root/.solcx
+      - vvm:/root/.vvm
+      - ypricemagic-bsc:/root/.ypricemagic
+      - appcache-bsc:/app/cache
+    labels:
+      traefik.enable: "true"
+      docker-rollout.pre-stop-hook: "touch /tmp/drain && sleep 10"
+      traefik.http.routers.ypm-bsc.rule: "Host(`${VIRTUAL_HOST:-localhost}`) && PathPrefix(`/bsc`)"
+      traefik.http.routers.ypm-bsc.entrypoints: web
+      traefik.http.middlewares.ypm-strip-bsc.stripprefix.prefixes: /bsc
+      traefik.http.routers.ypm-bsc.middlewares: ypm-strip-bsc
+      traefik.http.services.ypm-bsc.loadbalancer.server.port: "8001"
+
+  ypm-polygon:
+    <<: *ypm-service
+    environment:
+      CHAIN_NAME: polygon
+      CHAIN_ID: 137
+      RPC_URL: ${RPC_URL_POLYGON}
+      ETHERSCAN_TOKEN: ${ETHERSCAN_TOKEN}
+      SENTRY_DSN: ${SENTRY_DSN:-}
+    volumes:
+      - cache-polygon:/data/cache
+      - brownie-polygon:/root/.brownie
+      - solcx:/root/.solcx
+      - vvm:/root/.vvm
+      - ypricemagic-polygon:/root/.ypricemagic
+      - appcache-polygon:/app/cache
+    labels:
+      traefik.enable: "true"
+      docker-rollout.pre-stop-hook: "touch /tmp/drain && sleep 10"
+      traefik.http.routers.ypm-polygon.rule: "Host(`${VIRTUAL_HOST:-localhost}`) && PathPrefix(`/polygon`)"
+      traefik.http.routers.ypm-polygon.entrypoints: web
+      traefik.http.middlewares.ypm-strip-polygon.stripprefix.prefixes: /polygon
+      traefik.http.routers.ypm-polygon.middlewares: ypm-strip-polygon
+      traefik.http.services.ypm-polygon.loadbalancer.server.port: "8001"
+
+  ypm-fantom:
+    <<: *ypm-service
+    environment:
+      CHAIN_NAME: fantom
+      CHAIN_ID: 250
+      RPC_URL: ${RPC_URL_FANTOM}
+      ETHERSCAN_TOKEN: ${ETHERSCAN_TOKEN}
+      SENTRY_DSN: ${SENTRY_DSN:-}
+    volumes:
+      - cache-fantom:/data/cache
+      - brownie-fantom:/root/.brownie
+      - solcx:/root/.solcx
+      - vvm:/root/.vvm
+      - ypricemagic-fantom:/root/.ypricemagic
+      - appcache-fantom:/app/cache
+    labels:
+      traefik.enable: "true"
+      docker-rollout.pre-stop-hook: "touch /tmp/drain && sleep 10"
+      traefik.http.routers.ypm-fantom.rule: "Host(`${VIRTUAL_HOST:-localhost}`) && PathPrefix(`/fantom`)"
+      traefik.http.routers.ypm-fantom.entrypoints: web
+      traefik.http.middlewares.ypm-strip-fantom.stripprefix.prefixes: /fantom
+      traefik.http.routers.ypm-fantom.middlewares: ypm-strip-fantom
+      traefik.http.services.ypm-fantom.loadbalancer.server.port: "8001"
+
   frontend:
     image: ghcr.io/satoshiandkin/ypricemagic-server-frontend:latest
     labels:
@@ -156,3 +228,15 @@ volumes:
   brownie-base:
   ypricemagic-base:
   appcache-base:
+  cache-bsc:
+  brownie-bsc:
+  ypricemagic-bsc:
+  appcache-bsc:
+  cache-polygon:
+  brownie-polygon:
+  ypricemagic-polygon:
+  appcache-polygon:
+  cache-fantom:
+  brownie-fantom:
+  ypricemagic-fantom:
+  appcache-fantom:
