@@ -70,7 +70,6 @@ Fetch the USD price for a single token on a specific chain.
 | `timestamp` | query | no | Unix epoch or ISO-8601 timestamp; resolves to a block |
 | `to` | query | no | Output token address; switches to quote mode |
 | `amount` | query | no | Token amount (for price impact, or input amount when `to` is set) |
-| `skip_cache` | query | no | `true` to bypass disk cache |
 | `ignore_pools` | query | no | Comma-separated pool addresses to exclude |
 
 **Response schema (`200`, USD price mode):**
@@ -136,7 +135,6 @@ Batch USD pricing for multiple tokens.
 | `block` | query | no | Block number; mutually exclusive with `timestamp` |
 | `timestamp` | query | no | Unix epoch or ISO-8601 timestamp; resolves to a block |
 | `amounts` | query | no | Comma-separated amounts aligned with `tokens` order |
-| `skip_cache` | query | no | `true` to bypass disk cache |
 
 **Response schema (`200`):**
 

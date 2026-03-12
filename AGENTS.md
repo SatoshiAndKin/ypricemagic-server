@@ -65,7 +65,7 @@ traefik-proxy/   # Shared Traefik reverse proxy config
 
 All endpoints are chain-scoped via path prefix (`/{chain}/...`), routed by Traefik.
 
-- `GET /{chain}/price?token=<address>&block=<block>` — single token USD price (optional: `to`, `amount`, `timestamp`, `skip_cache`, `ignore_pools`)
+- `GET /{chain}/price?token=<address>&block=<block>` — single token USD price (optional: `to`, `amount`, `timestamp`, `ignore_pools`)
 - `GET /{chain}/prices?tokens=<addr1>,<addr2>&block=<block>` — batch USD pricing
 - `GET /{chain}/check_bucket?token=<address>` — token pricing bucket classification
 - `GET /health` — aggregate health (proxied to ethereum backend)

@@ -1,0 +1,39 @@
+{
+  "milestone": "remove-skip-cache",
+  "round": 1,
+  "status": "pass",
+  "assertionsSummary": {
+    "total": 16,
+    "passed": 16,
+    "failed": 0,
+    "blocked": 0
+  },
+  "passedAssertions": [
+    "VAL-PARAMS-001",
+    "VAL-PARAMS-002",
+    "VAL-PARAMS-003",
+    "VAL-PARAMS-004",
+    "VAL-SERVER-001",
+    "VAL-SERVER-002",
+    "VAL-SERVER-003",
+    "VAL-SERVER-004",
+    "VAL-SERVER-005",
+    "VAL-TESTS-001",
+    "VAL-TESTS-002",
+    "VAL-TESTS-003",
+    "VAL-DOCS-001",
+    "VAL-DOCS-002",
+    "VAL-CROSS-001",
+    "VAL-CROSS-002"
+  ],
+  "failedAssertions": [],
+  "blockedAssertions": [],
+  "appliedUpdates": [
+    {
+      "target": "user-testing.md",
+      "description": "Created user-testing.md documenting that all validations are static code checks (grep, pytest, OpenAPI) with no services needed",
+      "source": "setup"
+    }
+  ],
+  "previousRound": null
+}

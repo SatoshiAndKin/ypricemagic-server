@@ -154,11 +154,11 @@ class TestParsePriceParamsAmount:
 
 class TestParseBoolParam:
     def test_accepts_true_lowercase(self) -> None:
-        result = parse_bool_param("true", "skip_cache")
+        result = parse_bool_param("true", "some_flag")
         assert result is True
 
     def test_accepts_true_uppercase(self) -> None:
-        result = parse_bool_param("TRUE", "skip_cache")
+        result = parse_bool_param("TRUE", "some_flag")
         assert result is True
 
     def test_accepts_false_lowercase(self) -> None:
@@ -170,7 +170,7 @@ class TestParseBoolParam:
         assert result is False
 
     def test_accepts_1(self) -> None:
-        result = parse_bool_param("1", "skip_cache")
+        result = parse_bool_param("1", "some_flag")
         assert result is True
 
     def test_accepts_0(self) -> None:
@@ -179,18 +179,18 @@ class TestParseBoolParam:
 
     def test_none_returns_none(self) -> None:
         """When param is not provided (None), returns None to indicate absent."""
-        result = parse_bool_param(None, "skip_cache")
+        result = parse_bool_param(None, "some_flag")
         assert result is None
 
     def test_empty_string_returns_none(self) -> None:
         """Empty string is treated as not provided."""
-        result = parse_bool_param("", "skip_cache")
+        result = parse_bool_param("", "some_flag")
         assert result is None
 
     def test_rejects_maybe(self) -> None:
-        result = parse_bool_param("maybe", "skip_cache")
+        result = parse_bool_param("maybe", "some_flag")
         assert isinstance(result, ParseError)
-        assert "skip_cache" in result.error
+        assert "some_flag" in result.error
         assert "true" in result.error.lower() or "false" in result.error.lower()
 
     def test_rejects_2(self) -> None:
@@ -199,7 +199,7 @@ class TestParseBoolParam:
         assert "silent" in result.error
 
     def test_rejects_yes(self) -> None:
-        result = parse_bool_param("yes", "skip_cache")
+        result = parse_bool_param("yes", "some_flag")
         assert isinstance(result, ParseError)
 
     def test_rejects_no(self) -> None:
@@ -261,21 +261,6 @@ class TestParseIgnorePools:
 
 
 class TestParsePriceParamsNewFields:
-    def test_skip_cache_true(self) -> None:
-        result = parse_price_params(DAI, None, "18000000", None, skip_cache="true")
-        assert isinstance(result, ParseSuccess)
-        assert result.data.skip_cache is True
-
-    def test_skip_cache_default_false(self) -> None:
-        result = parse_price_params(DAI, None, "18000000")
-        assert isinstance(result, ParseSuccess)
-        assert result.data.skip_cache is False
-
-    def test_skip_cache_invalid(self) -> None:
-        result = parse_price_params(DAI, None, "18000000", None, skip_cache="maybe")
-        assert isinstance(result, ParseError)
-        assert "skip_cache" in result.error
-
     def test_to_address_valid(self) -> None:
         result = parse_price_params(DAI, USDC, "18000000")
         assert isinstance(result, ParseSuccess)
@@ -347,7 +332,6 @@ class TestParsePriceParamsNewFields:
             USDC,
             "18000000",
             "1000",
-            skip_cache="true",
             ignore_pools=f"{USDC},{WETH}",
         )
         assert isinstance(result, ParseSuccess)
@@ -355,7 +339,6 @@ class TestParsePriceParamsNewFields:
         assert result.data.to == USDC
         assert result.data.block == 18000000
         assert result.data.amount == 1000.0
-        assert result.data.skip_cache is True
         assert result.data.ignore_pools == (USDC, WETH)
 
     def test_backwards_compat_no_new_params(self) -> None:
@@ -366,7 +349,6 @@ class TestParsePriceParamsNewFields:
         assert result.data.to == "USD"
         assert result.data.block == 18000000
         assert result.data.amount == 1000.0
-        assert result.data.skip_cache is False
         assert result.data.ignore_pools == ()
 
 
@@ -443,36 +425,35 @@ class TestParsePriceParamsTimestamp:
 
     def test_timestamp_without_block(self) -> None:
         """Timestamp without block is accepted."""
-        result = parse_price_params(DAI, None, None, None, None, None, "1700000000")
+        result = parse_price_params(DAI, None, None, None, None, "1700000000")
         assert isinstance(result, ParseSuccess)
         assert result.data.timestamp == 1700000000
         assert result.data.block is None
 
     def test_timestamp_and_block_mutually_exclusive(self) -> None:
         """Both timestamp and block returns ParseError."""
-        result = parse_price_params(DAI, None, "18000000", None, None, None, "1700000000")
+        result = parse_price_params(DAI, None, "18000000", None, None, "1700000000")
         assert isinstance(result, ParseError)
         assert "mutually exclusive" in result.error.lower()
 
     def test_timestamp_invalid_format(self) -> None:
         """Invalid timestamp format returns ParseError."""
-        result = parse_price_params(DAI, None, None, None, None, None, "invalid")
+        result = parse_price_params(DAI, None, None, None, None, "invalid")
         assert isinstance(result, ParseError)
         assert "timestamp" in result.error.lower()
 
     def test_timestamp_future(self) -> None:
         """Future timestamp returns ParseError."""
-        result = parse_price_params(DAI, None, None, None, None, None, "9999999999")
+        result = parse_price_params(DAI, None, None, None, None, "9999999999")
         assert isinstance(result, ParseError)
         assert "future" in result.error.lower()
 
     def test_timestamp_with_other_params(self) -> None:
-        """Timestamp works with other params like amount, skip_cache, etc."""
-        result = parse_price_params(DAI, None, None, "1000", "true", None, "1700000000")
+        """Timestamp works with other params like amount, ignore_pools, etc."""
+        result = parse_price_params(DAI, None, None, "1000", None, "1700000000")
         assert isinstance(result, ParseSuccess)
         assert result.data.timestamp == 1700000000
         assert result.data.amount == 1000.0
-        assert result.data.skip_cache is True
 
     def test_no_timestamp_no_block(self) -> None:
         """Omitting both timestamp and block is valid (uses latest block)."""
@@ -732,25 +713,6 @@ class TestParseBatchParamsTimestamp:
         assert result.data.amounts == (1000.0,)
 
 
-class TestParseBatchParamsBooleans:
-    """Tests for skip_cache in batch pricing."""
-
-    def test_skip_cache_true(self) -> None:
-        result = parse_batch_params(DAI, skip_cache="true")
-        assert isinstance(result, BatchParseSuccess)
-        assert result.data.skip_cache is True
-
-    def test_skip_cache_default_false(self) -> None:
-        result = parse_batch_params(DAI)
-        assert isinstance(result, BatchParseSuccess)
-        assert result.data.skip_cache is False
-
-    def test_skip_cache_invalid(self) -> None:
-        result = parse_batch_params(DAI, skip_cache="maybe")
-        assert isinstance(result, ParseError)
-        assert "skip_cache" in result.error
-
-
 class TestParseBatchParamsCombined:
     """Tests for combined parameters in batch pricing."""
 
@@ -760,13 +722,11 @@ class TestParseBatchParamsCombined:
             f"{DAI},{USDC}",
             block="18000000",
             amounts="1000,500",
-            skip_cache="true",
         )
         assert isinstance(result, BatchParseSuccess)
         assert result.data.tokens == (DAI, USDC)
         assert result.data.block == 18000000
         assert result.data.amounts == (1000.0, 500.0)
-        assert result.data.skip_cache is True
 
     def test_timestamp_amounts_combined(self) -> None:
         """Timestamp and amounts can be combined."""

@@ -1,0 +1,123 @@
+{
+  "flowId": "all-assertions",
+  "milestone": "remove-skip-cache",
+  "testedAt": "2026-03-12T12:50:00Z",
+  "toolsUsed": ["grep", "pytest", "python3"],
+  "assertions": [
+    {
+      "id": "VAL-PARAMS-001",
+      "title": "PriceParams has no skip_cache field",
+      "status": "pass",
+      "evidence": "Read src/params.py. PriceParams dataclass fields: token, to, block, amount, ignore_pools, timestamp. No skip_cache field present.",
+      "notes": null
+    },
+    {
+      "id": "VAL-PARAMS-002",
+      "title": "BatchParams has no skip_cache field",
+      "status": "pass",
+      "evidence": "Read src/params.py. BatchParams dataclass fields: tokens, block, amounts, timestamp. No skip_cache field present.",
+      "notes": null
+    },
+    {
+      "id": "VAL-PARAMS-003",
+      "title": "parse_price_params rejects skip_cache",
+      "status": "pass",
+      "evidence": "parse_price_params signature: (token, to, block, amount, ignore_pools, timestamp). No skip_cache parameter. grep for skip_cache in src/ returned no matches.",
+      "notes": null
+    },
+    {
+      "id": "VAL-PARAMS-004",
+      "title": "parse_batch_params rejects skip_cache",
+      "status": "pass",
+      "evidence": "parse_batch_params signature: (tokens, block, amounts, timestamp). No skip_cache parameter. grep for skip_cache in src/ returned no matches.",
+      "notes": null
+    },
+    {
+      "id": "VAL-SERVER-001",
+      "title": "/price endpoint has no skip_cache param",
+      "status": "pass",
+      "evidence": "Verified via OpenAPI spec: app.openapi() JSON has 0 occurrences of 'skip_cache'. /price endpoint query params: token, to, block, amount, ignore_pools, timestamp. No skip_cache.",
+      "notes": null
+    },
+    {
+      "id": "VAL-SERVER-002",
+      "title": "/prices endpoint has no skip_cache param",
+      "status": "pass",
+      "evidence": "Verified via OpenAPI spec: app.openapi() JSON has 0 occurrences of 'skip_cache'. /prices endpoint query params: tokens, block, amounts, timestamp. No skip_cache.",
+      "notes": null
+    },
+    {
+      "id": "VAL-SERVER-003",
+      "title": "_fetch_price has no skip_cache param",
+      "status": "pass",
+      "evidence": "_fetch_price signature: (token, block, amount=None, ignore_pools=()). No skip_cache parameter. grep for skip_cache in src/ returned no matches.",
+      "notes": null
+    },
+    {
+      "id": "VAL-SERVER-004",
+      "title": "_fetch_batch_prices has no skip_cache param",
+      "status": "pass",
+      "evidence": "_fetch_batch_prices signature: (tokens, block, amounts=None). No skip_cache parameter. grep for skip_cache in src/ returned no matches.",
+      "notes": null
+    },
+    {
+      "id": "VAL-SERVER-005",
+      "title": "Cache reads are unconditional",
+      "status": "pass",
+      "evidence": "In _handle_usd_mode: 'if params.amount is None: cached = get_cached_price(...)'. In _prepare_batch_cache_check: 'if token_amount is None: cached = get_cached_price(...)'. Cache checks are guarded only by amount-is-None condition, no skip_cache guard anywhere.",
+      "notes": null
+    },
+    {
+      "id": "VAL-TESTS-001",
+      "title": "No skip_cache references in test_params.py",
+      "status": "pass",
+      "evidence": "Read src/tests/test_params.py in full. grep for skip_cache in src/ returned no matches. No skip_cache anywhere in the file.",
+      "notes": null
+    },
+    {
+      "id": "VAL-TESTS-002",
+      "title": "No skip_cache references in test_server.py",
+      "status": "pass",
+      "evidence": "Read src/tests/test_server.py (2878 lines). grep for skip_cache in src/ returned no matches. No skip_cache anywhere in the file.",
+      "notes": null
+    },
+    {
+      "id": "VAL-TESTS-003",
+      "title": "All tests pass",
+      "status": "pass",
+      "evidence": "uv run pytest src/tests/ -x -q exited with code 0. Result: 270 passed, 4 warnings in 14.64s. Zero failures.",
+      "notes": "4 deprecation warnings from web3/websockets packages, unrelated to skip_cache removal."
+    },
+    {
+      "id": "VAL-DOCS-001",
+      "title": "No skip_cache in README",
+      "status": "pass",
+      "evidence": "grep for skip_cache in README.md returned no matches.",
+      "notes": null
+    },
+    {
+      "id": "VAL-DOCS-002",
+      "title": "No skip_cache in repo AGENTS.md",
+      "status": "pass",
+      "evidence": "grep for skip_cache in AGENTS.md returned no matches.",
+      "notes": null
+    },
+    {
+      "id": "VAL-CROSS-001",
+      "title": "OpenAPI spec has zero skip_cache references",
+      "status": "pass",
+      "evidence": "python3 -c 'from src.server import app; import json; spec = json.dumps(app.openapi()); print(\"skip_cache count:\", spec.count(\"skip_cache\"))' output: 'skip_cache count: 0'",
+      "notes": null
+    },
+    {
+      "id": "VAL-CROSS-002",
+      "title": "Codebase grep returns zero hits",
+      "status": "pass",
+      "evidence": "Grep tool search for 'skip_cache' in /Users/bryan/code/ypricemagic-server/src returned: 'No matches found'.",
+      "notes": null
+    }
+  ],
+  "frictions": [],
+  "blockers": [],
+  "summary": "Tested 16 assertions: 16 passed, 0 failed, 0 blocked. All skip_cache references have been fully removed from params, server, tests, docs, and the OpenAPI spec. Test suite passes with 270 tests."
+}

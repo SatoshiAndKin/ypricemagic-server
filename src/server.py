@@ -161,6 +161,7 @@ _CHAINS = ["ethereum", "arbitrum", "optimism", "base"]
 
 app = FastAPI(
     title="ypricemagic API",
+    description="ERC-20 token pricing API. Returns USD prices (or token-to-token quotes) at any historical block or timestamp. Supports single and batch lookups.",
     version=_VERSION,
     lifespan=lifespan,
     docs_url=None,
@@ -231,7 +232,10 @@ async def request_id_middleware(request: Request, call_next: Any) -> Any:
     return response
 
 
-@app.get("/health")
+@app.get(
+    "/health",
+    description="Check API and RPC node status. Returns chain name, latest block height, and node sync state.",
+)
 async def health() -> dict[str, Any]:
     try:
         from brownie import chain
@@ -291,7 +295,6 @@ async def _fetch_price(
     token: str,
     block: int,
     amount: float | None = None,
-    skip_cache: bool = False,
     ignore_pools: tuple[str, ...] = (),
 ) -> tuple[float, list[dict[str, Any]] | None] | None:
     """Fetch a single token price. Returns (price, trade_path) or None."""
@@ -303,8 +306,6 @@ async def _fetch_price(
     }
     if amount is not None:
         kwargs["amount"] = amount
-    if skip_cache:
-        kwargs["skip_cache"] = True
     if ignore_pools:
         kwargs["ignore_pools"] = ignore_pools
 
@@ -324,7 +325,6 @@ async def _fetch_batch_prices(
     tokens: tuple[str, ...],
     block: int,
     amounts: tuple[float | None, ...] | None = None,
-    skip_cache: bool = False,
 ) -> list[tuple[float, list[dict[str, Any]] | None] | None]:
     """Fetch prices for multiple tokens in parallel.
 
@@ -339,8 +339,6 @@ async def _fetch_batch_prices(
     }
     if amounts is not None:
         kwargs["amounts"] = amounts
-    if skip_cache:
-        kwargs["skip_cache"] = True
 
     try:
         results = await asyncio.wait_for(get_prices(tokens, block, **kwargs), timeout=PRICE_TIMEOUT)
@@ -504,7 +502,6 @@ async def _handle_quote_mode(
             params.token,
             actual_block,
             amount=params.amount,
-            skip_cache=params.skip_cache,
             ignore_pools=params.ignore_pools,
         )
     except Exception as e:
@@ -557,7 +554,7 @@ async def _handle_quote_mode(
 
 
 async def _handle_usd_mode(params: Any, actual_block: int, quote_amount: float) -> Any:
-    if params.amount is None and not params.skip_cache:
+    if params.amount is None:
         cached = get_cached_price(params.token, actual_block)
         if cached is not None:
             logger.info(
@@ -590,7 +587,6 @@ async def _handle_usd_mode(params: Any, actual_block: int, quote_amount: float) 
             params.token,
             actual_block,
             amount=params.amount,
-            skip_cache=params.skip_cache,
             ignore_pools=params.ignore_pools,
         )
     except Exception as e:
@@ -686,8 +682,8 @@ def _prepare_batch_cache_check(
     for i, token in enumerate(params.tokens):
         token_amount = params.amounts[i] if params.amounts is not None else None
 
-        # Check cache only if: no amount AND not skip_cache
-        if token_amount is None and not params.skip_cache:
+        # Check cache only if: no amount
+        if token_amount is None:
             cached = get_cached_price(token, block)
             if cached is not None:
                 results.append(
@@ -744,17 +740,27 @@ def _fill_batch_results(
             set_cached_price(token, block, price_val, block_timestamp=block_timestamp)
 
 
-@app.get("/price")
+@app.get(
+    "/price",
+    description="Get the USD price of an ERC-20 token at a given block or timestamp. "
+    "Pass `to` as another token address to get a token-to-token quote instead. "
+    "Set `amount` to price a specific quantity (default 1). "
+    "Use `ignore_pools` (comma-separated addresses) to exclude specific liquidity pools. "
+    "Block and timestamp are mutually exclusive; omit both for latest block.",
+)
 async def price(
-    token: str | None = Query(None),
-    to: str | None = Query(None),
-    block: str | None = Query(None),
-    amount: str | None = Query(None),
-    skip_cache: str | None = Query(None),
-    ignore_pools: str | None = Query(None),
-    timestamp: str | None = Query(None),
+    token: str | None = Query(None, description="ERC-20 token address (0x...)"),
+    to: str | None = Query(
+        None, description="Quote currency: 'USD' (default) or another token address"
+    ),
+    block: str | None = Query(None, description="Block number (mutually exclusive with timestamp)"),
+    amount: str | None = Query(None, description="Token amount to price (default: 1)"),
+    ignore_pools: str | None = Query(None, description="Comma-separated pool addresses to exclude"),
+    timestamp: str | None = Query(
+        None, description="Unix epoch or ISO 8601 timestamp (mutually exclusive with block)"
+    ),
 ) -> Any:
-    result = parse_price_params(token, to, block, amount, skip_cache, ignore_pools, timestamp)
+    result = parse_price_params(token, to, block, amount, ignore_pools, timestamp)
     if isinstance(result, ParseError):
         price_requests_total.labels(chain=CHAIN_NAME, status="bad_request").inc()
         return _make_error_response(400, result.error)
@@ -772,27 +778,27 @@ async def price(
     return await _handle_quote_mode(params, actual_block, quote_to, quote_amount)
 
 
-@app.get("/prices")
+@app.get(
+    "/prices",
+    description="Batch-price multiple ERC-20 tokens in a single request. "
+    "Returns a JSON array with one entry per token containing price (or null on failure), "
+    "block, and block_timestamp. "
+    "Partial failures return 200 with null prices for failed tokens. Max 100 tokens per call.",
+)
 async def prices(
-    tokens: str | None = Query(None),
-    block: str | None = Query(None),
-    amounts: str | None = Query(None),
-    timestamp: str | None = Query(None),
-    skip_cache: str | None = Query(None),
+    tokens: str | None = Query(
+        None, description="Comma-separated ERC-20 token addresses (max 100)"
+    ),
+    block: str | None = Query(None, description="Block number (mutually exclusive with timestamp)"),
+    amounts: str | None = Query(
+        None,
+        description="Comma-separated amounts, positionally matched to tokens; empty segments mean 'no amount'",
+    ),
+    timestamp: str | None = Query(
+        None, description="Unix epoch or ISO 8601 timestamp (mutually exclusive with block)"
+    ),
 ) -> Any:
-    """Batch pricing endpoint.
-
-    Returns a JSON array of results. Each element has:
-    - token: the token address
-    - block: the block number used
-    - price: float or null (if price unavailable)
-    - block_timestamp: Unix epoch or null
-    - cached: boolean (true if from cache)
-
-    Partial failures return 200 with null prices for failed tokens.
-    All-failures also return 200.
-    """
-    result = parse_batch_params(tokens, block, amounts, timestamp, skip_cache)
+    result = parse_batch_params(tokens, block, amounts, timestamp)
     if isinstance(result, ParseError):
         batch_requests_total.labels(chain=CHAIN_NAME, status="bad_request").inc()
         return _make_error_response(400, result.error)
@@ -822,7 +828,6 @@ async def prices(
                 tuple(tokens_to_fetch),
                 actual_block,
                 amounts=fetch_amounts,
-                skip_cache=params.skip_cache,
             )
         except TimeoutError:
             batch_requests_total.labels(chain=CHAIN_NAME, status="timeout").inc()
@@ -860,19 +865,14 @@ async def prices(
     return results
 
 
-@app.get("/check_bucket")
+@app.get(
+    "/check_bucket",
+    description="Classify a token into its pricing bucket (e.g. 'atoken', 'curve lp', 'uni v2 lp'). "
+    "Returns the bucket string or null if the token cannot be classified.",
+)
 async def check_bucket(
-    token: str | None = Query(None),
+    token: str | None = Query(None, description="ERC-20 token address to classify"),
 ) -> Any:
-    """Token classification endpoint.
-
-    Returns the pricing bucket classification for a token.
-
-    Response:
-    - token: the token address
-    - chain: the chain name
-    - bucket: classification string (e.g., "atoken", "curve lp") or null if unclassifiable
-    """
     if not token:
         check_bucket_requests_total.labels(chain=CHAIN_NAME, status="bad_request").inc()
         return _make_error_response(400, "Missing required parameter: token")
