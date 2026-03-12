@@ -10,6 +10,7 @@
     isTokenInIndex,
     addLocalToken,
     tokenIndex,
+    USD_SENTINEL,
     type Chain,
   } from '../stores/tokenlist';
   import { getTokenFromIndex } from '../stores/tokenlist';
@@ -75,8 +76,8 @@
     base: 'https://basescan.org',
   };
 
-  function isValidAddress(addr: string): boolean {
-    return HEX_ADDR.test(addr);
+  function isValidTokenId(addr: string): boolean {
+    return addr === USD_SENTINEL || HEX_ADDR.test(addr);
   }
 
   function getSymbol(address: string): string {
@@ -160,7 +161,7 @@
       fromAddress = address;
     }
 
-    if (isValidAddress(fromAddress) && isValidAddress(toAddress)) {
+    if (isValidTokenId(fromAddress) && isValidTokenId(toAddress)) {
       saveCustomPair(chain, fromAddress, toAddress);
     }
   }
@@ -175,7 +176,7 @@
       toAddress = address;
     }
 
-    if (isValidAddress(fromAddress) && isValidAddress(toAddress)) {
+    if (isValidTokenId(fromAddress) && isValidTokenId(toAddress)) {
       saveCustomPair(chain, fromAddress, toAddress);
     }
   }
@@ -242,7 +243,7 @@
 
       result = { quote: quoteData };
 
-      if (isValidAddress(fromAddr) && isValidAddress(toAddr)) {
+      if (isValidTokenId(fromAddr) && isValidTokenId(toAddr)) {
         saveCustomPair(chain, fromAddr, toAddr);
       }
 
