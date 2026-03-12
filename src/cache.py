@@ -25,6 +25,14 @@ def get_cache() -> diskcache.Cache:
     return _cache
 
 
+def close_cache() -> None:
+    global _cache
+    with _lock:
+        if _cache is not None:
+            _cache.close()
+            _cache = None
+
+
 def make_key(token: str, block: int) -> str:
     return f"{token.lower()}:{block}"
 
