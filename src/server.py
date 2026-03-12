@@ -157,6 +157,8 @@ async def lifespan(app: FastAPI) -> Any:
     yield
 
 
+_CHAINS = ["ethereum", "arbitrum", "optimism", "base"]
+
 app = FastAPI(
     title="ypricemagic API",
     description="ERC-20 token pricing API. Returns USD prices (or token-to-token quotes) at any historical block or timestamp. Supports single and batch lookups.",
@@ -164,6 +166,7 @@ app = FastAPI(
     lifespan=lifespan,
     docs_url=None,
     redoc_url=None,
+    servers=[{"url": f"/{c}", "description": c} for c in _CHAINS],
 )
 
 
