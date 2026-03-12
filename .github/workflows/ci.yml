@@ -9,7 +9,6 @@ on:
       - ".factory/validation/**"
       - "docs/**"
       - "runbooks/**"
-      - "openapi.json"
       - "*.json"  # release-please-config, etc.
   pull_request:
     branches: [main]
