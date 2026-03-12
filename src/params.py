@@ -20,7 +20,6 @@ class PriceParams:
     to: str = "USD"
     block: int | None = None
     amount: float | None = None
-    skip_cache: bool = False
     ignore_pools: tuple[str, ...] = ()
     timestamp: int | None = None
 
@@ -30,7 +29,6 @@ class BatchParams:
     tokens: tuple[str, ...]
     block: int | None = None
     amounts: tuple[float | None, ...] | None = None
-    skip_cache: bool = False
     timestamp: int | None = None
 
 
@@ -240,7 +238,6 @@ def parse_price_params(
     to: str | None = None,
     block: str | None = None,
     amount: str | None = None,
-    skip_cache: str | None = None,
     ignore_pools: str | None = None,
     timestamp: str | None = None,
 ) -> ParseResult:
@@ -262,10 +259,6 @@ def parse_price_params(
     if isinstance(parsed_amount, ParseError):
         return parsed_amount
 
-    parsed_skip_cache = _parse_bool_with_default(skip_cache, "skip_cache")
-    if isinstance(parsed_skip_cache, ParseError):
-        return parsed_skip_cache
-
     parsed_ignore_pools = parse_ignore_pools(ignore_pools)
     if isinstance(parsed_ignore_pools, ParseError):
         return parsed_ignore_pools
@@ -286,7 +279,6 @@ def parse_price_params(
             to=parsed_to,
             block=parsed_block,
             amount=parsed_amount,
-            skip_cache=parsed_skip_cache,
             ignore_pools=parsed_ignore_pools,
             timestamp=parsed_timestamp,
         )
@@ -376,7 +368,6 @@ def parse_batch_params(
     block: str | None = None,
     amounts: str | None = None,
     timestamp: str | None = None,
-    skip_cache: str | None = None,
 ) -> BatchParseResult:
     """Parse batch pricing parameters.
 
@@ -385,7 +376,6 @@ def parse_batch_params(
     - block: optional block number
     - amounts: optional comma-separated amounts (must match token count if provided)
     - timestamp: optional Unix/ISO timestamp (mutually exclusive with block)
-    - skip_cache: optional boolean
 
     Returns BatchParseSuccess with BatchParams on success.
     Returns ParseError on validation failure.
@@ -416,11 +406,6 @@ def parse_batch_params(
     if isinstance(parsed_timestamp, ParseError):
         return parsed_timestamp
 
-    # Parse booleans
-    parsed_skip_cache = _parse_bool_with_default(skip_cache, "skip_cache")
-    if isinstance(parsed_skip_cache, ParseError):
-        return parsed_skip_cache
-
     # Mutual exclusivity check: timestamp and block cannot both be provided
     if parsed_timestamp is not None and parsed_block is not None:
         return ParseError(
@@ -432,7 +417,6 @@ def parse_batch_params(
             tokens=tuple(parsed_tokens),
             block=parsed_block,
             amounts=parsed_amounts,
-            skip_cache=parsed_skip_cache,
             timestamp=parsed_timestamp,
         )
     )
