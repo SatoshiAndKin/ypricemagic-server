@@ -157,12 +157,15 @@ async def lifespan(app: FastAPI) -> Any:
     yield
 
 
+_CHAINS = ["ethereum", "arbitrum", "optimism", "base"]
+
 app = FastAPI(
     title="ypricemagic API",
     version=_VERSION,
     lifespan=lifespan,
     docs_url=None,
     redoc_url=None,
+    servers=[{"url": f"/{c}", "description": c} for c in _CHAINS],
 )
 
 
