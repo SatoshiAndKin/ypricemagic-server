@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.9.0](https://github.com/SatoshiAndKin/ypricemagic-server/compare/v0.8.2...v0.9.0) (2026-03-12)
+
+
+### Features
+
+* add bsc, polygon, and fantom to prod docker compose ([#99](https://github.com/SatoshiAndKin/ypricemagic-server/issues/99)) ([adb6851](https://github.com/SatoshiAndKin/ypricemagic-server/commit/adb6851f56c2ee40e02dd892d65c09092b09e74d))
+
+
+### Bug Fixes
+
+* install health log filter inside lifespan, not at import time ([#96](https://github.com/SatoshiAndKin/ypricemagic-server/issues/96)) ([ed6eaf5](https://github.com/SatoshiAndKin/ypricemagic-server/commit/ed6eaf5e965c8ae5c5848682d7f6ed64ce08c1c8))
+* persist USD selection across refresh, add all chains to OpenAPI servers ([#97](https://github.com/SatoshiAndKin/ypricemagic-server/issues/97)) ([a5251cb](https://github.com/SatoshiAndKin/ypricemagic-server/commit/a5251cba0f7e57853147124561074ffff15a79ad))
+
 ## [0.8.2](https://github.com/SatoshiAndKin/ypricemagic-server/compare/v0.8.1...v0.8.2) (2026-03-12)
 
 
