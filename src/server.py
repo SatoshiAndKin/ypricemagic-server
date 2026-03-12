@@ -292,7 +292,6 @@ async def _fetch_price(
     token: str,
     block: int,
     amount: float | None = None,
-    skip_cache: bool = False,
     ignore_pools: tuple[str, ...] = (),
 ) -> tuple[float, list[dict[str, Any]] | None] | None:
     """Fetch a single token price. Returns (price, trade_path) or None."""
@@ -304,8 +303,6 @@ async def _fetch_price(
     }
     if amount is not None:
         kwargs["amount"] = amount
-    if skip_cache:
-        kwargs["skip_cache"] = True
     if ignore_pools:
         kwargs["ignore_pools"] = ignore_pools
 
@@ -325,7 +322,6 @@ async def _fetch_batch_prices(
     tokens: tuple[str, ...],
     block: int,
     amounts: tuple[float | None, ...] | None = None,
-    skip_cache: bool = False,
 ) -> list[tuple[float, list[dict[str, Any]] | None] | None]:
     """Fetch prices for multiple tokens in parallel.
 
@@ -340,8 +336,6 @@ async def _fetch_batch_prices(
     }
     if amounts is not None:
         kwargs["amounts"] = amounts
-    if skip_cache:
-        kwargs["skip_cache"] = True
 
     try:
         results = await asyncio.wait_for(get_prices(tokens, block, **kwargs), timeout=PRICE_TIMEOUT)
@@ -505,7 +499,6 @@ async def _handle_quote_mode(
             params.token,
             actual_block,
             amount=params.amount,
-            skip_cache=params.skip_cache,
             ignore_pools=params.ignore_pools,
         )
     except Exception as e:
@@ -558,7 +551,7 @@ async def _handle_quote_mode(
 
 
 async def _handle_usd_mode(params: Any, actual_block: int, quote_amount: float) -> Any:
-    if params.amount is None and not params.skip_cache:
+    if params.amount is None:
         cached = get_cached_price(params.token, actual_block)
         if cached is not None:
             logger.info(
@@ -591,7 +584,6 @@ async def _handle_usd_mode(params: Any, actual_block: int, quote_amount: float) 
             params.token,
             actual_block,
             amount=params.amount,
-            skip_cache=params.skip_cache,
             ignore_pools=params.ignore_pools,
         )
     except Exception as e:
@@ -687,8 +679,8 @@ def _prepare_batch_cache_check(
     for i, token in enumerate(params.tokens):
         token_amount = params.amounts[i] if params.amounts is not None else None
 
-        # Check cache only if: no amount AND not skip_cache
-        if token_amount is None and not params.skip_cache:
+        # Check cache only if: no amount
+        if token_amount is None:
             cached = get_cached_price(token, block)
             if cached is not None:
                 results.append(
@@ -760,13 +752,12 @@ async def price(
     ),
     block: str | None = Query(None, description="Block number (mutually exclusive with timestamp)"),
     amount: str | None = Query(None, description="Token amount to price (default: 1)"),
-    skip_cache: str | None = Query(None, description="Bypass price cache (true/false)"),
     ignore_pools: str | None = Query(None, description="Comma-separated pool addresses to exclude"),
     timestamp: str | None = Query(
         None, description="Unix epoch or ISO 8601 timestamp (mutually exclusive with block)"
     ),
 ) -> Any:
-    result = parse_price_params(token, to, block, amount, skip_cache, ignore_pools, timestamp)
+    result = parse_price_params(token, to, block, amount, ignore_pools, timestamp)
     if isinstance(result, ParseError):
         price_requests_total.labels(chain=CHAIN_NAME, status="bad_request").inc()
         return _make_error_response(400, result.error)
@@ -803,9 +794,8 @@ async def prices(
     timestamp: str | None = Query(
         None, description="Unix epoch or ISO 8601 timestamp (mutually exclusive with block)"
     ),
-    skip_cache: str | None = Query(None, description="Bypass price cache (true/false)"),
 ) -> Any:
-    result = parse_batch_params(tokens, block, amounts, timestamp, skip_cache)
+    result = parse_batch_params(tokens, block, amounts, timestamp)
     if isinstance(result, ParseError):
         batch_requests_total.labels(chain=CHAIN_NAME, status="bad_request").inc()
         return _make_error_response(400, result.error)
@@ -835,7 +825,6 @@ async def prices(
                 tuple(tokens_to_fetch),
                 actual_block,
                 amounts=fetch_amounts,
-                skip_cache=params.skip_cache,
             )
         except TimeoutError:
             batch_requests_total.labels(chain=CHAIN_NAME, status="timeout").inc()

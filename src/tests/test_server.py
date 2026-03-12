@@ -447,19 +447,6 @@ class TestFetchPriceNewParams:
     """Test that supported params are forwarded to get_price while removed ones are ignored."""
 
     @pytest.mark.asyncio
-    async def test_skip_cache_forwarded(self, mock_y_module: None) -> None:
-        """skip_cache=True is forwarded to get_price."""
-        from src.server import _fetch_price
-
-        mock_get_price = AsyncMock(return_value=1.0)
-        with patch("y.get_price", mock_get_price):
-            result = await _fetch_price(DAI, 18000000, skip_cache=True)
-            assert result == (1.0, None)
-            mock_get_price.assert_called_once_with(
-                DAI, 18000000, fail_to_None=True, sync=False, skip_cache=True
-            )
-
-    @pytest.mark.asyncio
     async def test_ignore_pools_forwarded(self, mock_y_module: None) -> None:
         """ignore_pools tuple is forwarded to get_price."""
         from src.server import _fetch_price
@@ -474,7 +461,6 @@ class TestFetchPriceNewParams:
             )
 
     @pytest.mark.asyncio
-    @pytest.mark.asyncio
     async def test_all_new_params_combined(self, mock_y_module: None) -> None:
         """All new params are forwarded together."""
         from src.server import _fetch_price
@@ -486,7 +472,6 @@ class TestFetchPriceNewParams:
                 DAI,
                 18000000,
                 amount=1000.0,
-                skip_cache=True,
                 ignore_pools=ignore_pools,
             )
             assert result == (1.0, None)
@@ -496,7 +481,6 @@ class TestFetchPriceNewParams:
                 amount=1000.0,
                 fail_to_None=True,
                 sync=False,
-                skip_cache=True,
                 ignore_pools=ignore_pools,
             )
 
@@ -1104,7 +1088,7 @@ class TestBatchPricesCaching:
             assert f"{DAI}:18000000" in cached_data
 
     @pytest.mark.asyncio
-    async def test_amounts_skip_cache_write(self, mock_y_module: None) -> None:
+    async def test_amounts_bypass_cache_write(self, mock_y_module: None) -> None:
         """Results with amounts are NOT cached."""
         from unittest.mock import patch
 
@@ -1144,7 +1128,7 @@ class TestBatchPricesCaching:
 
 
 class TestBatchPricesParams:
-    """Tests for skip_cache and ignored params in batch pricing."""
+    """Tests for ignored params in batch pricing."""
 
 
 class TestBatchPricesMixedAmounts:
@@ -1336,32 +1320,6 @@ class TestBatchPricesMixedAmounts:
             call_args = mock_get_prices.call_args
             # The tokens passed should just be WETH
             assert call_args[0][0] == (WETH,)
-
-    @pytest.mark.asyncio
-    async def test_skip_cache_forwarded(self, mock_y_module: None) -> None:
-        """skip_cache is forwarded to get_prices."""
-        from fastapi.testclient import TestClient
-
-        from src.server import app
-
-        mock_get_prices = AsyncMock(return_value=[1.0])
-        mock_get_block_timestamp = AsyncMock(return_value=1700000000)
-        mock_chain = type("MockChain", (), {"height": 19000000})()
-
-        with (
-            patch("y.get_prices", mock_get_prices),
-            patch("y.get_block_timestamp_async", mock_get_block_timestamp),
-            patch("brownie.chain", mock_chain),
-            patch("src.server.get_cached_price", return_value=None),
-        ):
-            client = TestClient(app)
-            response = client.get(
-                "/prices", params={"tokens": DAI, "block": "18000000", "skip_cache": "true"}
-            )
-
-            assert response.status_code == 200
-            call_kwargs = mock_get_prices.call_args[1]
-            assert call_kwargs.get("skip_cache") is True
 
 
 class TestCheckBucketEndpoint:
@@ -1752,14 +1710,12 @@ class TestCrossAreaCORS:
         assert "access-control-allow-origin" in response.headers
 
 
-class TestCrossAreaSkipCacheAmount:
-    """Tests for skip_cache + amount interaction (VAL-CROSS-004)."""
+class TestCrossAreaCacheAmount:
+    """Tests for amount + cache interaction."""
 
     @pytest.mark.asyncio
-    async def test_amount_skips_cache_write_regardless_of_skip_cache(
-        self, mock_y_module: None
-    ) -> None:
-        """Amount requests skip cache writes regardless of skip_cache setting."""
+    async def test_amount_skips_cache_write(self, mock_y_module: None) -> None:
+        """Amount requests skip cache writes."""
         from unittest.mock import patch
 
         from fastapi.testclient import TestClient
@@ -1789,7 +1745,7 @@ class TestCrossAreaSkipCacheAmount:
             # Request with amount (cache write should be skipped)
             response = client.get(
                 "/price",
-                params={"token": DAI, "block": "18000000", "amount": "1000", "skip_cache": "true"},
+                params={"token": DAI, "block": "18000000", "amount": "1000"},
             )
 
             assert response.status_code == 200
@@ -2265,9 +2221,7 @@ class TestPriceQuoteMode:
         assert response.json()["block"] == 18000000
 
     @pytest.mark.asyncio
-    async def test_price_with_to_and_skip_cache_not_forwarding_silent(
-        self, mock_y_module: None
-    ) -> None:
+    async def test_price_with_to_silent_not_forwarded(self, mock_y_module: None) -> None:
         from fastapi.testclient import TestClient
 
         from src.server import app
@@ -2284,7 +2238,7 @@ class TestPriceQuoteMode:
             client = TestClient(app)
             response = client.get(
                 "/price",
-                params={"token": DAI, "to": USDC, "skip_cache": "true", "silent": "true"},
+                params={"token": DAI, "to": USDC, "silent": "true"},
             )
 
         assert response.status_code == 200
