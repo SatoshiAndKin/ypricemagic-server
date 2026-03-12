@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.10.0](https://github.com/SatoshiAndKin/ypricemagic-server/compare/v0.9.0...v0.10.0) (2026-03-12)
+
+
+### Features
+
+* add bsc, polygon, fantom to network setup and OpenAPI servers ([#100](https://github.com/SatoshiAndKin/ypricemagic-server/issues/100)) ([d0910f0](https://github.com/SatoshiAndKin/ypricemagic-server/commit/d0910f0ab311f6234c52e5ecf275375ca2c9c98c))
+
 ## [0.9.0](https://github.com/SatoshiAndKin/ypricemagic-server/compare/v0.8.2...v0.9.0) (2026-03-12)
 
 
