@@ -25,7 +25,7 @@ from tenacity import (
     wait_exponential,
 )
 
-from src.cache import get_cached_price, set_cached_price
+from src.cache import close_cache, get_cached_price, set_cached_price
 from src.logger import configure_logging, get_logger, sanitize_error_message
 from src.params import (
     ParseError,
@@ -155,6 +155,9 @@ async def lifespan(app: FastAPI) -> Any:
         logger.info("sentry_initialized")
 
     yield
+
+    close_cache()
+    logger.info("shutdown", chain=CHAIN_NAME)
 
 
 _CHAINS = ["ethereum", "arbitrum", "optimism", "base", "bsc", "polygon", "fantom"]

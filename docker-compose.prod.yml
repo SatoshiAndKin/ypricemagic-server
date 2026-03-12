@@ -6,6 +6,10 @@ networks:
 x-ypm-service: &ypm-service
   image: ghcr.io/satoshiandkin/ypricemagic-server:latest
   init: true
+  ulimits:
+    nofile:
+      soft: 65536
+      hard: 65536
   healthcheck:
     test: ["CMD-SHELL", "test ! -f /tmp/drain && curl -sf http://localhost:8001/health || exit 1"]
     interval: 30s
