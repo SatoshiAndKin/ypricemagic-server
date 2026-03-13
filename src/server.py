@@ -51,11 +51,6 @@ class _HealthAccessFilter(logging.Filter):
 
 CHAIN_NAME = os.environ.get("CHAIN_NAME", "ethereum")
 
-# PoA chains include a proofOfAuthorityData field in block headers that web3.py's
-# response formatter rejects. Injecting geth_poa_middleware at layer 0 converts it
-# to a 32-byte extraData before any formatter sees it.
-POA_CHAINS = {"bsc", "polygon", "fantom"}
-
 try:
     _VERSION = _pkg_version("ypricemagic-server")
 except PackageNotFoundError:
@@ -109,12 +104,6 @@ async def lifespan(app: FastAPI) -> Any:
         if not network.is_connected():  # type: ignore[attr-defined]
             network.connect(network_id)  # type: ignore[attr-defined]
         logger.info("brownie_connected", network_id=network_id)
-
-        if CHAIN_NAME in POA_CHAINS:
-            from web3.middleware import geth_poa_middleware  # type: ignore[attr-defined]
-
-            network.web3.middleware_onion.inject(geth_poa_middleware, layer=0)
-            logger.info("poa_middleware_injected", chain=CHAIN_NAME)
 
         # Workaround: dank_mids sets concurrent.futures.process.EXTRA_QUEUED_CALLS
         # to 50,000 at import time. On macOS, SEM_VALUE_MAX is 32,767, so any
