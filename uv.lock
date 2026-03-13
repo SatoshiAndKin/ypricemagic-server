@@ -2855,8 +2855,8 @@ wheels = [
 
 [[package]]
 name = "ypricemagic"
-version = "0.0.1.dev1487"
-source = { git = "https://github.com/SatoshiAndKin/ypricemagic.git?rev=master#1cae065cff039a68d07d78a94f5e85e46689ccb4" }
+version = "0.0.1.dev1488"
+source = { git = "https://github.com/SatoshiAndKin/ypricemagic.git?rev=master#d2ab29b80f5f28a9d6c835758aae5acfc1bd2e7a" }
 dependencies = [
     { name = "aiosqlite" },
     { name = "asyncpg" },
