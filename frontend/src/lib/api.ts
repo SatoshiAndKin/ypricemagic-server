@@ -62,9 +62,11 @@ export async function fetchPrice(
   token: string,
   block?: string,
   signal?: AbortSignal,
+  amount?: string,
 ): Promise<PriceResponse> {
   const params = new URLSearchParams({ token });
   if (block) params.set('block', block);
+  if (amount) params.set('amount', amount);
   const res = await fetchWithTimeout(`${BASE_URL}/${chain}/price?${params}`, FETCH_TIMEOUT_MS, signal);
   return parseResponse<PriceResponse>(res);
 }

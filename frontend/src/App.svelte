@@ -27,9 +27,6 @@
       const from = params.get('from') || params.get('token');
       if (from && quoteFormRef) quoteFormRef.setFromAddress(from);
 
-      const to = params.get('to') || params.get('to_token');
-      if (to && quoteFormRef) quoteFormRef.setToAddress(to);
-
       const block = params.get('block');
       if (block && quoteFormRef) quoteFormRef.setBlock(block);
 
