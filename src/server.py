@@ -56,7 +56,7 @@ try:
 except PackageNotFoundError:
     _VERSION = "dev"
 
-PRICE_TIMEOUT = 30.0
+PRICE_TIMEOUT = 300.0
 
 # Prometheus metrics
 price_requests_total = Counter(
