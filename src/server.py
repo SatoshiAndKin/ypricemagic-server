@@ -125,7 +125,16 @@ async def lifespan(app: FastAPI) -> Any:
                 _cfp.EXTRA_QUEUED_CALLS, _sem_value_max - 1
             )
 
+        import contextlib
+
         from dank_mids.helpers import setup_dank_w3_from_sync
+        from web3.middleware import geth_poa_middleware  # type: ignore[attr-defined]
+
+        # Brownie injects geth_poa_middleware for PoA chains (polygon, bsc, etc.).
+        # dank_mids also injects it, causing "same un-named instance twice".
+        # Remove it first so dank_mids can re-add it cleanly.
+        with contextlib.suppress(ValueError):
+            network.web3.middleware_onion.remove(geth_poa_middleware)  # type: ignore[arg-type]
 
         setup_dank_w3_from_sync(network.web3)
         logger.info("dank_mids_patched")
