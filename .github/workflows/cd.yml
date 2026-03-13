@@ -77,3 +77,17 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
           platforms: linux/amd64
+
+  deploy:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger deploy webhook
+        env:
+          WEBHOOK_URL: https://webhook.stytt.com/hooks/ypricemagic-server
+          WEBHOOK_SECRET: ${{ secrets.WEBHOOK_SECRET }}
+        run: |
+          curl --fail --show-error --silent \
+            -X POST \
+            -H "X-Webhook-Secret: ${WEBHOOK_SECRET}" \
+            "${WEBHOOK_URL}"
