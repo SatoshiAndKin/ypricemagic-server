@@ -321,7 +321,9 @@ async def _fetch_price(
     if ignore_pools:
         kwargs["ignore_pools"] = ignore_pools
 
+    logger.debug("fetch_price_start", token=token[:10], block=block, kwargs=list(kwargs.keys()))
     p = await asyncio.wait_for(get_price(token, block, **kwargs), timeout=PRICE_TIMEOUT)
+    logger.debug("fetch_price_done", token=token[:10], block=block, result_type=type(p).__name__)
     if p is None:
         return None
     price_float = float(p)
@@ -466,8 +468,11 @@ async def _resolve_price_block(params: Any) -> int | JSONResponse:
     from brownie import chain as brownie_chain
 
     if params.timestamp is None:
-        return params.block if params.block is not None else brownie_chain.height
+        block = params.block if params.block is not None else brownie_chain.height
+        logger.debug("resolve_block", source="param_or_latest", block=block)
+        return block
 
+    logger.debug("resolve_block_from_timestamp", timestamp=params.timestamp)
     try:
         return await _resolve_block_from_timestamp(params.timestamp)
     except Exception as e:
@@ -789,6 +794,7 @@ async def price(
         None, description="Unix epoch or ISO 8601 timestamp (mutually exclusive with block)"
     ),
 ) -> Any:
+    logger.debug("price_request", token=token, to=to, block=block, timestamp=timestamp)
     result = parse_price_params(token, to, block, amount, ignore_pools, timestamp)
     if isinstance(result, ParseError):
         price_requests_total.labels(chain=CHAIN_NAME, status="bad_request").inc()
@@ -800,6 +806,8 @@ async def price(
     actual_block = await _resolve_price_block(params)
     if isinstance(actual_block, JSONResponse):
         return actual_block
+
+    logger.debug("price_resolved", token=params.token[:10], block=actual_block, mode=quote_to)
 
     if quote_to == "USD":
         return await _handle_usd_mode(params, actual_block, quote_amount)

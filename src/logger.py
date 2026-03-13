@@ -26,11 +26,30 @@ def _redact_secrets(
     return event_dict
 
 
+def _make_level_filter(min_level: str) -> structlog.types.Processor:
+    """Create a processor that drops events below *min_level*."""
+    _levels = {"debug": 10, "info": 20, "warning": 30, "error": 40, "critical": 50}
+    threshold = _levels.get(min_level.lower(), 20)
+
+    def _filter(
+        logger: logging.Logger,
+        method_name: str,
+        event_dict: structlog.types.EventDict,
+    ) -> structlog.types.EventDict:
+        if _levels.get(method_name, 20) < threshold:
+            raise structlog.DropEvent
+        return event_dict
+
+    return _filter
+
+
 def configure_logging() -> None:
+    log_level = os.environ.get("LOG_LEVEL", "INFO").upper()
     structlog.configure(
         processors=[
             structlog.contextvars.merge_contextvars,
             structlog.processors.add_log_level,
+            _make_level_filter(log_level),
             structlog.processors.TimeStamper(fmt="iso"),
             _redact_secrets,
             structlog.dev.ConsoleRenderer(),

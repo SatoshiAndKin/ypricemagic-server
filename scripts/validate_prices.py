@@ -83,9 +83,17 @@ def _http_get_json(url: str) -> object:
 # ---------------------------------------------------------------------------
 
 
-def fetch_ypm_price(base_url: str, token: Token, timestamp: int) -> tuple[float | None, str | None]:
-    """Fetch a price from ypricemagic-server. Returns (price, error)."""
-    url = f"{base_url}/price?token={token.address}&timestamp={timestamp}"
+def fetch_ypm_price(
+    base_url: str, token: Token, timestamp: int | None = None
+) -> tuple[float | None, str | None]:
+    """Fetch a price from ypricemagic-server. Returns (price, error).
+
+    If *timestamp* is None, fetches the latest price (no timestamp param).
+    """
+    if timestamp is not None:
+        url = f"{base_url}/price?token={token.address}&timestamp={timestamp}"
+    else:
+        url = f"{base_url}/price?token={token.address}"
     try:
         data = _http_get_json(url)
         if not isinstance(data, dict):
@@ -193,6 +201,27 @@ def get_defillama_price(
     return (None, "not in cache")
 
 
+def fetch_defillama_current_prices(tokens: list[Token]) -> dict[str, float]:
+    """Fetch current prices from DefiLlama /prices/current/. Returns {address: price}."""
+    coins = ",".join(f"ethereum:{t.address}" for t in tokens)
+    url = f"https://coins.llama.fi/prices/current/{coins}"
+    try:
+        data = _http_get_json(url)
+        if not isinstance(data, dict):
+            return {}
+        results: dict[str, float] = {}
+        for token in tokens:
+            key = f"ethereum:{token.address}"
+            entry = data.get("coins", {}).get(key, {})
+            price = entry.get("price")
+            if price is not None:
+                results[token.address] = float(price)
+        return results
+    except Exception as exc:
+        print(f"  [current price fetch failed: {exc}]", flush=True)  # noqa: T201
+        return {}
+
+
 # ---------------------------------------------------------------------------
 # Formatting helpers
 # ---------------------------------------------------------------------------
@@ -215,6 +244,54 @@ def _fmt_price(price: float) -> str:
 # ---------------------------------------------------------------------------
 # Main logic
 # ---------------------------------------------------------------------------
+
+
+def _compare_latest(base_url: str, token: Token, ref_price_val: float) -> ComparisonResult:
+    """Compare a latest (no-timestamp) YPM price against DefiLlama current price."""
+    label = f"{token.name} ({_short_addr(token.address)}) @ latest"
+
+    ypm_price, ypm_err = fetch_ypm_price(base_url, token, timestamp=None)
+    ref_price: float | None = ref_price_val
+    ref_err: str | None = None
+    now_ts = int(datetime.now(tz=UTC).timestamp())
+
+    result = ComparisonResult(
+        token=token,
+        timestamp=now_ts,
+        ypm_price=ypm_price,
+        ref_price=ref_price,
+        ypm_error=ypm_err,
+        ref_error=ref_err,
+        passed=None,
+    )
+
+    ypm_str = f"ERROR ({ypm_err})" if ypm_err is not None else _fmt_price(ypm_price)  # type: ignore[arg-type]
+    ref_str = f"ERROR ({ref_err})" if ref_err is not None else _fmt_price(ref_price)  # type: ignore[arg-type]
+
+    if ypm_err is not None or ref_err is not None:
+        verdict = "-- SKIP"
+    else:
+        assert ypm_price is not None
+        assert ref_price is not None
+        if ref_price == 0:
+            delta_pct = 0.0 if ypm_price == 0 else float("inf")
+        else:
+            delta_pct = abs(ypm_price - ref_price) / ref_price
+        tol_str = f"{token.tolerance:.0%}"
+        if delta_pct <= token.tolerance:
+            result.passed = True
+            verdict = f"Delta: {delta_pct:.2%}  PASS (tol: {tol_str})"
+        else:
+            result.passed = False
+            verdict = f"Delta: {delta_pct:.2%}  FAIL (tol: {tol_str})"
+
+    print(label)  # noqa: T201
+    print(f"  YPM: {ypm_str}")  # noqa: T201
+    print(f"  REF: {ref_str}")  # noqa: T201
+    print(f"  {verdict}")  # noqa: T201
+    print()  # noqa: T201
+
+    return result
 
 
 def _compare_one(base_url: str, token: Token, ts: int, ref_price_val: float) -> ComparisonResult:
@@ -310,6 +387,22 @@ def run(base_url: str) -> int:
         for ts, ref_price_val in points:
             result = _compare_one(base_url, token, ts, ref_price_val)
             results.append(result)
+
+    # 4. Compare latest (current block) prices -- always a cache miss
+    print("------------------")  # noqa: T201
+    print("Latest prices (cache miss)")  # noqa: T201
+    print("------------------")  # noqa: T201
+    print()  # noqa: T201
+
+    current_prices = fetch_defillama_current_prices(TOKENS)
+    for token in TOKENS:
+        ref = current_prices.get(token.address)
+        if ref is None:
+            print(f"{token.name}: no current price from DefiLlama, skipping")  # noqa: T201
+            print()  # noqa: T201
+            continue
+        result = _compare_latest(base_url, token, ref)
+        results.append(result)
 
     # Summary
     total = len(results)
