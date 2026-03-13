@@ -56,4 +56,4 @@ echo "Network ${NETWORK_ID} registered successfully"
 
 export BROWNIE_NETWORK_ID="${NETWORK_ID}"
 
-exec uvicorn src.server:app --host 0.0.0.0 --port 8001 --loop asyncio --root-path "/${CHAIN_NAME}"
+exec uvicorn src.server:app --host 0.0.0.0 --port 8001 --loop asyncio --root-path "/${CHAIN_NAME}" --timeout-graceful-shutdown 300

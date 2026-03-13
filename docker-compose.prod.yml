@@ -19,7 +19,7 @@ x-ypm-service: &ypm-service
   networks:
     - traefik-proxy
   restart: unless-stopped
-  stop_grace_period: 30s
+  stop_grace_period: 320s
 
 services:
   ypm-ethereum:

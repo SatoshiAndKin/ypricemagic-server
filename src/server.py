@@ -333,6 +333,23 @@ async def _fetch_price(
     return price_float, trade_path
 
 
+async def _fetch_price_and_cache(
+    token: str,
+    block: int,
+    amount: float | None = None,
+    ignore_pools: tuple[str, ...] = (),
+) -> tuple[float, list[dict[str, Any]] | None, int | None] | None:
+    """Fetch price, timestamp, and write cache in one shieldable coroutine."""
+    result = await _fetch_price(token, block, amount=amount, ignore_pools=ignore_pools)
+    if result is None:
+        return None
+    price_float, trade_path = result
+    block_timestamp = await _fetch_block_timestamp(block)
+    if amount is None:
+        set_cached_price(token, block, price_float, block_timestamp=block_timestamp)
+    return price_float, trade_path, block_timestamp
+
+
 async def _fetch_batch_prices(
     tokens: tuple[str, ...],
     block: int,
@@ -510,11 +527,13 @@ async def _handle_quote_mode(
         )
 
     try:
-        from_result = await _fetch_price(
-            params.token,
-            actual_block,
-            amount=params.amount,
-            ignore_pools=params.ignore_pools,
+        from_result = await asyncio.shield(
+            _fetch_price(
+                params.token,
+                actual_block,
+                amount=params.amount,
+                ignore_pools=params.ignore_pools,
+            )
         )
     except Exception as e:
         duration_ms = int((time.monotonic() - start) * 1000)
@@ -527,7 +546,7 @@ async def _handle_quote_mode(
     from_price, from_trade_path = from_result
 
     try:
-        to_result = await _fetch_price(quote_to, actual_block)
+        to_result = await asyncio.shield(_fetch_price(quote_to, actual_block))
     except Exception as e:
         duration_ms = int((time.monotonic() - start) * 1000)
         return _handle_price_error(e, quote_to, actual_block, duration_ms)
@@ -595,11 +614,13 @@ async def _handle_usd_mode(params: Any, actual_block: int, quote_amount: float) 
 
     start = time.monotonic()
     try:
-        fetch_result = await _fetch_price(
-            params.token,
-            actual_block,
-            amount=params.amount,
-            ignore_pools=params.ignore_pools,
+        fetch_result = await asyncio.shield(
+            _fetch_price_and_cache(
+                params.token,
+                actual_block,
+                amount=params.amount,
+                ignore_pools=params.ignore_pools,
+            )
         )
     except Exception as e:
         duration_ms = int((time.monotonic() - start) * 1000)
@@ -613,12 +634,8 @@ async def _handle_usd_mode(params: Any, actual_block: int, quote_amount: float) 
             f"No price found for {params.token} at block {actual_block} on {CHAIN_NAME}",
         )
 
-    price_float, trade_path = fetch_result
+    price_float, trade_path, block_timestamp = fetch_result
     duration_ms = int((time.monotonic() - start) * 1000)
-    block_timestamp = await _fetch_block_timestamp(actual_block)
-
-    if params.amount is None:
-        set_cached_price(params.token, actual_block, price_float, block_timestamp=block_timestamp)
     price_requests_total.labels(chain=CHAIN_NAME, status="ok").inc()
     price_request_duration_seconds.labels(chain=CHAIN_NAME).observe(duration_ms / 1000)
     logger.info(
@@ -836,10 +853,12 @@ async def prices(
             fetch_amounts = tuple(params.amounts[i] for i in indices_to_fetch)
 
         try:
-            prices = await _fetch_batch_prices(
-                tuple(tokens_to_fetch),
-                actual_block,
-                amounts=fetch_amounts,
+            prices = await asyncio.shield(
+                _fetch_batch_prices(
+                    tuple(tokens_to_fetch),
+                    actual_block,
+                    amounts=fetch_amounts,
+                )
             )
         except TimeoutError:
             batch_requests_total.labels(chain=CHAIN_NAME, status="timeout").inc()
