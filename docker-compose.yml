@@ -26,6 +26,7 @@ services:
       RPC_URL: ${RPC_URL_ETHEREUM}
       ETHERSCAN_TOKEN: ${ETHERSCAN_TOKEN}
       SENTRY_DSN: ${SENTRY_DSN:-}
+      LOG_LEVEL: ${LOG_LEVEL:-DEBUG}
     volumes:
       - cache-ethereum:/data/cache
       - brownie-ethereum:/root/.brownie
