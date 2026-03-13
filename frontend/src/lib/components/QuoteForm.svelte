@@ -3,7 +3,7 @@
   import Autocomplete from './Autocomplete.svelte';
   import UnknownTokenModal from './UnknownTokenModal.svelte';
   import { fetchPrice } from '../api';
-  import type { PriceResponse } from '../types';
+  import type { QuoteResponse } from '../types';
   import {
     getEffectivePair,
     isTokenInIndex,
@@ -34,7 +34,7 @@
   let showAmountWarning = $state(false);
   let loading = $state(false);
   let error = $state<string | null>(null);
-  let result = $state<PriceResponse | null>(null);
+  let result = $state<QuoteResponse | null>(null);
 
   // Unknown token modal state
   let showUnknownModal = $state(false);
@@ -189,8 +189,8 @@
 
       result = priceData;
 
-      if (priceData.timestamp != null) {
-        startAgeInterval(priceData.timestamp);
+      if (priceData.block_timestamp != null) {
+        startAgeInterval(priceData.block_timestamp);
       }
     } catch (err) {
       if (err instanceof DOMException && err.name === 'AbortError') return;
@@ -354,7 +354,7 @@
         <div class="result-row">
           <span class="result-label">Price (USD)</span>
           <span class="result-value result-value-number">
-            {formatPrice(result.price)}
+            {formatPrice(result.from_price)}
           </span>
         </div>
 
@@ -370,10 +370,10 @@
           </span>
         </div>
 
-        {#if result.timestamp != null}
+        {#if result.block_timestamp != null}
           <div class="result-row">
             <span class="result-label">Block Timestamp</span>
-            <span class="result-value">{formatTimestamp(result.timestamp)}</span>
+            <span class="result-value">{formatTimestamp(result.block_timestamp)}</span>
           </div>
 
           <div class="result-row">
@@ -381,11 +381,6 @@
             <span class="result-value result-value-muted">{ageDisplay}</span>
           </div>
         {/if}
-
-        <div class="result-row">
-          <span class="result-label">Cached</span>
-          <span class="result-value">{result.cached ? 'Yes' : 'No'}</span>
-        </div>
       </div>
     </div>
   {/if}

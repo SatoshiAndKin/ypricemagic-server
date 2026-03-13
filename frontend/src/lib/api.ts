@@ -1,6 +1,5 @@
 import type {
   QuoteResponse,
-  PriceResponse,
   BatchPriceResponse,
   BucketResponse,
   HealthResponse,
@@ -63,12 +62,12 @@ export async function fetchPrice(
   block?: string,
   signal?: AbortSignal,
   amount?: string,
-): Promise<PriceResponse> {
+): Promise<QuoteResponse> {
   const params = new URLSearchParams({ token });
   if (block) params.set('block', block);
   if (amount) params.set('amount', amount);
   const res = await fetchWithTimeout(`${BASE_URL}/${chain}/price?${params}`, FETCH_TIMEOUT_MS, signal);
-  return parseResponse<PriceResponse>(res);
+  return parseResponse<QuoteResponse>(res);
 }
 
 export async function fetchBatchPrices(
