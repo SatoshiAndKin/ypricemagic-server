@@ -1,11 +1,3 @@
-export interface PriceResponse {
-  price: number | null;
-  block: number;
-  timestamp: number;
-  cached: boolean;
-  chain: string;
-}
-
 export interface BatchPriceItem {
   token: string;
   price: number | null;
