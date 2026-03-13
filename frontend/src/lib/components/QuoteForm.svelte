@@ -2,15 +2,13 @@
   import { untrack } from 'svelte';
   import Autocomplete from './Autocomplete.svelte';
   import UnknownTokenModal from './UnknownTokenModal.svelte';
-  import { fetchQuote } from '../api';
-  import type { QuoteResponse, TradeStep } from '../types';
+  import { fetchPrice } from '../api';
+  import type { PriceResponse } from '../types';
   import {
     getEffectivePair,
-    saveCustomPair,
     isTokenInIndex,
     addLocalToken,
     tokenIndex,
-    USD_SENTINEL,
     type Chain,
   } from '../stores/tokenlist';
   import { getTokenFromIndex } from '../stores/tokenlist';
@@ -19,24 +17,14 @@
 
   let { chain, chainId }: { chain: string; chainId: number } = $props();
 
-  interface QuoteResult {
-    quote: QuoteResponse;
-  }
-
   // Component refs (not reactive; accessed imperatively)
   let fromRef: ReturnType<typeof Autocomplete> | undefined;
-  let toRef: ReturnType<typeof Autocomplete> | undefined;
 
   // Internal address tracking
   let fromAddress = $state('');
-  let toAddress = $state('');
   let fromTokenInfo = $derived.by(() => {
     void $tokenIndex;
     return fromAddress ? getTokenFromIndex(fromAddress, chainId) ?? null : null;
-  });
-  let toTokenInfo = $derived.by(() => {
-    void $tokenIndex;
-    return toAddress ? getTokenFromIndex(toAddress, chainId) ?? null : null;
   });
 
   // Form state
@@ -46,7 +34,7 @@
   let showAmountWarning = $state(false);
   let loading = $state(false);
   let error = $state<string | null>(null);
-  let result = $state<QuoteResult | null>(null);
+  let result = $state<PriceResponse | null>(null);
 
   // Unknown token modal state
   let showUnknownModal = $state(false);
@@ -75,16 +63,6 @@
     optimism: 'https://optimistic.etherscan.io',
     base: 'https://basescan.org',
   };
-
-  function isValidTokenId(addr: string): boolean {
-    return addr === USD_SENTINEL || HEX_ADDR.test(addr);
-  }
-
-  function getSymbol(address: string): string {
-    if (!address) return '?';
-    const token = getTokenFromIndex(address, chainId);
-    return token?.symbol ?? address.slice(0, 8) + '...';
-  }
 
   function getBlockParam(): string {
     if (!blockInput.trim()) return '';
@@ -152,33 +130,7 @@
   // ---------------------------------------------------------------------------
 
   function handleFromSelect(_token: unknown, address: string) {
-    if (address.toLowerCase() === toAddress.toLowerCase()) {
-      const oldFromAddress = fromAddress;
-      fromAddress = address;
-      toAddress = oldFromAddress;
-      toRef?.setFromAddress(oldFromAddress);
-    } else {
-      fromAddress = address;
-    }
-
-    if (isValidTokenId(fromAddress) && isValidTokenId(toAddress)) {
-      saveCustomPair(chain, fromAddress, toAddress);
-    }
-  }
-
-  function handleToSelect(_token: unknown, address: string) {
-    if (address.toLowerCase() === fromAddress.toLowerCase()) {
-      const oldToAddress = toAddress;
-      toAddress = address;
-      fromAddress = oldToAddress;
-      fromRef?.setFromAddress(oldToAddress);
-    } else {
-      toAddress = address;
-    }
-
-    if (isValidTokenId(fromAddress) && isValidTokenId(toAddress)) {
-      saveCustomPair(chain, fromAddress, toAddress);
-    }
+    fromAddress = address;
   }
 
   function handleBlockInput(e: Event) {
@@ -216,15 +168,10 @@
     error = null;
 
     const fromAddr = fromRef?.getValue() ?? fromAddress;
-    const toAddr = toRef?.getValue() ?? toAddress;
     const fromEdited = fromRef?.getWasUserEdited() ?? false;
-    const toEdited = toRef?.getWasUserEdited() ?? false;
 
     const fromAction = await checkUnknownToken(fromAddr, fromEdited);
     if (fromAction === 'reject') return;
-
-    const toAction = await checkUnknownToken(toAddr, toEdited);
-    if (toAction === 'reject') return;
 
     const blockParam = getBlockParam() || undefined;
     const amountParam = amount.trim() || undefined;
@@ -232,23 +179,18 @@
     abortController = new AbortController();
     loading = true;
     try {
-      const quoteData = await fetchQuote(
+      const priceData = await fetchPrice(
         chain,
         fromAddr,
-        toAddr,
         blockParam,
-        amountParam,
         abortController.signal,
+        amountParam,
       );
 
-      result = { quote: quoteData };
+      result = priceData;
 
-      if (isValidTokenId(fromAddr) && isValidTokenId(toAddr)) {
-        saveCustomPair(chain, fromAddr, toAddr);
-      }
-
-      if (quoteData.block_timestamp != null) {
-        startAgeInterval(quoteData.block_timestamp);
+      if (priceData.timestamp != null) {
+        startAgeInterval(priceData.timestamp);
       }
     } catch (err) {
       if (err instanceof DOMException && err.name === 'AbortError') return;
@@ -274,9 +216,7 @@
 
       const pair = getEffectivePair(_chain as Chain);
       fromAddress = pair.from;
-      toAddress = pair.to;
       fromRef?.setFromAddress(pair.from);
-      toRef?.setFromAddress(pair.to);
     });
   });
 
@@ -298,14 +238,6 @@
       if (suppress) fromRef.setSuppressModal(true);
     }
     fromAddress = address;
-  }
-
-  export function setToAddress(address: string, suppress = true): void {
-    if (toRef) {
-      toRef.setFromAddress(address);
-      if (suppress) toRef.setSuppressModal(true);
-    }
-    toAddress = address;
   }
 
   export function setBlock(block: string): void {
@@ -331,13 +263,6 @@
     if (price == null) return 'N/A';
     return '$' + price.toFixed(4);
   }
-
-  function formatNumber(n: number): string {
-    if (n === 0) return '0';
-    if (Math.abs(n) < 0.0001) return n.toExponential(4);
-    if (Math.abs(n) >= 1e9) return n.toExponential(4);
-    return n.toPrecision(6).replace(/\.?0+$/, '');
-  }
 </script>
 
 <section class="form-section">
@@ -346,7 +271,7 @@
 
     <div class="form-group">
       <label for="from-token" class="token-field-label">
-        From Token
+        Token
         {#if fromTokenInfo?.symbol}
           <span class="token-label-info">
             {#if fromTokenInfo.logoURI}
@@ -361,27 +286,6 @@
         chain={chainId}
         onselect={handleFromSelect}
         initialAddress={fromAddress}
-        placeholder="0x... or symbol"
-      />
-    </div>
-
-    <div class="form-group">
-      <label for="to-token" class="token-field-label">
-        To Token
-        {#if toTokenInfo?.symbol}
-          <span class="token-label-info">
-            {#if toTokenInfo.logoURI}
-              <img src={toTokenInfo.logoURI} alt="" class="token-label-icon" />
-            {/if}
-            <span>{toTokenInfo.symbol}</span>
-          </span>
-        {/if}
-      </label>
-      <Autocomplete
-        bind:this={toRef}
-        chain={chainId}
-        onselect={handleToSelect}
-        initialAddress={toAddress}
         placeholder="0x... or symbol"
       />
     </div>
@@ -426,7 +330,7 @@
 
     <div class="form-actions">
       <button type="submit" class="btn-wide" disabled={loading}>
-        {loading ? 'Fetching...' : 'Get Quote'}
+        {loading ? 'Fetching...' : 'Get Price'}
       </button>
     </div>
 
@@ -436,73 +340,40 @@
   </form>
 
   {#if result}
-    {@const q = result.quote}
-    {@const fromSym = getSymbol(q.from)}
-    {@const toSym = getSymbol(q.to)}
-    {@const rate = q.amount > 0 ? q.output_amount / q.amount : 0}
     <div class="result-card">
       <div class="result-section-title">Result</div>
 
-      {#if q.chain !== chain}
+      {#if result.chain !== chain}
         <div class="result-warning">
-          ⚠ Chain mismatch: response is for <strong>{q.chain}</strong>, but you selected
+          ⚠ Chain mismatch: response is for <strong>{result.chain}</strong>, but you selected
           <strong>{chain}</strong>.
         </div>
       {/if}
 
       <div class="result-grid">
         <div class="result-row">
-          <span class="result-label">Conversion</span>
+          <span class="result-label">Price (USD)</span>
           <span class="result-value result-value-number">
-            1 {fromSym} = {formatNumber(rate)}
-            {toSym}
+            {formatPrice(result.price)}
           </span>
         </div>
-
-        <div class="result-row">
-          <span class="result-label">Input / Output</span>
-          <span class="result-value result-value-number">
-            {formatNumber(q.amount)}
-            {fromSym} →
-            {formatNumber(q.output_amount)}
-            {toSym}
-          </span>
-        </div>
-
-        {#if q.from_price != null}
-          <div class="result-row">
-            <span class="result-label">From Token Price (USD)</span>
-            <span class="result-value result-value-number">
-              {formatPrice(q.from_price)}
-            </span>
-          </div>
-        {/if}
-
-        {#if q.to_price != null}
-          <div class="result-row">
-            <span class="result-label">To Token Price (USD)</span>
-            <span class="result-value result-value-number">
-              {formatPrice(q.to_price)}
-            </span>
-          </div>
-        {/if}
 
         <div class="result-row">
           <span class="result-label">Chain</span>
-          <span class="result-value">{q.chain}</span>
+          <span class="result-value">{result.chain}</span>
         </div>
 
         <div class="result-row">
           <span class="result-label">Block</span>
           <span class="result-value result-value-number">
-            <a href="{(BLOCK_EXPLORER[q.chain] ?? BLOCK_EXPLORER['ethereum'])}/block/{q.block}" target="_blank" rel="noreferrer" class="block-link">{q.block}</a>
+            <a href="{(BLOCK_EXPLORER[result.chain] ?? BLOCK_EXPLORER['ethereum'])}/block/{result.block}" target="_blank" rel="noreferrer" class="block-link">{result.block}</a>
           </span>
         </div>
 
-        {#if q.block_timestamp != null}
+        {#if result.timestamp != null}
           <div class="result-row">
             <span class="result-label">Block Timestamp</span>
-            <span class="result-value">{formatTimestamp(q.block_timestamp)}</span>
+            <span class="result-value">{formatTimestamp(result.timestamp)}</span>
           </div>
 
           <div class="result-row">
@@ -511,47 +382,10 @@
           </div>
         {/if}
 
-        {#if q.route === 'identity'}
-          <div class="result-row">
-            <span class="result-label">Route</span>
-            <span class="result-value result-value-muted">identity (same token)</span>
-          </div>
-        {:else}
-          {#if q.from_trade_path?.length}
-            <div class="result-row result-row-route">
-              <span class="result-label">{getSymbol(q.from)} Route</span>
-              <span class="result-value">
-                {#each q.from_trade_path as step, i}
-                  <div class="route-step">
-                    <span class="route-step-num">{i + 1}.</span>
-                    <span class="route-step-tokens">{getSymbol(step.input_token)} → {getSymbol(step.output_token)}</span>
-                    <span class="route-step-pool">{step.source}{#if step.pool} <code>{step.pool.slice(0, 10)}…</code>{/if}</span>
-                  </div>
-                {/each}
-              </span>
-            </div>
-          {/if}
-          {#if q.to_trade_path?.length}
-            <div class="result-row result-row-route">
-              <span class="result-label">{getSymbol(q.to)} Route</span>
-              <span class="result-value">
-                {#each q.to_trade_path as step, i}
-                  <div class="route-step">
-                    <span class="route-step-num">{i + 1}.</span>
-                    <span class="route-step-tokens">{getSymbol(step.input_token)} → {getSymbol(step.output_token)}</span>
-                    <span class="route-step-pool">{step.source}{#if step.pool} <code>{step.pool.slice(0, 10)}…</code>{/if}</span>
-                  </div>
-                {/each}
-              </span>
-            </div>
-          {/if}
-          {#if !q.from_trade_path?.length && !q.to_trade_path?.length}
-            <div class="result-row">
-              <span class="result-label">Route</span>
-              <span class="result-value result-value-muted">{q.route}</span>
-            </div>
-          {/if}
-        {/if}
+        <div class="result-row">
+          <span class="result-label">Cached</span>
+          <span class="result-value">{result.cached ? 'Yes' : 'No'}</span>
+        </div>
       </div>
     </div>
   {/if}
