@@ -509,13 +509,16 @@ async def _handle_quote_mode(
             params.token, quote_to, quote_amount, actual_block, block_timestamp
         )
 
+    from_coro = _fetch_price(
+        params.token,
+        actual_block,
+        amount=params.amount,
+        ignore_pools=params.ignore_pools,
+    )
+    to_coro = _fetch_price(quote_to, actual_block)
+
     try:
-        from_result = await _fetch_price(
-            params.token,
-            actual_block,
-            amount=params.amount,
-            ignore_pools=params.ignore_pools,
-        )
+        from_result, to_result = await asyncio.gather(from_coro, to_coro)
     except Exception as e:
         duration_ms = int((time.monotonic() - start) * 1000)
         return _handle_price_error(e, params.token, actual_block, duration_ms)
@@ -525,12 +528,6 @@ async def _handle_quote_mode(
         return _make_quote_not_found_response("from", params.token, actual_block)
 
     from_price, from_trade_path = from_result
-
-    try:
-        to_result = await _fetch_price(quote_to, actual_block)
-    except Exception as e:
-        duration_ms = int((time.monotonic() - start) * 1000)
-        return _handle_price_error(e, quote_to, actual_block, duration_ms)
 
     if to_result is None:
         price_requests_total.labels(chain=CHAIN_NAME, status="not_found").inc()
