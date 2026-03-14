@@ -380,13 +380,13 @@
           <div class="result-row">
             <span class="result-label">Unit Price (USD)</span>
             <span class="result-value result-value-number">
-              {formatPrice(result.price / resultAmount)}
+              {formatPrice(result.price)}
             </span>
           </div>
           <div class="result-row">
             <span class="result-label">Total ({resultAmount} tokens)</span>
             <span class="result-value result-value-number">
-              {formatPrice(result.price)}
+              {formatPrice(result.price * resultAmount)}
             </span>
           </div>
         {:else}
