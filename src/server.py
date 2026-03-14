@@ -90,6 +90,21 @@ check_bucket_request_duration_seconds = Histogram(
     ["chain"],
 )
 
+# Per-token classification lock — deduplicates concurrent check_bucket calls
+# for the same token address so ypricemagic only classifies once.
+# Note: grows one entry per unique token address, never cleaned up.
+# This is acceptable — locks are lightweight and the set of queried tokens is bounded.
+_bucket_locks: dict[str, asyncio.Lock] = {}
+_bucket_locks_guard = asyncio.Lock()
+
+
+async def _get_token_lock(token: str) -> asyncio.Lock:
+    """Get or create a per-token lock. Thread-safe via _bucket_locks_guard."""
+    async with _bucket_locks_guard:
+        if token not in _bucket_locks:
+            _bucket_locks[token] = asyncio.Lock()
+        return _bucket_locks[token]
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> Any:
@@ -800,36 +815,64 @@ async def check_bucket(
         return _make_error_response(400, f"Invalid token address: {token}")
 
     start = time.monotonic()
-    try:
-        from y import check_bucket as y_check_bucket
+    token_lock = await _get_token_lock(token)
+    async with token_lock:
+        try:
+            from y import check_bucket as y_check_bucket
 
-        bucket = await y_check_bucket(token, sync=False)
-        duration_ms = int((time.monotonic() - start) * 1000)
-        check_bucket_requests_total.labels(chain=CHAIN_NAME, status="ok").inc()
-        check_bucket_request_duration_seconds.labels(chain=CHAIN_NAME).observe(duration_ms / 1000)
-        logger.info(
-            "check_bucket_success",
-            chain=CHAIN_NAME,
-            token=token[:10],
-            bucket=bucket,
-            duration_ms=duration_ms,
-        )
-        return {
-            "token": token,
-            "chain": CHAIN_NAME,
-            "bucket": bucket,
-        }
-    except Exception as e:
-        duration_ms = int((time.monotonic() - start) * 1000)
-        check_bucket_requests_total.labels(chain=CHAIN_NAME, status="error").inc()
-        logger.error(
-            "check_bucket_failed",
-            chain=CHAIN_NAME,
-            token=token[:10] if token else None,
-            error=str(e),
-            duration_ms=duration_ms,
-        )
-        return _make_error_response(
-            500,
-            f"Failed to classify token {token}: {e}",
-        )
+            bucket = await y_check_bucket(token, sync=False)
+            duration_ms = int((time.monotonic() - start) * 1000)
+            check_bucket_requests_total.labels(chain=CHAIN_NAME, status="ok").inc()
+            check_bucket_request_duration_seconds.labels(chain=CHAIN_NAME).observe(
+                duration_ms / 1000
+            )
+
+            # Fetch token metadata (symbol, name, decimals) alongside bucket.
+            # ERC20 properties are memory-cached by ypricemagic after first call.
+            metadata: dict[str, Any] = {}
+            try:
+                from y.classes.common import ERC20
+
+                erc20 = ERC20(token, asynchronous=True)
+                symbol, name, decimals = await asyncio.gather(
+                    erc20.symbol,  # type: ignore[call-overload]
+                    erc20.name,  # type: ignore[call-overload]
+                    erc20.decimals,  # type: ignore[call-overload]
+                )
+                metadata = {"symbol": symbol, "name": name, "decimals": decimals}
+            except Exception as meta_err:
+                logger.warning(
+                    "check_bucket_metadata_failed",
+                    chain=CHAIN_NAME,
+                    token=token[:10],
+                    error=str(meta_err),
+                )
+
+            logger.info(
+                "check_bucket_success",
+                chain=CHAIN_NAME,
+                token=token[:10],
+                bucket=bucket,
+                has_metadata=bool(metadata),
+                duration_ms=duration_ms,
+            )
+            return {
+                "token": token,
+                "chain": CHAIN_NAME,
+                "bucket": bucket,
+                **metadata,
+            }
+        except Exception as e:
+            duration_ms = int((time.monotonic() - start) * 1000)
+            check_bucket_requests_total.labels(chain=CHAIN_NAME, status="error").inc()
+            logger.error(
+                "check_bucket_failed",
+                chain=CHAIN_NAME,
+                token=token[:10] if token else None,
+                error=str(e),
+                duration_ms=duration_ms,
+            )
+            return _make_error_response(
+                500,
+                f"Failed to classify token {token}: {e}",
+            )
