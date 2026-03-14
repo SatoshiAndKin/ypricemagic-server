@@ -35,6 +35,7 @@
   let loading = $state(false);
   let error = $state<string | null>(null);
   let result = $state<PriceResponse | null>(null);
+  let resultAmount = $state<number | null>(null);
 
   // Unknown token modal state
   let showUnknownModal = $state(false);
@@ -187,6 +188,7 @@
     const blockParam = getBlockParam() || undefined;
     const amountParam = amount.trim() || undefined;
 
+    resultAmount = amountParam ? parseFloat(amountParam) : null;
     abortController = new AbortController();
     loading = true;
     try {
@@ -369,12 +371,27 @@
       {/if}
 
       <div class="result-grid">
-        <div class="result-row">
-          <span class="result-label">Price (USD)</span>
-          <span class="result-value result-value-number">
-            {formatPrice(result.price)}
-          </span>
-        </div>
+        {#if resultAmount != null && resultAmount !== 1 && result.price != null}
+          <div class="result-row">
+            <span class="result-label">Unit Price (USD)</span>
+            <span class="result-value result-value-number">
+              {formatPrice(result.price / resultAmount)}
+            </span>
+          </div>
+          <div class="result-row">
+            <span class="result-label">Total ({resultAmount} tokens)</span>
+            <span class="result-value result-value-number">
+              {formatPrice(result.price)}
+            </span>
+          </div>
+        {:else}
+          <div class="result-row">
+            <span class="result-label">Price (USD)</span>
+            <span class="result-value result-value-number">
+              {formatPrice(result.price)}
+            </span>
+          </div>
+        {/if}
 
         <div class="result-row">
           <span class="result-label">Chain</span>
