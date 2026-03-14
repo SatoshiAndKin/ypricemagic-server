@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.12.0](https://github.com/SatoshiAndKin/ypricemagic-server/compare/v0.11.0...v0.12.0) (2026-03-14)
+
+
+### Features
+
+* add per-token lock and metadata to check_bucket ([#122](https://github.com/SatoshiAndKin/ypricemagic-server/issues/122)) ([193b50e](https://github.com/SatoshiAndKin/ypricemagic-server/commit/193b50ecd7d406df1fe5c9529e46e07f2e9264ee))
+* auto-submit Get Price on page load ([#120](https://github.com/SatoshiAndKin/ypricemagic-server/issues/120)) ([9004582](https://github.com/SatoshiAndKin/ypricemagic-server/commit/90045820abb496436b0db7a2e6c0b455039590e8))
+* show unit price and total output when amount is specified ([#121](https://github.com/SatoshiAndKin/ypricemagic-server/issues/121)) ([1099852](https://github.com/SatoshiAndKin/ypricemagic-server/commit/1099852c59002f5fbfb4b62b1391a40eebb749a8))
+
+
+### Bug Fixes
+
+* restore result box details (timestamp, age, trade path) and cancel fetch on token change ([#118](https://github.com/SatoshiAndKin/ypricemagic-server/issues/118)) ([3dfdd08](https://github.com/SatoshiAndKin/ypricemagic-server/commit/3dfdd082005a96ae61a8fe251ff2b3b77a61f2df))
+
 ## [0.11.0](https://github.com/SatoshiAndKin/ypricemagic-server/compare/v0.10.0...v0.11.0) (2026-03-14)
 
 
