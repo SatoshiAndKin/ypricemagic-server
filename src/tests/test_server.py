@@ -1,5 +1,6 @@
 """Tests for server._fetch_price behavior."""
 
+import asyncio
 from unittest.mock import AsyncMock, patch
 
 import pytest
@@ -1475,6 +1476,99 @@ class TestCheckBucketEndpoint:
             # The metric should have been incremented (we can't easily check the value here,
             # but we verify the endpoint works without error)
 
+    @pytest.mark.asyncio
+    async def test_check_bucket_returns_metadata_fields(self, mock_y_module: None) -> None:
+        """check_bucket response includes symbol/name/decimals when available."""
+        from unittest.mock import MagicMock, patch
+
+        from fastapi.testclient import TestClient
+
+        from src.server import app
+
+        mock_check_bucket = AsyncMock(return_value="stable usd")
+
+        # Mock ERC20 class at its import location
+        mock_erc20_instance = MagicMock()
+        # Use asyncio.Future for awaitable properties (asyncio.coroutine removed in 3.11)
+        symbol_fut: asyncio.Future[str] = asyncio.Future()
+        symbol_fut.set_result("USDC")
+        mock_erc20_instance.symbol = symbol_fut
+        name_fut: asyncio.Future[str] = asyncio.Future()
+        name_fut.set_result("USD Coin")
+        mock_erc20_instance.name = name_fut
+        decimals_fut: asyncio.Future[int] = asyncio.Future()
+        decimals_fut.set_result(6)
+        mock_erc20_instance.decimals = decimals_fut
+        mock_erc20_cls = MagicMock(return_value=mock_erc20_instance)
+
+        with (
+            patch("y.check_bucket", mock_check_bucket),
+            patch("y.classes.common.ERC20", mock_erc20_cls),
+        ):
+            client = TestClient(app)
+            response = client.get("/check_bucket", params={"token": DAI})
+
+            assert response.status_code == 200
+            data = response.json()
+            assert data["bucket"] == "stable usd"
+            assert data["symbol"] == "USDC"
+            assert data["name"] == "USD Coin"
+            assert data["decimals"] == 6
+
+    @pytest.mark.asyncio
+    async def test_check_bucket_metadata_failure_still_returns_bucket(
+        self, mock_y_module: None
+    ) -> None:
+        """If metadata fetch fails, response still includes bucket without metadata fields."""
+        from unittest.mock import patch
+
+        from fastapi.testclient import TestClient
+
+        from src.server import app
+
+        mock_check_bucket = AsyncMock(return_value="chainlink feed")
+
+        with (
+            patch("y.check_bucket", mock_check_bucket),
+            patch("y.classes.common.ERC20", side_effect=Exception("RPC down")),
+        ):
+            client = TestClient(app)
+            response = client.get("/check_bucket", params={"token": DAI})
+
+            assert response.status_code == 200
+            data = response.json()
+            assert data["bucket"] == "chainlink feed"
+            assert "symbol" not in data
+            assert "decimals" not in data
+
+    @pytest.mark.asyncio
+    async def test_check_bucket_serializes_concurrent_requests(self, mock_y_module: None) -> None:
+        """Concurrent check_bucket calls for same token are serialized by per-token lock."""
+        from unittest.mock import patch
+
+        from httpx import ASGITransport, AsyncClient
+
+        from src.server import app
+
+        mock_check_bucket = AsyncMock(return_value="stable usd")
+
+        with (
+            patch("y.check_bucket", mock_check_bucket),
+            patch("y.classes.common.ERC20", side_effect=Exception("skip metadata")),
+        ):
+            async with AsyncClient(
+                transport=ASGITransport(app=app), base_url="http://test"
+            ) as client:
+                results = await asyncio.gather(
+                    client.get("/check_bucket", params={"token": DAI}),
+                    client.get("/check_bucket", params={"token": DAI}),
+                    client.get("/check_bucket", params={"token": DAI}),
+                )
+                for r in results:
+                    assert r.status_code == 200
+                # All responses should have the same bucket
+                assert all(r.json()["bucket"] == "stable usd" for r in results)
+
 
 class TestCrossAreaErrorEnvelope:
     """Tests for error envelope format across all endpoints (VAL-CROSS-002)."""
@@ -2257,12 +2351,17 @@ class TestEndpointSchemaRegression:
             assert response.status_code == 200
             data = response.json()
 
-            # Expected fields for /check_bucket endpoint
-            expected_fields = {"token", "chain", "bucket"}
+            # Required fields for /check_bucket endpoint
+            required_fields = {"token", "chain", "bucket"}
+            # Optional metadata fields (present when ERC20 metadata resolves)
+            optional_fields = {"symbol", "name", "decimals"}
             actual_fields = set(data.keys())
 
-            assert expected_fields == actual_fields, (
-                f"Schema mismatch: expected {expected_fields}, got {actual_fields}"
+            assert required_fields.issubset(actual_fields), (
+                f"Missing required fields: {required_fields - actual_fields}"
+            )
+            assert actual_fields.issubset(required_fields | optional_fields), (
+                f"Unexpected fields: {actual_fields - required_fields - optional_fields}"
             )
 
             # Verify field types
@@ -2329,8 +2428,8 @@ class TestEndpointSchemaRegression:
             assert response.status_code == 200
             data = response.json()
 
-            # Exact field count (no more, no less)
-            assert len(data) == 3, f"Expected 3 fields, got {len(data)}: {list(data.keys())}"
+            # 3 required fields + 0-3 optional metadata fields
+            assert 3 <= len(data) <= 6, f"Expected 3-6 fields, got {len(data)}: {list(data.keys())}"
 
     @pytest.mark.asyncio
     async def test_prices_endpoint_array_not_object(self, mock_y_module: None) -> None:
