@@ -73,13 +73,21 @@ def mock_y_module(monkeypatch: pytest.MonkeyPatch) -> None:
     mock_y_exceptions: Any = MagicMock()
     mock_y_exceptions.NodeNotSynced = NodeNotSynced
 
+    # Create mock y.classes.common submodule
+    mock_y_classes_common: Any = MagicMock()
+    mock_y_classes: Any = MagicMock()
+    mock_y_classes.common = mock_y_classes_common
+
     # Create main mock y module
     mock_y: Any = MagicMock()
     mock_y.get_price = MagicMock()
     mock_y.time = mock_y_time
     mock_y.exceptions = mock_y_exceptions
+    mock_y.classes = mock_y_classes
 
     # Install mocks
     monkeypatch.setitem(sys.modules, "y", mock_y)
     monkeypatch.setitem(sys.modules, "y.time", mock_y_time)
     monkeypatch.setitem(sys.modules, "y.exceptions", mock_y_exceptions)
+    monkeypatch.setitem(sys.modules, "y.classes", mock_y_classes)
+    monkeypatch.setitem(sys.modules, "y.classes.common", mock_y_classes_common)
