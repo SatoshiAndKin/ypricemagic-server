@@ -60,7 +60,10 @@ async def _retry_one(
         return token, block, False, "dry-run, skipped"
 
     url = f"{base_url}/{chain}/price"
-    params = {"token": token, "block": str(block)}
+    # force=true bypasses the cached-error short-circuit so the server
+    # actually triggers a fresh ypricemagic lookup instead of returning the
+    # cached error immediately.
+    params = {"token": token, "block": str(block), "force": "true"}
     try:
         resp = await client.get(url, params=params, timeout=300.0)
         if resp.status_code == 200:

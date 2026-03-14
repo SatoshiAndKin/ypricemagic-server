@@ -508,7 +508,7 @@ async def _resolve_price_block(params: Any) -> int | JSONResponse:
         )
 
 
-async def _handle_price_request(params: Any, actual_block: int) -> Any:
+async def _handle_price_request(params: Any, actual_block: int, force: bool = False) -> Any:
     if params.amount is None:
         cached = get_cached_price(params.token, actual_block)
         if cached is not None:
@@ -531,21 +531,30 @@ async def _handle_price_request(params: Any, actual_block: int) -> Any:
                 "trade_path": None,
             }
 
-        # Return a cached error immediately (avoids re-fetching until TTL expires)
-        cached_err = get_cached_error(params.token, actual_block)
-        if cached_err is not None:
+        # Return a cached error immediately (avoids re-fetching until TTL expires).
+        # When force=True, skip this check and proceed to a real price lookup.
+        if not force:
+            cached_err = get_cached_error(params.token, actual_block)
+            if cached_err is not None:
+                logger.info(
+                    "cache_error_hit",
+                    chain=CHAIN_NAME,
+                    token=params.token[:10],
+                    block=actual_block,
+                    error=cached_err.get("error"),
+                )
+                price_requests_total.labels(chain=CHAIN_NAME, status="cache_error_hit").inc()
+                return _make_error_response(
+                    404,
+                    f"No price found for {params.token} at block {actual_block} on {CHAIN_NAME} "
+                    f"(cached error: {cached_err.get('error')})",
+                )
+        else:
             logger.info(
-                "cache_error_hit",
+                "force_bypass_error_cache",
                 chain=CHAIN_NAME,
                 token=params.token[:10],
                 block=actual_block,
-                error=cached_err.get("error"),
-            )
-            price_requests_total.labels(chain=CHAIN_NAME, status="cache_error_hit").inc()
-            return _make_error_response(
-                404,
-                f"No price found for {params.token} at block {actual_block} on {CHAIN_NAME} "
-                f"(cached error: {cached_err.get('error')})",
             )
 
     start = time.monotonic()
@@ -716,7 +725,8 @@ def _fill_batch_results(
     description="Get the USD price of an ERC-20 token at a given block or timestamp. "
     "Set `amount` to price a specific quantity (affects on-chain path selection for price impact). "
     "Use `ignore_pools` (comma-separated addresses) to exclude specific liquidity pools. "
-    "Block and timestamp are mutually exclusive; omit both for latest block.",
+    "Block and timestamp are mutually exclusive; omit both for latest block. "
+    "Set `force=true` to bypass any cached error entry and attempt a fresh price lookup.",
 )
 async def price(
     token: str | None = Query(None, description="ERC-20 token address (0x...)"),
@@ -726,8 +736,12 @@ async def price(
     timestamp: str | None = Query(
         None, description="Unix epoch or ISO 8601 timestamp (mutually exclusive with block)"
     ),
+    force: bool = Query(
+        False,
+        description="Bypass cached error entries and attempt a fresh price lookup (default: false)",
+    ),
 ) -> Any:
-    logger.debug("price_request", token=token, block=block, timestamp=timestamp)
+    logger.debug("price_request", token=token, block=block, timestamp=timestamp, force=force)
     result = parse_price_params(token, block, amount, ignore_pools, timestamp)
     if isinstance(result, ParseError):
         price_requests_total.labels(chain=CHAIN_NAME, status="bad_request").inc()
@@ -740,7 +754,7 @@ async def price(
 
     logger.debug("price_resolved", token=params.token[:10], block=actual_block)
 
-    return await _handle_price_request(params, actual_block)
+    return await _handle_price_request(params, actual_block, force=force)
 
 
 @app.get(
