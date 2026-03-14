@@ -2855,8 +2855,8 @@ wheels = [
 
 [[package]]
 name = "ypricemagic"
-version = "0.0.1.dev1495"
-source = { git = "https://github.com/SatoshiAndKin/ypricemagic.git?rev=feat%2Fstablecoin-pricing#d75db1b8cea35e177c9437477810e8515140d801" }
+version = "0.0.1.dev1497"
+source = { git = "https://github.com/SatoshiAndKin/ypricemagic.git?rev=feat%2Fstablecoin-pricing#54e10f94518e9247f58e280ce21a819060259bf0" }
 dependencies = [
     { name = "aiosqlite" },
     { name = "asyncpg" },
