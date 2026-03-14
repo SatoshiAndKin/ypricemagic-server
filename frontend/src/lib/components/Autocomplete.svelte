@@ -7,6 +7,7 @@
     placeholder = '0x...',
     chain,
     onselect,
+    oninputchange,
     initialAddress,
     suppressModal = false,
     class: className = ''
@@ -14,6 +15,7 @@
     placeholder?: string;
     chain: number;
     onselect?: (token: TokenlistToken | null, address: string) => void;
+    oninputchange?: () => void;
     initialAddress?: string;
     suppressModal?: boolean;
     class?: string;
@@ -113,6 +115,7 @@
     inputValue = target.value;
     wasUserEdited = true;
     inputAddress = '';
+    oninputchange?.();
 
     if (debounceTimer !== null) clearTimeout(debounceTimer);
     debounceTimer = setTimeout(() => {

@@ -48,7 +48,15 @@ describe('API client error handling', () => {
   });
 
   it('returns parsed JSON on successful 200 response', async () => {
-    const mockData = { price: 1.23, token: '0xSomeToken' };
+    const mockData = {
+      price: 1.23,
+      token: '0xSomeToken',
+      block: 12345,
+      chain: 'ethereum',
+      block_timestamp: 1700000000,
+      cached: false,
+      trade_path: null,
+    };
     vi.mocked(fetch).mockResolvedValueOnce(
       new Response(JSON.stringify(mockData), {
         status: 200,

@@ -58,7 +58,7 @@ export async function fetchPrice(
     price: data.price as number | null,
     block: data.block as number,
     chain: data.chain as string,
-    timestamp: (data.block_timestamp ?? null) as number | null,
+    block_timestamp: (data.block_timestamp ?? null) as number | null,
     cached: data.cached as boolean,
     trade_path: (data.trade_path ?? null) as PriceResponse['trade_path'],
   };

@@ -129,7 +129,18 @@
   // Event handlers
   // ---------------------------------------------------------------------------
 
+  function cancelIfLoading() {
+    if (loading) {
+      abortPending();
+      loading = false;
+      result = null;
+      error = null;
+      stopAgeInterval();
+    }
+  }
+
   function handleFromSelect(_token: unknown, address: string) {
+    cancelIfLoading();
     fromAddress = address;
   }
 
@@ -263,6 +274,12 @@
     if (price == null) return 'N/A';
     return '$' + price.toFixed(4);
   }
+
+  function getSymbol(address: string): string {
+    if (!address) return '?';
+    const token = getTokenFromIndex(address, chainId);
+    return token?.symbol ?? address.slice(0, 8) + '...';
+  }
 </script>
 
 <section class="form-section">
@@ -285,6 +302,7 @@
         bind:this={fromRef}
         chain={chainId}
         onselect={handleFromSelect}
+        oninputchange={cancelIfLoading}
         initialAddress={fromAddress}
         placeholder="0x... or symbol"
       />
@@ -379,6 +397,21 @@
           <div class="result-row">
             <span class="result-label">Block Age</span>
             <span class="result-value result-value-muted">{ageDisplay}</span>
+          </div>
+        {/if}
+
+        {#if result.trade_path?.length}
+          <div class="result-row result-row-route">
+            <span class="result-label">Price Route</span>
+            <span class="result-value">
+              {#each result.trade_path as step, i}
+                <div class="route-step">
+                  <span class="route-step-num">{i + 1}.</span>
+                  <span class="route-step-tokens">{getSymbol(step.input_token)} → {getSymbol(step.output_token)}</span>
+                  <span class="route-step-pool">{step.source}{#if step.pool} <code>{step.pool.slice(0, 10)}…</code>{/if}</span>
+                </div>
+              {/each}
+            </span>
           </div>
         {/if}
       </div>
