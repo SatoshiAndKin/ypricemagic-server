@@ -5,3 +5,5 @@ commands:
   test_server: uv run pytest src/tests/test_server.py -x -q
   lint: uv run ruff check src/
   format: uv run ruff format src/
+  format_check: uv run ruff format --check src/
+  typecheck: uv run mypy src/
