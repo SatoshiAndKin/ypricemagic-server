@@ -2489,6 +2489,127 @@ class TestEndpointSchemaRegression:
             assert data_with_amount["price"] == 1.0
 
 
+class TestErrorCaching:
+    """Tests for error caching behavior: cache errors with TTL, fast retries."""
+
+    @pytest.mark.asyncio
+    async def test_price_not_found_is_cached(self, mock_y_module: None) -> None:
+        """When price lookup returns None, an error entry is written to cache."""
+        from fastapi.testclient import TestClient
+
+        from src.server import app
+
+        mock_get_price = AsyncMock(return_value=None)
+        mock_get_block_timestamp = AsyncMock(return_value=1700000000)
+        mock_chain = type("MockChain", (), {"height": 19000000})()
+        error_writes: list[tuple[str, int, str]] = []
+
+        def mock_set_cached_error(token: str, block: int, error: str) -> None:
+            error_writes.append((token, block, error))
+
+        with (
+            patch("y.get_price", mock_get_price),
+            patch("y.get_block_timestamp_async", mock_get_block_timestamp),
+            patch("brownie.chain", mock_chain),
+            patch("src.server.get_cached_price", return_value=None),
+            patch("src.server.get_cached_error", return_value=None),
+            patch("src.server.set_cached_error", mock_set_cached_error),
+        ):
+            client = TestClient(app)
+            response = client.get("/price", params={"token": DAI, "block": "18000000"})
+
+        assert response.status_code == 404
+        assert len(error_writes) == 1
+        token_written, block_written, _ = error_writes[0]
+        assert token_written == DAI
+        assert block_written == 18000000
+
+    @pytest.mark.asyncio
+    async def test_cached_error_returned_fast(self, mock_y_module: None) -> None:
+        """When a cached error entry exists, the API returns it immediately without re-fetching."""
+        from fastapi.testclient import TestClient
+
+        from src.server import app
+
+        mock_get_price = AsyncMock(return_value=1.0)
+        mock_chain = type("MockChain", (), {"height": 19000000})()
+        cached_error_entry: dict[str, object] = {
+            "error": "No price found",
+            "cached_at": "2024-01-01T00:00:00+00:00",
+            "block_timestamp": None,
+        }
+
+        with (
+            patch("y.get_price", mock_get_price),
+            patch("brownie.chain", mock_chain),
+            patch("src.server.get_cached_price", return_value=None),
+            patch("src.server.get_cached_error", return_value=cached_error_entry),
+        ):
+            client = TestClient(app)
+            response = client.get("/price", params={"token": DAI, "block": "18000000"})
+
+        assert response.status_code == 404
+        # The real price fetch must NOT have been called
+        mock_get_price.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_exception_is_cached_as_error(self, mock_y_module: None) -> None:
+        """When price fetch raises an exception, the error is written to cache."""
+        from fastapi.testclient import TestClient
+
+        from src.server import app
+
+        mock_get_price = AsyncMock(side_effect=ConnectionError("rpc down"))
+        mock_chain = type("MockChain", (), {"height": 19000000})()
+        error_writes: list[tuple[str, int, str]] = []
+
+        def mock_set_cached_error(token: str, block: int, error: str) -> None:
+            error_writes.append((token, block, error))
+
+        with (
+            patch("y.get_price", mock_get_price),
+            patch("brownie.chain", mock_chain),
+            patch("src.server.get_cached_price", return_value=None),
+            patch("src.server.get_cached_error", return_value=None),
+            patch("src.server.set_cached_error", mock_set_cached_error),
+        ):
+            client = TestClient(app)
+            response = client.get("/price", params={"token": DAI, "block": "18000000"})
+
+        assert response.status_code in (500, 503)
+        assert len(error_writes) == 1
+
+    @pytest.mark.asyncio
+    async def test_error_not_cached_when_amount_specified(self, mock_y_module: None) -> None:
+        """When amount is specified, failures are NOT cached (amount-based lookups are ephemeral)."""
+        from fastapi.testclient import TestClient
+
+        from src.server import app
+
+        mock_get_price = AsyncMock(return_value=None)
+        mock_get_block_timestamp = AsyncMock(return_value=1700000000)
+        mock_chain = type("MockChain", (), {"height": 19000000})()
+        error_writes: list[tuple[str, int, str]] = []
+
+        def mock_set_cached_error(token: str, block: int, error: str) -> None:
+            error_writes.append((token, block, error))
+
+        with (
+            patch("y.get_price", mock_get_price),
+            patch("y.get_block_timestamp_async", mock_get_block_timestamp),
+            patch("brownie.chain", mock_chain),
+            patch("src.server.set_cached_error", mock_set_cached_error),
+        ):
+            client = TestClient(app)
+            response = client.get(
+                "/price", params={"token": DAI, "block": "18000000", "amount": "1000"}
+            )
+
+        assert response.status_code == 404
+        # No error should be cached when amount is specified
+        assert len(error_writes) == 0
+
+
 class TestErrorMessageSanitization:
     """Error responses must not leak RPC URLs or API keys."""
 

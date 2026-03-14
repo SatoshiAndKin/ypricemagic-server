@@ -25,7 +25,13 @@ from tenacity import (
     wait_exponential,
 )
 
-from src.cache import close_cache, get_cached_price, set_cached_price
+from src.cache import (
+    close_cache,
+    get_cached_error,
+    get_cached_price,
+    set_cached_error,
+    set_cached_price,
+)
 from src.logger import configure_logging, get_logger, sanitize_error_message
 from src.params import (
     ParseError,
@@ -525,6 +531,23 @@ async def _handle_price_request(params: Any, actual_block: int) -> Any:
                 "trade_path": None,
             }
 
+        # Return a cached error immediately (avoids re-fetching until TTL expires)
+        cached_err = get_cached_error(params.token, actual_block)
+        if cached_err is not None:
+            logger.info(
+                "cache_error_hit",
+                chain=CHAIN_NAME,
+                token=params.token[:10],
+                block=actual_block,
+                error=cached_err.get("error"),
+            )
+            price_requests_total.labels(chain=CHAIN_NAME, status="cache_error_hit").inc()
+            return _make_error_response(
+                404,
+                f"No price found for {params.token} at block {actual_block} on {CHAIN_NAME} "
+                f"(cached error: {cached_err.get('error')})",
+            )
+
     start = time.monotonic()
     try:
         fetch_result = await asyncio.shield(
@@ -537,11 +560,22 @@ async def _handle_price_request(params: Any, actual_block: int) -> Any:
         )
     except Exception as e:
         duration_ms = int((time.monotonic() - start) * 1000)
+        # Cache the error so immediate retries are fast (TTL-limited)
+        if params.amount is None:
+            inner = e.last_attempt.exception() if isinstance(e, RetryError) else e
+            set_cached_error(params.token, actual_block, str(inner))
         return _handle_price_error(e, params.token, actual_block, duration_ms)
 
     if fetch_result is None:
         price_requests_total.labels(chain=CHAIN_NAME, status="not_found").inc()
         logger.warning("price_not_found", token=params.token[:10], block=actual_block)
+        # Cache the "not found" outcome so repeated requests don't re-trigger lookups
+        if params.amount is None:
+            set_cached_error(
+                params.token,
+                actual_block,
+                f"No price found for {params.token} at block {actual_block} on {CHAIN_NAME}",
+            )
         return _make_error_response(
             404,
             f"No price found for {params.token} at block {actual_block} on {CHAIN_NAME}",
