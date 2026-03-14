@@ -173,7 +173,7 @@ _CHAINS = ["ethereum", "arbitrum", "optimism", "base", "bsc", "polygon", "fantom
 
 app = FastAPI(
     title="ypricemagic API",
-    description="ERC-20 token pricing API. Returns USD prices (or token-to-token quotes) at any historical block or timestamp. Supports single and batch lookups.",
+    description="ERC-20 token pricing API. Returns USD prices at any historical block or timestamp. Supports single and batch lookups.",
     version=_VERSION,
     lifespan=lifespan,
     docs_url=None,
@@ -487,109 +487,7 @@ async def _resolve_price_block(params: Any) -> int | JSONResponse:
         )
 
 
-def _make_identity_quote_response(
-    token: str,
-    quote_to: str,
-    amount: float,
-    block: int,
-    block_timestamp: int | None,
-) -> dict[str, Any]:
-    return {
-        "from": token,
-        "to": quote_to,
-        "amount": amount,
-        "output_amount": amount,
-        "block": block,
-        "chain": CHAIN_NAME,
-        "block_timestamp": block_timestamp,
-        "route": "identity",
-        "from_price": None,
-        "to_price": None,
-        "from_trade_path": None,
-        "to_trade_path": None,
-    }
-
-
-def _make_quote_not_found_response(direction: str, token: str, block: int) -> JSONResponse:
-    return _make_error_response(
-        404,
-        f"No price found for {direction} token {token} at block {block} on {CHAIN_NAME}",
-    )
-
-
-async def _handle_quote_mode(
-    params: Any, actual_block: int, quote_to: str, quote_amount: float
-) -> Any:
-    start = time.monotonic()
-
-    if params.token.lower() == quote_to.lower():
-        block_timestamp = await _fetch_block_timestamp(actual_block)
-        duration_ms = int((time.monotonic() - start) * 1000)
-        price_requests_total.labels(chain=CHAIN_NAME, status="ok").inc()
-        price_request_duration_seconds.labels(chain=CHAIN_NAME).observe(duration_ms / 1000)
-        return _make_identity_quote_response(
-            params.token, quote_to, quote_amount, actual_block, block_timestamp
-        )
-
-    try:
-        from_result = await asyncio.shield(
-            _fetch_price(
-                params.token,
-                actual_block,
-                amount=params.amount,
-                ignore_pools=params.ignore_pools,
-            )
-        )
-    except Exception as e:
-        duration_ms = int((time.monotonic() - start) * 1000)
-        return _handle_price_error(e, params.token, actual_block, duration_ms)
-
-    if from_result is None:
-        price_requests_total.labels(chain=CHAIN_NAME, status="not_found").inc()
-        return _make_quote_not_found_response("from", params.token, actual_block)
-
-    from_price, from_trade_path = from_result
-
-    try:
-        to_result = await asyncio.shield(_fetch_price(quote_to, actual_block))
-    except Exception as e:
-        duration_ms = int((time.monotonic() - start) * 1000)
-        return _handle_price_error(e, quote_to, actual_block, duration_ms)
-
-    if to_result is None:
-        price_requests_total.labels(chain=CHAIN_NAME, status="not_found").inc()
-        return _make_quote_not_found_response("to", quote_to, actual_block)
-
-    to_price, to_trade_path = to_result
-    if to_price == 0.0:
-        price_requests_total.labels(chain=CHAIN_NAME, status="not_found").inc()
-        return _make_error_response(
-            404,
-            f"Cannot price destination token {quote_to} at block {actual_block} on {CHAIN_NAME}",
-        )
-
-    output_amount = quote_amount * (from_price / to_price)
-    block_timestamp = await _fetch_block_timestamp(actual_block)
-    duration_ms = int((time.monotonic() - start) * 1000)
-    price_requests_total.labels(chain=CHAIN_NAME, status="ok").inc()
-    price_request_duration_seconds.labels(chain=CHAIN_NAME).observe(duration_ms / 1000)
-    return {
-        "from": params.token,
-        "to": quote_to,
-        "amount": quote_amount,
-        "output_amount": output_amount,
-        "block": actual_block,
-        "chain": CHAIN_NAME,
-        "block_timestamp": block_timestamp,
-        "route": "divide",
-        "from_price": from_price,
-        "to_price": to_price,
-        "from_trade_path": from_trade_path,
-        "to_trade_path": to_trade_path,
-    }
-
-
-async def _handle_usd_mode(params: Any, actual_block: int, quote_amount: float) -> Any:
+async def _handle_price_request(params: Any, actual_block: int) -> Any:
     if params.amount is None:
         cached = get_cached_price(params.token, actual_block)
         if cached is not None:
@@ -603,18 +501,13 @@ async def _handle_usd_mode(params: Any, actual_block: int, quote_amount: float) 
             price_requests_total.labels(chain=CHAIN_NAME, status="cache_hit").inc()
             cached_price = float(cached["price"])  # type: ignore[arg-type]
             return {
-                "from": params.token,
-                "to": "USD",
-                "amount": quote_amount,
-                "output_amount": cached_price * quote_amount,
+                "token": params.token,
+                "price": cached_price,
                 "block": actual_block,
                 "chain": CHAIN_NAME,
                 "block_timestamp": cached.get("block_timestamp"),
-                "route": "usd",
-                "from_price": cached_price,
-                "to_price": 1.0,
-                "from_trade_path": None,
-                "to_trade_path": None,
+                "cached": True,
+                "trade_path": None,
             }
 
     start = time.monotonic()
@@ -654,18 +547,13 @@ async def _handle_usd_mode(params: Any, actual_block: int, quote_amount: float) 
     )
 
     return {
-        "from": params.token,
-        "to": "USD",
-        "amount": quote_amount,
-        "output_amount": price_float * quote_amount,
+        "token": params.token,
+        "price": price_float,
         "block": actual_block,
         "chain": CHAIN_NAME,
         "block_timestamp": block_timestamp,
-        "route": "usd",
-        "from_price": price_float,
-        "to_price": 1.0,
-        "from_trade_path": trade_path,
-        "to_trade_path": None,
+        "cached": False,
+        "trade_path": trade_path,
     }
 
 
@@ -777,16 +665,12 @@ def _fill_batch_results(
 @app.get(
     "/price",
     description="Get the USD price of an ERC-20 token at a given block or timestamp. "
-    "Pass `to` as another token address to get a token-to-token quote instead. "
-    "Set `amount` to price a specific quantity (default 1). "
+    "Set `amount` to price a specific quantity (affects on-chain path selection for price impact). "
     "Use `ignore_pools` (comma-separated addresses) to exclude specific liquidity pools. "
     "Block and timestamp are mutually exclusive; omit both for latest block.",
 )
 async def price(
     token: str | None = Query(None, description="ERC-20 token address (0x...)"),
-    to: str | None = Query(
-        None, description="Quote currency: 'USD' (default) or another token address"
-    ),
     block: str | None = Query(None, description="Block number (mutually exclusive with timestamp)"),
     amount: str | None = Query(None, description="Token amount to price (default: 1)"),
     ignore_pools: str | None = Query(None, description="Comma-separated pool addresses to exclude"),
@@ -794,25 +678,20 @@ async def price(
         None, description="Unix epoch or ISO 8601 timestamp (mutually exclusive with block)"
     ),
 ) -> Any:
-    logger.debug("price_request", token=token, to=to, block=block, timestamp=timestamp)
-    result = parse_price_params(token, to, block, amount, ignore_pools, timestamp)
+    logger.debug("price_request", token=token, block=block, timestamp=timestamp)
+    result = parse_price_params(token, block, amount, ignore_pools, timestamp)
     if isinstance(result, ParseError):
         price_requests_total.labels(chain=CHAIN_NAME, status="bad_request").inc()
         return _make_error_response(400, result.error)
 
     params = result.data
-    quote_to = params.to
-    quote_amount = params.amount if params.amount is not None else 1.0
     actual_block = await _resolve_price_block(params)
     if isinstance(actual_block, JSONResponse):
         return actual_block
 
-    logger.debug("price_resolved", token=params.token[:10], block=actual_block, mode=quote_to)
+    logger.debug("price_resolved", token=params.token[:10], block=actual_block)
 
-    if quote_to == "USD":
-        return await _handle_usd_mode(params, actual_block, quote_amount)
-
-    return await _handle_quote_mode(params, actual_block, quote_to, quote_amount)
+    return await _handle_price_request(params, actual_block)
 
 
 @app.get(

@@ -166,7 +166,7 @@ def fetch_defillama_chart(
     try:
         data = _http_get_json(url)
     except Exception as exc:
-        print(f"  [chart fetch failed: {exc}]", flush=True)  # noqa: T201
+        print(f"  [chart fetch failed: {exc}]", flush=True)
         return {}
 
     if not isinstance(data, dict):
@@ -218,7 +218,7 @@ def fetch_defillama_current_prices(tokens: list[Token]) -> dict[str, float]:
                 results[token.address] = float(price)
         return results
     except Exception as exc:
-        print(f"  [current price fetch failed: {exc}]", flush=True)  # noqa: T201
+        print(f"  [current price fetch failed: {exc}]", flush=True)
         return {}
 
 
@@ -285,11 +285,11 @@ def _compare_latest(base_url: str, token: Token, ref_price_val: float) -> Compar
             result.passed = False
             verdict = f"Delta: {delta_pct:.2%}  FAIL (tol: {tol_str})"
 
-    print(label)  # noqa: T201
-    print(f"  YPM: {ypm_str}")  # noqa: T201
-    print(f"  REF: {ref_str}")  # noqa: T201
-    print(f"  {verdict}")  # noqa: T201
-    print()  # noqa: T201
+    print(label)
+    print(f"  YPM: {ypm_str}")
+    print(f"  REF: {ref_str}")
+    print(f"  {verdict}")
+    print()
 
     return result
 
@@ -332,46 +332,46 @@ def _compare_one(base_url: str, token: Token, ts: int, ref_price_val: float) -> 
             result.passed = False
             verdict = f"Delta: {delta_pct:.2%}  FAIL (tol: {tol_str})"
 
-    print(label)  # noqa: T201
-    print(f"  YPM: {ypm_str}")  # noqa: T201
-    print(f"  REF: {ref_str}")  # noqa: T201
-    print(f"  {verdict}")  # noqa: T201
-    print()  # noqa: T201
+    print(label)
+    print(f"  YPM: {ypm_str}")
+    print(f"  REF: {ref_str}")
+    print(f"  {verdict}")
+    print()
 
     return result
 
 
 def run(base_url: str) -> int:
     """Run all comparisons and print results. Returns exit code."""
-    print("YPM Price Validator")  # noqa: T201
-    print("==================")  # noqa: T201
-    print(f"Server:    {base_url}")  # noqa: T201
-    print(f"Reference: DefiLlama (cached at {_llama_cache.directory})")  # noqa: T201
-    print()  # noqa: T201
+    print("YPM Price Validator")
+    print("==================")
+    print(f"Server:    {base_url}")
+    print(f"Reference: DefiLlama (cached at {_llama_cache.directory})")
+    print()
 
     # 1. Find earliest available timestamps per token
-    print("Fetching start timestamps...", flush=True)  # noqa: T201
+    print("Fetching start timestamps...", flush=True)
     first_ts = fetch_defillama_first_timestamps(TOKENS)
     global_start = max(first_ts.get(t.address, 0) for t in TOKENS)
     if global_start == 0:
         global_start = 1609459200  # 2021-01-01 fallback
-    print(  # noqa: T201
+    print(
         f"Earliest common data: {_ts_label(global_start)} "
         f"(using {NUM_CHART_POINTS} points, {CHART_PERIOD} apart)",
         flush=True,
     )
-    print()  # noqa: T201
+    print()
 
     # 2. Fetch reference price charts per token (each gets its own timestamps)
-    print("Fetching DefiLlama price charts...", flush=True)  # noqa: T201
+    print("Fetching DefiLlama price charts...", flush=True)
     chart_data = fetch_defillama_chart(TOKENS, global_start, NUM_CHART_POINTS, CHART_PERIOD)
 
     total_points = sum(len(pts) for pts in chart_data.values())
-    print(f"Got {total_points} price points across {len(chart_data)} tokens")  # noqa: T201
-    print()  # noqa: T201
+    print(f"Got {total_points} price points across {len(chart_data)} tokens")
+    print()
 
     if total_points == 0:
-        print("ERROR: no chart data returned from DefiLlama")  # noqa: T201
+        print("ERROR: no chart data returned from DefiLlama")
         return 1
 
     # 3. Compare each token at its own chart timestamps
@@ -380,8 +380,8 @@ def run(base_url: str) -> int:
     for token in TOKENS:
         points = chart_data.get(token.address, [])
         if not points:
-            print(f"{token.name}: no chart data from DefiLlama, skipping")  # noqa: T201
-            print()  # noqa: T201
+            print(f"{token.name}: no chart data from DefiLlama, skipping")
+            print()
             continue
 
         for ts, ref_price_val in points:
@@ -389,17 +389,17 @@ def run(base_url: str) -> int:
             results.append(result)
 
     # 4. Compare latest (current block) prices -- always a cache miss
-    print("------------------")  # noqa: T201
-    print("Latest prices (cache miss)")  # noqa: T201
-    print("------------------")  # noqa: T201
-    print()  # noqa: T201
+    print("------------------")
+    print("Latest prices (cache miss)")
+    print("------------------")
+    print()
 
     current_prices = fetch_defillama_current_prices(TOKENS)
     for token in TOKENS:
         ref = current_prices.get(token.address)
         if ref is None:
-            print(f"{token.name}: no current price from DefiLlama, skipping")  # noqa: T201
-            print()  # noqa: T201
+            print(f"{token.name}: no current price from DefiLlama, skipping")
+            print()
             continue
         result = _compare_latest(base_url, token, ref)
         results.append(result)
@@ -410,10 +410,8 @@ def run(base_url: str) -> int:
     failed = sum(1 for r in results if r.passed is False)
     skipped = sum(1 for r in results if r.passed is None)
 
-    print("==================")  # noqa: T201
-    print(  # noqa: T201
-        f"Summary: {total} comparisons | {passed} passed | {failed} failed | {skipped} skipped"
-    )
+    print("==================")
+    print(f"Summary: {total} comparisons | {passed} passed | {failed} failed | {skipped} skipped")
 
     return 1 if failed > 0 else 0
 

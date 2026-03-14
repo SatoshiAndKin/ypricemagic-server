@@ -3,7 +3,7 @@
   import Autocomplete from './Autocomplete.svelte';
   import UnknownTokenModal from './UnknownTokenModal.svelte';
   import { fetchPrice } from '../api';
-  import type { QuoteResponse } from '../types';
+  import type { PriceResponse } from '../types';
   import {
     getEffectivePair,
     isTokenInIndex,
@@ -34,7 +34,7 @@
   let showAmountWarning = $state(false);
   let loading = $state(false);
   let error = $state<string | null>(null);
-  let result = $state<QuoteResponse | null>(null);
+  let result = $state<PriceResponse | null>(null);
 
   // Unknown token modal state
   let showUnknownModal = $state(false);
@@ -354,7 +354,7 @@
         <div class="result-row">
           <span class="result-label">Price (USD)</span>
           <span class="result-value result-value-number">
-            {formatPrice(result.from_price)}
+            {formatPrice(result.price)}
           </span>
         </div>
 
