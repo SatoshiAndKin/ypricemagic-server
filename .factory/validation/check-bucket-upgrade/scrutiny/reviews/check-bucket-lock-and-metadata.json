@@ -1,0 +1,45 @@
+{
+  "featureId": "check-bucket-lock-and-metadata",
+  "reviewedAt": "2026-03-14T05:35:00.000Z",
+  "commitId": "8e5f48c9e10768e7b10273b70c496a347e5a00ec",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "pass",
+  "codeReview": {
+    "summary": "Implementation is solid and fully covers the feature requirements. The per-token lock infrastructure is correct, the metadata fetch is wrapped in a non-fatal try/except, and the response spread is clean. Three new tests and two updated regression tests cover all specified behaviors. Two minor non-blocking observations noted below.",
+    "issues": [
+      {
+        "file": "src/tests/test_server.py",
+        "line": 1543,
+        "severity": "non_blocking",
+        "description": "test_check_bucket_metadata_failure_still_returns_bucket does not assert 'name' not in data — only 'symbol' and 'decimals' are checked. This is a minor coverage gap: if future code accidentally included 'name' but not 'symbol'/'decimals', this test would not catch it. Low severity since all three fields come from the same metadata dict, so partial inclusion is unlikely."
+      },
+      {
+        "file": "src/tests/test_server.py",
+        "line": 1545,
+        "severity": "non_blocking",
+        "description": "test_check_bucket_serializes_concurrent_requests does not actually verify serialization (i.e. that check_bucket was called only once for concurrent requests on the same token, or that ordering was enforced). It only verifies that 3 concurrent requests all return 200 with the correct bucket, which would also pass without any lock. The test validates liveness but not the lock's deduplication property. This weakens the test's value as a correctness guarantee for the serialization requirement, though it does confirm basic concurrent correctness."
+      },
+      {
+        "file": "src/server.py",
+        "line": 817,
+        "severity": "non_blocking",
+        "description": "The start = time.monotonic() timer is captured before acquiring the token_lock, so duration_ms includes lock wait time for queued requests. This means the duration metric for a request that waited behind another is inflated. Whether this is intentional (end-to-end latency) or incidental (should measure only work time) is ambiguous — it's not incorrect, but worth documenting. For a deduplication lock, measuring total latency including wait is arguably the right choice."
+      }
+    ]
+  },
+  "sharedStateObservations": [
+    {
+      "area": "conventions",
+      "observation": "The conftest.py mock_y_module fixture needed y.classes and y.classes.common added to sys.modules for the new ERC20 import to work in tests. This pattern — adding submodule mocks to sys.modules in conftest — is not documented in AGENTS.md or the library files. Future workers adding imports from y.* submodules will hit the same gotcha.",
+      "evidence": "Worker's skillFeedback.suggestedChanges: 'AGENTS.md note about mocking y.classes.common via patch(\"y.classes.common.ERC20\", ...) didn't mention that the conftest.py mock_y_module fixture also needs y.classes.common added to sys.modules.' Worker encountered this as a blocking test failure before discovering the fix."
+    },
+    {
+      "area": "conventions",
+      "observation": "The pattern for mocking async properties on ypricemagic ERC20 objects (asyncio.Future with set_result) is not documented anywhere in the library or AGENTS.md. asyncio.coroutine was removed in Python 3.11 so this is the correct approach, but it's non-obvious and took worker effort to figure out.",
+      "evidence": "src/tests/test_server.py:1494-1503 — worker used asyncio.Future manually with set_result() and even commented '# Use asyncio.Future for awaitable properties (asyncio.coroutine removed in 3.11)' indicating this was a discovered pattern worth preserving."
+    }
+  ],
+  "addressesFailureFrom": null,
+  "summary": "The feature is fully implemented and all validators pass (248 tests, mypy clean, ruff clean). Lock infrastructure is correct and idiomatic. Metadata fetch is properly non-fatal. Test coverage is good with 3 new tests and 2 updated regression tests. Two non-blocking test quality issues: the concurrent test doesn't verify deduplication call count, and the metadata failure test omits 'name' from its absence assertions. One metrics note: duration_ms includes lock wait time which may be intentional. Two shared-state observations: the conftest sys.modules pattern for y.* submodules and the asyncio.Future pattern for ERC20 async properties should be documented."
+}
