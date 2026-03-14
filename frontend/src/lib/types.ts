@@ -3,7 +3,7 @@ export interface PriceResponse {
   price: number | null;
   block: number;
   chain: string;
-  timestamp: number | null;
+  block_timestamp: number | null;
   cached: boolean;
   trade_path: TradeStep[] | null;
 }
