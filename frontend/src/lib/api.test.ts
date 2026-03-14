@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { fetchPrice, fetchQuote, fetchBatchPrices, fetchBucket, fetchHealth } from './api';
+import { fetchPrice, fetchBatchPrices, fetchBucket, fetchHealth } from './api';
 
 // Mock fetch globally
 global.fetch = vi.fn();
@@ -57,26 +57,6 @@ describe('API client error handling', () => {
     );
     const result = await fetchPrice('ethereum', '0xSomeToken');
     expect(result).toEqual(mockData);
-  });
-});
-
-// ---------------------------------------------------------------------------
-// fetchQuote
-// ---------------------------------------------------------------------------
-
-describe('fetchQuote', () => {
-  it('throws on non-OK response', async () => {
-    vi.mocked(fetch).mockResolvedValueOnce(new Response('error', { status: 503 }));
-    await expect(fetchQuote('ethereum', '0xFrom', '0xTo')).rejects.toThrow('HTTP 503');
-  });
-
-  it('returns parsed quote on success', async () => {
-    const mockQuote = { price: 0.5, amount_out: '1000' };
-    vi.mocked(fetch).mockResolvedValueOnce(
-      new Response(JSON.stringify(mockQuote), { status: 200 })
-    );
-    const result = await fetchQuote('ethereum', '0xFrom', '0xTo');
-    expect(result).toEqual(mockQuote);
   });
 });
 

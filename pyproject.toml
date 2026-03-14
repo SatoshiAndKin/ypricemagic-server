@@ -42,6 +42,9 @@ override-dependencies = [
 line-length = 100
 target-version = "py313"
 
+[tool.ruff.lint.per-file-ignores]
+"scripts/*" = ["T201"]  # CLI scripts use print() for output
+
 [tool.ruff.lint]
 select = [
     "E",    # pycodestyle errors
@@ -91,4 +94,4 @@ fail_under = 80
 show_missing = true
 
 [tool.deptry]
-per_rule_ignores = {DEP002 = ["uvicorn", "setuptools", "pre-commit", "pytest-cov", "pytest-randomly", "pytest-asyncio", "httpx", "mypy", "ruff", "deptry", "vulture"], DEP003 = ["brownie", "dank_mids", "y", "web3", "yaml"]}
+per_rule_ignores = {DEP001 = ["playwright"], DEP002 = ["uvicorn", "setuptools", "pre-commit", "pytest-cov", "pytest-randomly", "pytest-asyncio", "httpx", "mypy", "ruff", "deptry", "vulture"], DEP003 = ["brownie", "dank_mids", "y", "web3", "yaml"]}

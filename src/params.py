@@ -17,7 +17,6 @@ def is_valid_address(address: str) -> bool:
 @dataclass
 class PriceParams:
     token: str
-    to: str = "USD"
     block: int | None = None
     amount: float | None = None
     ignore_pools: tuple[str, ...] = ()
@@ -217,25 +216,8 @@ def _parse_bool_with_default(value: str | None, name: str) -> bool | ParseError:
     return result if result is not None else False
 
 
-def _parse_to(to: str | None) -> str | ParseError:
-    """Parse the 'to' query parameter.
-
-    Returns "USD" for missing/empty/literal "USD" values.
-    Returns the address string for valid addresses.
-    Returns ParseError for invalid values.
-    """
-    normalized = to.strip() if to is not None else None
-    parsed = normalized or None
-    if parsed is None or parsed.upper() == "USD":
-        return "USD"
-    if not is_valid_address(parsed):
-        return ParseError(f"Invalid to token address: {parsed}")
-    return parsed
-
-
 def parse_price_params(
     token: str | None,
-    to: str | None = None,
     block: str | None = None,
     amount: str | None = None,
     ignore_pools: str | None = None,
@@ -246,10 +228,6 @@ def parse_price_params(
 
     if not is_valid_address(token):
         return ParseError(f"Invalid token address: {token}")
-
-    parsed_to = _parse_to(to)
-    if isinstance(parsed_to, ParseError):
-        return parsed_to
 
     parsed_block = _parse_block(block)
     if isinstance(parsed_block, ParseError):
@@ -276,7 +254,6 @@ def parse_price_params(
     return ParseSuccess(
         data=PriceParams(
             token=token,
-            to=parsed_to,
             block=parsed_block,
             amount=parsed_amount,
             ignore_pools=parsed_ignore_pools,

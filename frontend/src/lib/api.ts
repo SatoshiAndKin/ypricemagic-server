@@ -1,5 +1,5 @@
 import type {
-  QuoteResponse,
+  PriceResponse,
   BatchPriceResponse,
   BucketResponse,
   HealthResponse,
@@ -41,33 +41,27 @@ async function parseResponse<T>(res: Response): Promise<T> {
   }
 }
 
-export async function fetchQuote(
-  chain: string,
-  from: string,
-  to: string,
-  block?: string,
-  amount?: string,
-  signal?: AbortSignal,
-): Promise<QuoteResponse> {
-  const params = new URLSearchParams({ token: from, to });
-  if (block) params.set('block', block);
-  if (amount) params.set('amount', amount);
-  const res = await fetchWithTimeout(`${BASE_URL}/${chain}/price?${params}`, FETCH_TIMEOUT_MS, signal);
-  return parseResponse<QuoteResponse>(res);
-}
-
 export async function fetchPrice(
   chain: string,
   token: string,
   block?: string,
   signal?: AbortSignal,
   amount?: string,
-): Promise<QuoteResponse> {
+): Promise<PriceResponse> {
   const params = new URLSearchParams({ token });
   if (block) params.set('block', block);
   if (amount) params.set('amount', amount);
   const res = await fetchWithTimeout(`${BASE_URL}/${chain}/price?${params}`, FETCH_TIMEOUT_MS, signal);
-  return parseResponse<QuoteResponse>(res);
+  const data = await parseResponse<Record<string, unknown>>(res);
+  return {
+    token: data.token as string,
+    price: data.price as number | null,
+    block: data.block as number,
+    chain: data.chain as string,
+    timestamp: (data.block_timestamp ?? null) as number | null,
+    cached: data.cached as boolean,
+    trade_path: (data.trade_path ?? null) as PriceResponse['trade_path'],
+  };
 }
 
 export async function fetchBatchPrices(

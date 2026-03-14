@@ -21,7 +21,12 @@ COPY . /app
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --locked
 
-RUN mkdir -p /data/cache
+RUN mkdir -p /data/cache /app/cache
+
+# Persist caches across standalone docker-run invocations (compiler downloads,
+# brownie artifacts, ypricemagic data, and price cache).  docker-compose mounts
+# named volumes over these same paths, so the directive is a no-op there.
+VOLUME ["/root/.brownie", "/root/.solcx", "/root/.vvm", "/root/.ypricemagic", "/data/cache", "/app/cache"]
 
 ENV PYTHONUNBUFFERED=1
 ENV PATH="/app/.venv/bin:$PATH"
