@@ -35,6 +35,9 @@
 
       const amount = params.get('amount');
       if (amount && quoteFormRef) quoteFormRef.setAmount(amount);
+
+      // Auto-submit the form on page load
+      if (quoteFormRef) quoteFormRef.submit();
     }, 0);
   });
 </script>

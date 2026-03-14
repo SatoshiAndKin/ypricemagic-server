@@ -266,6 +266,11 @@
     showAmountWarning = !!amt.trim();
   }
 
+  export function submit(): void {
+    const form = document.querySelector('.form-section form') as HTMLFormElement | null;
+    if (form) form.requestSubmit();
+  }
+
   // ---------------------------------------------------------------------------
   // Format helpers for display
   // ---------------------------------------------------------------------------
