@@ -1,5 +1,24 @@
 # Changelog
 
+## [0.11.0](https://github.com/SatoshiAndKin/ypricemagic-server/compare/v0.10.0...v0.11.0) (2026-03-14)
+
+
+### Features
+
+* add deploy webhook trigger to CD workflow ([#110](https://github.com/SatoshiAndKin/ypricemagic-server/issues/110)) ([cad6900](https://github.com/SatoshiAndKin/ypricemagic-server/commit/cad6900f96afa0ed0f248ca926c3b8bc531f1a5e))
+* graceful cache shutdown, raise file descriptor ulimits, bump ypricemagic ([#102](https://github.com/SatoshiAndKin/ypricemagic-server/issues/102)) ([96cbc53](https://github.com/SatoshiAndKin/ypricemagic-server/commit/96cbc5397cab80bb4a88f574930b83e2d2e8ce46))
+* shield price fetches from client disconnect cancellation ([#112](https://github.com/SatoshiAndKin/ypricemagic-server/issues/112)) ([85243d0](https://github.com/SatoshiAndKin/ypricemagic-server/commit/85243d05374370f3512a51f022c9f941452c408b))
+
+
+### Bug Fixes
+
+* bump ypricemagic to fix stablecoin hang, add debug logging ([#115](https://github.com/SatoshiAndKin/ypricemagic-server/issues/115)) ([9f91c37](https://github.com/SatoshiAndKin/ypricemagic-server/commit/9f91c371f3851a1bc31f320ea7a4f3072a02b8bb))
+* increase price lookup timeout from 30s to 300s ([#109](https://github.com/SatoshiAndKin/ypricemagic-server/issues/109)) ([f7f03fb](https://github.com/SatoshiAndKin/ypricemagic-server/commit/f7f03fb2dc011c0b314e7b56637b6ab449ded90a))
+* inject geth_poa_middleware for bsc, polygon, and fantom ([#104](https://github.com/SatoshiAndKin/ypricemagic-server/issues/104)) ([2383e52](https://github.com/SatoshiAndKin/ypricemagic-server/commit/2383e52e331712eeeba4f35f7e0c287be7b24386))
+* remove duplicate geth_poa_middleware and pin setuptools&lt;81 ([#105](https://github.com/SatoshiAndKin/ypricemagic-server/issues/105)) ([645963a](https://github.com/SatoshiAndKin/ypricemagic-server/commit/645963ac438c8b0ea6154b77c5c47ca2c49f2a87))
+* remove geth_poa_middleware injection, tighten setuptools to &lt;81 ([#106](https://github.com/SatoshiAndKin/ypricemagic-server/issues/106)) ([8f4139b](https://github.com/SatoshiAndKin/ypricemagic-server/commit/8f4139bc69d0bc038f0ac012786d582d53565c89))
+* use correct API field names in frontend price display ([#116](https://github.com/SatoshiAndKin/ypricemagic-server/issues/116)) ([f048133](https://github.com/SatoshiAndKin/ypricemagic-server/commit/f048133ef5aad228957a6eaf8e25971f566e62d4))
+
 ## [0.10.0](https://github.com/SatoshiAndKin/ypricemagic-server/compare/v0.9.0...v0.10.0) (2026-03-12)
 
 
