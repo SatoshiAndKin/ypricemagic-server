@@ -1,0 +1,36 @@
+{
+  "milestone": "check-bucket-upgrade",
+  "round": 1,
+  "status": "pass",
+  "validatorsRun": {
+    "test": { "passed": true, "command": "uv run pytest src/tests/ -x -q", "exitCode": 0, "note": "245 tests passed, 4 deprecation warnings (pkg_resources, websockets — pre-existing, unrelated)" },
+    "typecheck": { "passed": true, "command": "uv run mypy src/", "exitCode": 0 },
+    "lint": { "passed": true, "command": "uv run ruff check src/ && uv run ruff format --check src/", "exitCode": 0 }
+  },
+  "reviewsSummary": {
+    "total": 3,
+    "passed": 3,
+    "failed": 0,
+    "failedFeatures": []
+  },
+  "blockingIssues": [],
+  "appliedUpdates": [
+    {
+      "target": "library/testing-ypricemagic-mocks.md",
+      "description": "Documented the conftest.py mock_y_module sys.modules pattern for y.* submodules and the asyncio.Future/set_result pattern for mocking ERC20 async properties",
+      "sourceFeature": "check-bucket-lock-and-metadata"
+    }
+  ],
+  "suggestedGuidanceUpdates": [],
+  "rejectedObservations": [
+    {
+      "observation": "Backend-worker skill should include pre-check step to detect when deliverables are already present",
+      "reason": "This is a general agent observation about skill procedure, not specific to this codebase or workers in this project. The skill is a personal skill and would need to be updated separately outside this repo."
+    },
+    {
+      "observation": ".factory/services.yaml format_check and typecheck commands added on feature branch not yet on main",
+      "reason": "This is correct workflow behavior — the feature branch will be merged via PR. No action needed before PR merge."
+    }
+  ],
+  "previousRound": null
+}

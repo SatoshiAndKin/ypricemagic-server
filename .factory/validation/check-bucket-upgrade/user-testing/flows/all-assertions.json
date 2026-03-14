@@ -1,0 +1,51 @@
+{
+  "groupId": "all-assertions",
+  "milestone": "check-bucket-upgrade",
+  "testedAt": "2026-03-14T05:35:00Z",
+  "isolation": {
+    "repo": "/Users/bryan/code/ypricemagic-server",
+    "branch": "feat/check-bucket-metadata-and-dedup",
+    "testMethod": "uv run pytest + ruff + mypy + gh + git"
+  },
+  "toolsUsed": ["pytest", "ruff", "mypy", "gh", "git"],
+  "assertions": {
+    "VAL-CB-001": {
+      "status": "pass",
+      "evidence": "evidence/check-bucket-upgrade/all-assertions/targeted-tests.txt — TestCheckBucketEndpoint::test_check_bucket_returns_metadata_fields PASSED",
+      "notes": "Test confirms response includes symbol (str), name (str), decimals (int) alongside token, chain, and bucket when metadata resolves."
+    },
+    "VAL-CB-002": {
+      "status": "pass",
+      "evidence": "evidence/check-bucket-upgrade/all-assertions/targeted-tests.txt — TestCheckBucketEndpoint::test_check_bucket_metadata_failure_still_returns_bucket PASSED",
+      "notes": "Test confirms response returns 200 with bucket when metadata fetch raises an exception. Metadata fields are absent (not null)."
+    },
+    "VAL-CB-003": {
+      "status": "pass",
+      "evidence": "evidence/check-bucket-upgrade/all-assertions/targeted-tests.txt — TestCheckBucketEndpoint::test_check_bucket_serializes_concurrent_requests PASSED",
+      "notes": "Test confirms multiple concurrent requests for the same token are serialized via per-token asyncio.Lock. All return 200 with correct bucket."
+    },
+    "VAL-CB-004": {
+      "status": "pass",
+      "evidence": "evidence/check-bucket-upgrade/all-assertions/targeted-tests.txt — TestEndpointSchemaRegression::test_check_bucket_endpoint_schema_fields PASSED, test_check_bucket_endpoint_no_extra_fields PASSED",
+      "notes": "Schema regression tests confirm required fields (token, chain, bucket) always present, total fields between 3-6, no unexpected fields."
+    },
+    "VAL-CB-005": {
+      "status": "pass",
+      "evidence": "evidence/check-bucket-upgrade/all-assertions/targeted-tests.txt — TestCheckBucketEndpoint::test_missing_token_returns_400 PASSED, test_invalid_address_returns_400 PASSED, test_exception_returns_500 PASSED",
+      "notes": "All existing error paths unchanged. Per-token lock does not interfere with validation or error paths. 9/9 targeted tests passed."
+    },
+    "VAL-CB-006": {
+      "status": "pass",
+      "evidence": "evidence/check-bucket-upgrade/all-assertions/full-suite-summary.txt — 248 passed, 0 failed; ruff check: All checks passed!; ruff format: 15 files already formatted; mypy: Success: no issues found in 12 source files",
+      "notes": "Full test suite (248 tests), ruff check, ruff format --check, and mypy src/ all clean. No errors or warnings from tools."
+    },
+    "VAL-CB-007": {
+      "status": "fail",
+      "evidence": "evidence/check-bucket-upgrade/all-assertions/pr-status.txt — PR #122 'feat: add per-token lock and metadata to check_bucket' OPEN targeting main; git rev-parse --abbrev-ref HEAD returns 'feat/check-bucket-metadata-and-dedup' (not 'main')",
+      "notes": "PR #122 exists and is OPEN targeting main. However, the repo is still checked out to 'feat/check-bucket-metadata-and-dedup' rather than 'main'. The assertion requires 'git checkout main && git pull' after PR creation, which has not been done."
+    }
+  },
+  "frictions": [],
+  "blockers": [],
+  "summary": "Tested 7 assertions: 6 passed, 1 failed. VAL-CB-001 through VAL-CB-006 all pass — metadata fields, metadata failure handling, per-token lock, schema compatibility, error cases, and full test suite/lint are all working correctly. VAL-CB-007 fails because the repo is still on the feature branch 'feat/check-bucket-metadata-and-dedup' rather than 'main' after PR creation. PR #122 exists and is open, but the parent agent still needs to run 'git checkout main && git pull'."
+}

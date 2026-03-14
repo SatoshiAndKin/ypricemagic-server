@@ -1,0 +1,21 @@
+{
+  "featureId": "check-bucket-pr",
+  "reviewedAt": "2026-03-14T06:00:00.000Z",
+  "commitId": "e170ef5",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "pass",
+  "codeReview": {
+    "summary": "This feature was a git hygiene task: commit pending .factory/ changes, push the feature branch, create a PR, then check out main and pull. The worker executed all steps correctly. The commit (e170ef5) captured two .factory/ files left uncommitted by prior workers: .factory/library/user-testing.md (pruned/generalized content) and .factory/services.yaml (added format_check and typecheck commands). PR #122 was created with a clear, descriptive title and body matching the feature description requirements. The repo was checked out to main with git pull afterward, and git status confirmed a clean working tree.",
+    "issues": []
+  },
+  "sharedStateObservations": [
+    {
+      "area": "conventions",
+      "observation": "The worker committed .factory/library/user-testing.md and .factory/services.yaml on the feature branch (feat/check-bucket-metadata-and-dedup) rather than directly to main (via a separate chore commit). This is correct per AGENTS.md ('Never commit directly to main'), but it means these shared-state files are locked inside the PR and won't be on main until the PR is merged. The .factory/services.yaml currently on main (HEAD) is missing the format_check and typecheck commands that the worker added.",
+      "evidence": "git show HEAD:.factory/services.yaml vs git show e170ef5:.factory/services.yaml — HEAD lacks format_check and typecheck. The feature branch commit e170ef5 is not on main."
+    }
+  ],
+  "addressesFailureFrom": null,
+  "summary": "All five required steps of the feature were completed successfully: (1) pending .factory/ changes committed on feat/check-bucket-metadata-and-dedup, (2) branch pushed to origin, (3) PR #122 created with descriptive title 'feat: add per-token lock and metadata to check_bucket' and body covering dedup lock, metadata fields, non-fatal failure, and flashtaxes motivation, (4) git checkout main && git pull executed, (5) git rev-parse --abbrev-ref HEAD confirmed 'main'. All verification steps from the validation contract (VAL-CB-007) pass. One minor observation: the .factory/services.yaml update (format_check and typecheck commands) is part of the feature branch and not yet on main — this is consistent with the project workflow but worth noting for post-merge awareness."
+}
