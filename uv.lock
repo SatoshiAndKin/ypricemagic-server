@@ -2855,8 +2855,8 @@ wheels = [
 
 [[package]]
 name = "ypricemagic"
-version = "0.0.1.dev1498"
-source = { git = "https://github.com/SatoshiAndKin/ypricemagic.git?rev=feat%2Fstablecoin-pricing#84b593b5dea6c7d32c55f480e390ae9dfc200443" }
+version = "0.0.1.dev1507"
+source = { git = "https://github.com/SatoshiAndKin/ypricemagic.git?rev=feat%2Fexotic-tokens#6ddc532fc7053a69983fa0f3e3766be46e105e7a" }
 dependencies = [
     { name = "aiosqlite" },
     { name = "asyncpg" },
@@ -2930,6 +2930,6 @@ requires-dist = [
     { name = "tenacity" },
     { name = "uvicorn", extras = ["standard"] },
     { name = "vulture", marker = "extra == 'dev'" },
-    { name = "ypricemagic", git = "https://github.com/SatoshiAndKin/ypricemagic.git?rev=feat%2Fstablecoin-pricing" },
+    { name = "ypricemagic", git = "https://github.com/SatoshiAndKin/ypricemagic.git?rev=feat%2Fexotic-tokens" },
 ]
 provides-extras = ["dev"]
