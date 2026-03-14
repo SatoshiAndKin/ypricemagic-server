@@ -1,0 +1,39 @@
+{
+  "milestone": "check-bucket-upgrade",
+  "round": 1,
+  "status": "pass",
+  "assertionsSummary": {
+    "total": 7,
+    "passed": 7,
+    "failed": 0,
+    "blocked": 0
+  },
+  "passedAssertions": [
+    "VAL-CB-001",
+    "VAL-CB-002",
+    "VAL-CB-003",
+    "VAL-CB-004",
+    "VAL-CB-005",
+    "VAL-CB-006",
+    "VAL-CB-007"
+  ],
+  "failedAssertions": [],
+  "blockedAssertions": [],
+  "appliedUpdates": [
+    {
+      "target": "user-testing.md",
+      "description": "Added Flow Validator Guidance section for Automated Tests surface, including concurrency guidance and check-bucket-upgrade specific commands",
+      "source": "setup"
+    }
+  ],
+  "notes": {
+    "VAL-CB-001": "test_check_bucket_returns_metadata_fields PASSED — response includes symbol, name, decimals when ERC20 resolves",
+    "VAL-CB-002": "test_check_bucket_metadata_failure_still_returns_bucket PASSED — 200 returned with bucket even on metadata error, fields absent not null",
+    "VAL-CB-003": "test_check_bucket_serializes_concurrent_requests PASSED — per-token asyncio.Lock serializes concurrent requests",
+    "VAL-CB-004": "test_check_bucket_endpoint_schema_fields and test_check_bucket_endpoint_no_extra_fields PASSED — backward compatible schema",
+    "VAL-CB-005": "test_missing_token_returns_400, test_invalid_address_returns_400, test_exception_returns_500 all PASSED",
+    "VAL-CB-006": "248/248 tests pass, ruff check clean, ruff format --check clean, mypy clean (12 source files)",
+    "VAL-CB-007": "PR #122 open on feat/check-bucket-metadata-and-dedup targeting main; repo on main branch. (Note: flow subagent observed transient state during branch checkout for testing — verified manually after returning to main)"
+  },
+  "previousRound": null
+}
