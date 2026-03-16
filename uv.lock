@@ -2855,8 +2855,8 @@ wheels = [
 
 [[package]]
 name = "ypricemagic"
-version = "0.0.1.dev1515"
-source = { git = "https://github.com/SatoshiAndKin/ypricemagic.git?rev=master#18886e47d4428a702086c315767d94945866418a" }
+version = "0.0.1.dev1529"
+source = { git = "https://github.com/SatoshiAndKin/ypricemagic.git?rev=feat%2Fpool-index#54de192444b64d26e915ffed343f12e6ee471fd2" }
 dependencies = [
     { name = "aiosqlite" },
     { name = "asyncpg" },
@@ -2930,6 +2930,6 @@ requires-dist = [
     { name = "tenacity" },
     { name = "uvicorn", extras = ["standard"] },
     { name = "vulture", marker = "extra == 'dev'" },
-    { name = "ypricemagic", git = "https://github.com/SatoshiAndKin/ypricemagic.git?rev=master" },
+    { name = "ypricemagic", git = "https://github.com/SatoshiAndKin/ypricemagic.git?rev=feat%2Fpool-index" },
 ]
 provides-extras = ["dev"]
