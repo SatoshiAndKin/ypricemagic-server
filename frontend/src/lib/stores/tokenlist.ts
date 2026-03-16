@@ -28,6 +28,9 @@ export interface TokenlistEntry {
 
 export const USD_SENTINEL = 'USD';
 
+// Native token address used across all EVM chains
+export const NATIVE_TOKEN_ADDRESS = '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE';
+
 export const DEFAULT_PAIRS: Record<Chain, { from: string; to: string }> = {
   ethereum: {
     from: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48',
@@ -56,8 +59,25 @@ export const USD_TOKEN: TokenlistToken = {
   decimals: 0,
 };
 
+// Chain-appropriate names for the native gas token
+const NATIVE_TOKEN_BY_CHAIN: Record<number, { symbol: string; name: string }> = {
+  1: { symbol: 'ETH', name: 'Ether (ETH)' },
+  42161: { symbol: 'ETH', name: 'Ether (ETH)' },
+  10: { symbol: 'ETH', name: 'Ether (ETH)' },
+  8453: { symbol: 'ETH', name: 'Ether (ETH)' },
+};
+
 // Built-in default pair tokens (always available in index)
+// Native token entries come first so they appear prominently in autocomplete
 const DEFAULT_PAIR_TOKENS: TokenlistToken[] = [
+  // Native token entries — one per supported chain
+  ...Object.entries(NATIVE_TOKEN_BY_CHAIN).map(([chainIdStr, meta]) => ({
+    chainId: Number(chainIdStr),
+    address: NATIVE_TOKEN_ADDRESS,
+    symbol: meta.symbol,
+    name: meta.name,
+    decimals: 18,
+  })),
   {
     chainId: 1,
     address: '0xf939E0A03FB07F59A73314E73794Be0E57ac1b4E',
@@ -197,6 +217,8 @@ export function searchTokens(
   const q = query.toLowerCase();
   const results: Array<{ token: TokenlistToken & { sourceList: string }; rank: number }> = [];
 
+  const nativeAddrLower = NATIVE_TOKEN_ADDRESS.toLowerCase();
+
   for (const token of chainMap.values()) {
     const symLower = token.symbol.toLowerCase();
     const nameLower = token.name.toLowerCase();
@@ -216,9 +238,10 @@ export function searchTokens(
     }
 
     if (rank >= 0) {
-      // USD sentinel always sorts first within its rank tier
+      // USD sentinel and native token always sort first within their rank tier
       const isUsd = addrLower === USD_SENTINEL.toLowerCase();
-      results.push({ token, rank: isUsd ? rank - 0.5 : rank });
+      const isNative = addrLower === nativeAddrLower;
+      results.push({ token, rank: (isUsd || isNative) ? rank - 0.5 : rank });
     }
   }
 

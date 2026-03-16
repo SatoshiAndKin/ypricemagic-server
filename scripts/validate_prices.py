@@ -1,5 +1,31 @@
 #!/usr/bin/env python3
-"""Compare ypricemagic-server prices against DefiLlama historical prices."""
+"""Validation / smoke-test: compare ypricemagic-server prices against DefiLlama.
+
+PURPOSE
+-------
+This is a **validation and smoke-test** script, *not* a cache warmer.
+
+It fetches historical prices for a hard-coded token matrix from both
+ypricemagic-server and the DefiLlama public API, then checks that the two
+sources agree within a configurable tolerance.  It exits non-zero if any
+comparison fails so it can be used as a gate in CI or manual QA runs.
+
+It does **not** pre-populate the cache — any cached prices are a side-effect
+of the normal API calls it makes, not a goal.
+
+USAGE
+-----
+    # Run against the local Docker stack (default)
+    python scripts/validate_prices.py
+
+    # Run with a custom tolerance override
+    python scripts/validate_prices.py --volatile-tolerance 0.15
+
+    # Run against a different server
+    python scripts/validate_prices.py --base-url http://localhost:8001
+
+See ``--help`` for all options.
+"""
 
 from __future__ import annotations
 
