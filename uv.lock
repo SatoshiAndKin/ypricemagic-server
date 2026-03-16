@@ -2855,8 +2855,8 @@ wheels = [
 
 [[package]]
 name = "ypricemagic"
-version = "0.0.1.dev1534"
-source = { git = "https://github.com/SatoshiAndKin/ypricemagic.git?rev=master#7660ba1dd5937335d3e38f9d919ee8f1468184d6" }
+version = "0.0.1.dev1529"
+source = { git = "https://github.com/SatoshiAndKin/ypricemagic.git?rev=feat%2Fpool-index#54de192444b64d26e915ffed343f12e6ee471fd2" }
 dependencies = [
     { name = "aiosqlite" },
     { name = "asyncpg" },
@@ -2882,7 +2882,7 @@ dependencies = [
 
 [[package]]
 name = "ypricemagic-server"
-version = "0.12.0"
+version = "0.11.0"
 source = { virtual = "." }
 dependencies = [
     { name = "diskcache" },
@@ -2930,6 +2930,6 @@ requires-dist = [
     { name = "tenacity" },
     { name = "uvicorn", extras = ["standard"] },
     { name = "vulture", marker = "extra == 'dev'" },
-    { name = "ypricemagic", git = "https://github.com/SatoshiAndKin/ypricemagic.git?rev=master" },
+    { name = "ypricemagic", git = "https://github.com/SatoshiAndKin/ypricemagic.git?rev=feat%2Fpool-index" },
 ]
 provides-extras = ["dev"]
