@@ -342,9 +342,9 @@ async def _fetch_price(
     if ignore_pools:
         kwargs["ignore_pools"] = ignore_pools
 
-    logger.debug("fetch_price_start", token=token[:10], block=block, kwargs=list(kwargs.keys()))
+    logger.debug("fetch_price_start", token=token, block=block, kwargs=list(kwargs.keys()))
     p = await asyncio.wait_for(get_price(token, block, **kwargs), timeout=PRICE_TIMEOUT)
-    logger.debug("fetch_price_done", token=token[:10], block=block, result_type=type(p).__name__)
+    logger.debug("fetch_price_done", token=token, block=block, result_type=type(p).__name__)
     if p is None:
         return None
     price_float = float(p)
@@ -403,7 +403,7 @@ async def _fetch_batch_prices(
                 if math.isnan(price_float) or math.isinf(price_float) or price_float < 0:
                     logger.warning(
                         "batch_invalid_price",
-                        token=tokens[i][:10],
+                        token=tokens[i],
                         block=block,
                         price=p,
                     )
@@ -468,7 +468,7 @@ def _handle_price_error(e: Exception, token: str, block: int, duration_ms: int) 
     price_requests_total.labels(chain=CHAIN_NAME, status="error").inc()
     logger.error(
         "price_lookup_failed",
-        token=token[:10],
+        token=token,
         block=block,
         duration_ms=duration_ms,
     )
@@ -515,7 +515,7 @@ async def _handle_price_request(params: Any, actual_block: int, force: bool = Fa
             logger.info(
                 "cache_hit",
                 chain=CHAIN_NAME,
-                token=params.token[:10],
+                token=params.token,
                 block=actual_block,
                 price=cached["price"],
             )
@@ -539,7 +539,7 @@ async def _handle_price_request(params: Any, actual_block: int, force: bool = Fa
                 logger.info(
                     "cache_error_hit",
                     chain=CHAIN_NAME,
-                    token=params.token[:10],
+                    token=params.token,
                     block=actual_block,
                     error=cached_err.get("error"),
                 )
@@ -553,7 +553,7 @@ async def _handle_price_request(params: Any, actual_block: int, force: bool = Fa
             logger.info(
                 "force_bypass_error_cache",
                 chain=CHAIN_NAME,
-                token=params.token[:10],
+                token=params.token,
                 block=actual_block,
             )
 
@@ -577,7 +577,7 @@ async def _handle_price_request(params: Any, actual_block: int, force: bool = Fa
 
     if fetch_result is None:
         price_requests_total.labels(chain=CHAIN_NAME, status="not_found").inc()
-        logger.warning("price_not_found", token=params.token[:10], block=actual_block)
+        logger.warning("price_not_found", token=params.token, block=actual_block)
         # Cache the "not found" outcome so repeated requests don't re-trigger lookups
         if params.amount is None:
             set_cached_error(
@@ -597,7 +597,7 @@ async def _handle_price_request(params: Any, actual_block: int, force: bool = Fa
     logger.info(
         "price_fetched",
         chain=CHAIN_NAME,
-        token=params.token[:10],
+        token=params.token,
         block=actual_block,
         price=price_float,
         amount=params.amount,
@@ -752,7 +752,7 @@ async def price(
     if isinstance(actual_block, JSONResponse):
         return actual_block
 
-    logger.debug("price_resolved", token=params.token[:10], block=actual_block)
+    logger.debug("price_resolved", token=params.token, block=actual_block)
 
     return await _handle_price_request(params, actual_block, force=force)
 
@@ -892,14 +892,14 @@ async def check_bucket(
                 logger.warning(
                     "check_bucket_metadata_failed",
                     chain=CHAIN_NAME,
-                    token=token[:10],
+                    token=token,
                     error=str(meta_err),
                 )
 
             logger.info(
                 "check_bucket_success",
                 chain=CHAIN_NAME,
-                token=token[:10],
+                token=token,
                 bucket=bucket,
                 has_metadata=bool(metadata),
                 duration_ms=duration_ms,
@@ -916,7 +916,7 @@ async def check_bucket(
             logger.error(
                 "check_bucket_failed",
                 chain=CHAIN_NAME,
-                token=token[:10] if token else None,
+                token=token if token else None,
                 error=str(e),
                 duration_ms=duration_ms,
             )
