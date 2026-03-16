@@ -108,7 +108,7 @@ class ComparisonResult:
     ref_price: float | None
     ypm_error: str | None
     ref_error: str | None
-    passed: bool | None  # None = skipped
+    passed: bool | str | None  # None = skipped, "ypm_only" = no reference data
 
 
 # ---------------------------------------------------------------------------
@@ -313,6 +313,34 @@ def _fmt_price(price: float) -> str:
 # ---------------------------------------------------------------------------
 
 
+def _ypm_only(base_url: str, token: Token) -> ComparisonResult:
+    """Fetch a latest price from YPM for a token with no DefiLlama reference data."""
+    label = f"[{token.chain}] {token.name} ({_short_addr(token.address)}) @ latest [ypm_only]"
+    ypm_price, ypm_err = fetch_ypm_price(base_url, token, timestamp=None)
+    now_ts = int(datetime.now(tz=UTC).timestamp())
+
+    result = ComparisonResult(
+        token=token,
+        timestamp=now_ts,
+        ypm_price=ypm_price,
+        ref_price=None,
+        ypm_error=ypm_err,
+        ref_error="no DefiLlama data",
+        passed="ypm_only",
+    )
+
+    ypm_str = f"ERROR ({ypm_err})" if ypm_err is not None else _fmt_price(ypm_price)  # type: ignore[arg-type]
+    verdict = "YPM_ONLY (no reference)" if ypm_err is None else "YPM_ONLY (YPM also failed)"
+
+    print(label)
+    print(f"  YPM: {ypm_str}")
+    print("  REF: n/a")
+    print(f"  {verdict}")
+    print()
+
+    return result
+
+
 def _compare_latest(base_url: str, token: Token, ref_price_val: float) -> ComparisonResult:
     """Compare a latest (no-timestamp) YPM price against DefiLlama current price."""
     label = f"[{token.chain}] {token.name} ({_short_addr(token.address)}) @ latest"
@@ -450,8 +478,7 @@ def _compare_historical(base_url: str, tokens: list[Token]) -> tuple[list[Compar
     for token in tokens:
         points = chart_data.get(token.address, [])
         if not points:
-            print(f"[{token.chain}] {token.name}: no chart data from DefiLlama, skipping")
-            print()
+            results.append(_ypm_only(base_url, token))
             continue
         for ts, ref_price_val in points:
             results.append(_compare_one(base_url, token, ts, ref_price_val))
@@ -495,8 +522,7 @@ def run(base_url: str) -> int:
     for token in tokens:
         ref = current_prices.get(token.address)
         if ref is None:
-            print(f"[{token.chain}] {token.name}: no current price from DefiLlama, skipping")
-            print()
+            results.append(_ypm_only(base_url, token))
             continue
         results.append(_compare_latest(base_url, token, ref))
 
@@ -504,10 +530,14 @@ def run(base_url: str) -> int:
     passed = sum(1 for r in results if r.passed is True)
     failed = sum(1 for r in results if r.passed is False)
     skipped = sum(1 for r in results if r.passed is None)
+    ypm_only = sum(1 for r in results if r.passed == "ypm_only")
 
     print("==================")
     print(f"Chains validated: {', '.join(live_chains)}")
-    print(f"Summary: {total} comparisons | {passed} passed | {failed} failed | {skipped} skipped")
+    print(
+        f"Summary: {total} comparisons | {passed} passed | {failed} failed "
+        f"| {skipped} skipped | {ypm_only} ypm_only"
+    )
 
     return 1 if failed > 0 else 0
 
