@@ -3,7 +3,7 @@ name = "ypricemagic-server"
 version = "0.12.0"
 requires-python = ">=3.12,<3.14"
 dependencies = [
-    "ypricemagic @ git+https://github.com/SatoshiAndKin/ypricemagic.git@feat/pool-index",
+    "ypricemagic @ git+https://github.com/SatoshiAndKin/ypricemagic.git@master",
     "fastapi",
     "uvicorn[standard]",
     "diskcache",
