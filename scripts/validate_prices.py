@@ -13,16 +13,16 @@ comparison fails so it can be used as a gate in CI or manual QA runs.
 It does **not** pre-populate the cache — any cached prices are a side-effect
 of the normal API calls it makes, not a goal.
 
+Multi-chain support: the script auto-detects which chain backends are running
+by probing ``/{chain}/health`` and only validates tokens on live chains.
+
 USAGE
 -----
     # Run against the local Docker stack (default)
     python scripts/validate_prices.py
 
-    # Run with a custom tolerance override
-    python scripts/validate_prices.py --volatile-tolerance 0.15
-
     # Run against a different server
-    python scripts/validate_prices.py --base-url http://localhost:8001
+    python scripts/validate_prices.py --url http://localhost:8000
 
 See ``--help`` for all options.
 """
@@ -48,16 +48,28 @@ import diskcache
 STABLECOIN_TOLERANCE = 0.02  # 2%
 VOLATILE_TOLERANCE = 0.10  # 10%
 
+# DefiLlama chain prefixes (must match their API)
+LLAMA_CHAIN_PREFIX: dict[str, str] = {
+    "ethereum": "ethereum",
+    "arbitrum": "arbitrum",
+    "optimism": "optimism",
+    "base": "base",
+    "bsc": "bsc",
+    "polygon": "polygon",
+    "fantom": "fantom",
+}
+
 
 @dataclass(frozen=True)
 class Token:
     name: str
     address: str
     tolerance: float
+    chain: str = "ethereum"
 
 
 TOKENS: list[Token] = [
-    # Blue-chip tokens
+    # --- Ethereum: blue-chip tokens ---
     Token("USDC", "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48", STABLECOIN_TOLERANCE),
     Token("USDT", "0xdAC17F958D2ee523a2206206994597C13D831ec7", STABLECOIN_TOLERANCE),
     Token("DAI", "0x6B175474E89094C44Da98b954EedeAC495271d0F", STABLECOIN_TOLERANCE),
@@ -66,13 +78,18 @@ TOKENS: list[Token] = [
     Token("UNI", "0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984", VOLATILE_TOLERANCE),
     Token("LINK", "0x514910771AF9Ca656af840dff83E8264EcF986CA", VOLATILE_TOLERANCE),
     Token("AAVE", "0x7Fc66500c84A76Ad7e9c93437bFc5Ac33E2DDaE9", VOLATILE_TOLERANCE),
-    # Exotic tokens (ypricemagic PR #15)
+    # --- Ethereum: exotic tokens (ypricemagic PR #15) ---
     Token("stkAAVE", "0x4da27a545c0c5B758a6BA100e3a049001de870f5", VOLATILE_TOLERANCE),
     Token("plDAI", "0x49d716DFe60b37379010A75329ae09428f17118d", STABLECOIN_TOLERANCE),
     Token("plUSDC", "0xBD87447F48ad729C5c4b8bcb503e1395F62e8B98", STABLECOIN_TOLERANCE),
     Token("sDAI", "0x83F20F44975D03b1b09e64809B757c47f942BEeA", STABLECOIN_TOLERANCE),
     Token("weETH", "0xCd5fE23C85820F7B72D0926FC9b05b43E359b7ee", VOLATILE_TOLERANCE),
     Token("aDAI-v1", "0xfC1E690f61EFd961294b3e1Ce3313fBD8aa4f85d", STABLECOIN_TOLERANCE),
+    Token("pSLP-WBTC-ETH", "0x55282dA27a3a02eFe599f9bD85E2e0C78f9cD2b2", VOLATILE_TOLERANCE),
+    Token("ptUSDC-v4", "0xdd4d117723C257CEe402285D3aCF218E9A8236E1", STABLECOIN_TOLERANCE),
+    Token("xPREMIA", "0x16f9D564Df80376C61AC914205D3fDfB8a32f98b", VOLATILE_TOLERANCE),
+    # --- Fantom: exotic tokens ---
+    Token("xTAROT", "0x74D1D2A851e339B8cB953716445Be7E8aBdf92F4", VOLATILE_TOLERANCE, "fantom"),
 ]
 
 NUM_CHART_POINTS = 8
@@ -104,17 +121,44 @@ _CACHE_DIR = Path(os.environ.get("CACHE_DIR", Path(__file__).resolve().parent.pa
 _llama_cache = diskcache.Cache(_CACHE_DIR / "defillama-prices")
 
 
-def _http_get_json(url: str) -> object:
+def _http_get_json(url: str, timeout: int = _TIMEOUT) -> object:
     """Perform a GET request and return parsed JSON."""
     req = urllib.request.Request(url)
-    with urllib.request.urlopen(req, timeout=_TIMEOUT) as resp:
+    with urllib.request.urlopen(req, timeout=timeout) as resp:
         body = resp.read().decode()
     return json.loads(body)
 
 
 # ---------------------------------------------------------------------------
+# Chain discovery
+# ---------------------------------------------------------------------------
+
+ALL_CHAINS = ["ethereum", "arbitrum", "optimism", "base", "bsc", "polygon", "fantom"]
+
+
+def discover_live_chains(base_url: str) -> list[str]:
+    """Probe each chain's health endpoint and return the list of live chains."""
+    live: list[str] = []
+    for chain in ALL_CHAINS:
+        url = f"{base_url}/{chain}/health"
+        try:
+            data = _http_get_json(url, timeout=5)
+            if isinstance(data, dict) and data.get("status") == "ok":
+                live.append(chain)
+        except Exception:
+            pass
+    return live
+
+
+# ---------------------------------------------------------------------------
 # API callers
 # ---------------------------------------------------------------------------
+
+
+def _llama_coin(token: Token) -> str:
+    """Return the DefiLlama coin identifier for a token."""
+    prefix = LLAMA_CHAIN_PREFIX.get(token.chain, token.chain)
+    return f"{prefix}:{token.address}"
 
 
 def fetch_ypm_price(
@@ -124,10 +168,11 @@ def fetch_ypm_price(
 
     If *timestamp* is None, fetches the latest price (no timestamp param).
     """
+    chain_url = f"{base_url}/{token.chain}"
     if timestamp is not None:
-        url = f"{base_url}/price?token={token.address}&timestamp={timestamp}"
+        url = f"{chain_url}/price?token={token.address}&timestamp={timestamp}"
     else:
-        url = f"{base_url}/price?token={token.address}"
+        url = f"{chain_url}/price?token={token.address}"
     try:
         data = _http_get_json(url)
         if not isinstance(data, dict):
@@ -157,7 +202,7 @@ def fetch_defillama_first_timestamps(
     uncached: list[Token] = []
 
     for token in tokens:
-        cache_key = f"first:{token.address}"
+        cache_key = f"first:{_llama_coin(token)}"
         cached = _llama_cache.get(cache_key)
         if cached is not None:
             results[token.address] = cached
@@ -167,18 +212,18 @@ def fetch_defillama_first_timestamps(
     if not uncached:
         return results
 
-    coins = ",".join(f"ethereum:{t.address}" for t in uncached)
+    coins = ",".join(_llama_coin(t) for t in uncached)
     url = f"https://coins.llama.fi/prices/first/{coins}"
     try:
         data = _http_get_json(url)
         if isinstance(data, dict):
             for token in uncached:
-                key = f"ethereum:{token.address}"
+                key = _llama_coin(token)
                 entry = data.get("coins", {}).get(key, {})
                 ts = entry.get("timestamp")
                 if isinstance(ts, int | float):
                     results[token.address] = int(ts)
-                    _llama_cache.set(f"first:{token.address}", int(ts))
+                    _llama_cache.set(f"first:{key}", int(ts))
     except Exception:
         pass  # non-fatal; we'll use a fallback start time
 
@@ -195,7 +240,7 @@ def fetch_defillama_chart(
 
     Returns {address: [(timestamp, price), ...]}. Individual points cached on disk.
     """
-    coins = ",".join(f"ethereum:{t.address}" for t in tokens)
+    coins = ",".join(_llama_coin(t) for t in tokens)
     url = f"https://coins.llama.fi/chart/{coins}?start={start}&span={span}&period={period}"
     try:
         data = _http_get_json(url)
@@ -208,7 +253,7 @@ def fetch_defillama_chart(
 
     results: dict[str, list[tuple[int, float]]] = {}
     for token in tokens:
-        key = f"ethereum:{token.address}"
+        key = _llama_coin(token)
         entry = data.get("coins", {}).get(key, {})
         prices = entry.get("prices", [])
         points: list[tuple[int, float]] = []
@@ -216,28 +261,16 @@ def fetch_defillama_chart(
             ts = p.get("timestamp")
             price = p.get("price")
             if ts is not None and price is not None:
-                _llama_cache.set(f"{token.address}:{ts}", float(price))
+                _llama_cache.set(f"{key}:{ts}", float(price))
                 points.append((int(ts), float(price)))
         results[token.address] = points
 
     return results
 
 
-def get_defillama_price(
-    token: Token,
-    timestamp: int,
-) -> tuple[float | None, str | None]:
-    """Get a single cached DefiLlama price. Returns (price, error)."""
-    cache_key = f"{token.address}:{timestamp}"
-    cached = _llama_cache.get(cache_key)
-    if cached is not None:
-        return (float(cached), None)
-    return (None, "not in cache")
-
-
 def fetch_defillama_current_prices(tokens: list[Token]) -> dict[str, float]:
     """Fetch current prices from DefiLlama /prices/current/. Returns {address: price}."""
-    coins = ",".join(f"ethereum:{t.address}" for t in tokens)
+    coins = ",".join(_llama_coin(t) for t in tokens)
     url = f"https://coins.llama.fi/prices/current/{coins}"
     try:
         data = _http_get_json(url)
@@ -245,7 +278,7 @@ def fetch_defillama_current_prices(tokens: list[Token]) -> dict[str, float]:
             return {}
         results: dict[str, float] = {}
         for token in tokens:
-            key = f"ethereum:{token.address}"
+            key = _llama_coin(token)
             entry = data.get("coins", {}).get(key, {})
             price = entry.get("price")
             if price is not None:
@@ -282,7 +315,7 @@ def _fmt_price(price: float) -> str:
 
 def _compare_latest(base_url: str, token: Token, ref_price_val: float) -> ComparisonResult:
     """Compare a latest (no-timestamp) YPM price against DefiLlama current price."""
-    label = f"{token.name} ({_short_addr(token.address)}) @ latest"
+    label = f"[{token.chain}] {token.name} ({_short_addr(token.address)}) @ latest"
 
     ypm_price, ypm_err = fetch_ypm_price(base_url, token, timestamp=None)
     ref_price: float | None = ref_price_val
@@ -330,7 +363,7 @@ def _compare_latest(base_url: str, token: Token, ref_price_val: float) -> Compar
 
 def _compare_one(base_url: str, token: Token, ts: int, ref_price_val: float) -> ComparisonResult:
     """Compare a single YPM price against a reference price and print the result."""
-    label = f"{token.name} ({_short_addr(token.address)}) @ {_ts_label(ts)}"
+    label = f"[{token.chain}] {token.name} ({_short_addr(token.address)}) @ {_ts_label(ts)}"
 
     ypm_price, ypm_err = fetch_ypm_price(base_url, token, ts)
     ref_price: float | None = ref_price_val
@@ -375,18 +408,25 @@ def _compare_one(base_url: str, token: Token, ts: int, ref_price_val: float) -> 
     return result
 
 
-def run(base_url: str) -> int:
-    """Run all comparisons and print results. Returns exit code."""
-    print("YPM Price Validator")
-    print("==================")
-    print(f"Server:    {base_url}")
-    print(f"Reference: DefiLlama (cached at {_llama_cache.directory})")
-    print()
+def _filter_tokens_by_chains(live_chains: list[str]) -> list[Token]:
+    """Filter TOKENS to those on live chains and print skip info."""
+    tokens = [t for t in TOKENS if t.chain in live_chains]
+    skipped_chains = sorted({t.chain for t in TOKENS} - set(live_chains))
+    if skipped_chains:
+        skipped_tokens = [t for t in TOKENS if t.chain not in live_chains]
+        print(
+            f"Skipping {len(skipped_tokens)} token(s) on offline chain(s): "
+            f"{', '.join(skipped_chains)}"
+        )
+        print()
+    return tokens
 
-    # 1. Find earliest available timestamps per token
+
+def _compare_historical(base_url: str, tokens: list[Token]) -> tuple[list[ComparisonResult], bool]:
+    """Fetch DefiLlama charts and compare historical prices. Returns (results, ok)."""
     print("Fetching start timestamps...", flush=True)
-    first_ts = fetch_defillama_first_timestamps(TOKENS)
-    global_start = max(first_ts.get(t.address, 0) for t in TOKENS)
+    first_ts = fetch_defillama_first_timestamps(tokens)
+    global_start = max(first_ts.get(t.address, 0) for t in tokens)
     if global_start == 0:
         global_start = 1609459200  # 2021-01-01 fallback
     print(
@@ -396,55 +436,77 @@ def run(base_url: str) -> int:
     )
     print()
 
-    # 2. Fetch reference price charts per token (each gets its own timestamps)
     print("Fetching DefiLlama price charts...", flush=True)
-    chart_data = fetch_defillama_chart(TOKENS, global_start, NUM_CHART_POINTS, CHART_PERIOD)
-
+    chart_data = fetch_defillama_chart(tokens, global_start, NUM_CHART_POINTS, CHART_PERIOD)
     total_points = sum(len(pts) for pts in chart_data.values())
     print(f"Got {total_points} price points across {len(chart_data)} tokens")
     print()
 
     if total_points == 0:
         print("ERROR: no chart data returned from DefiLlama")
-        return 1
+        return [], False
 
-    # 3. Compare each token at its own chart timestamps
     results: list[ComparisonResult] = []
-
-    for token in TOKENS:
+    for token in tokens:
         points = chart_data.get(token.address, [])
         if not points:
-            print(f"{token.name}: no chart data from DefiLlama, skipping")
+            print(f"[{token.chain}] {token.name}: no chart data from DefiLlama, skipping")
             print()
             continue
-
         for ts, ref_price_val in points:
-            result = _compare_one(base_url, token, ts, ref_price_val)
-            results.append(result)
+            results.append(_compare_one(base_url, token, ts, ref_price_val))
 
-    # 4. Compare latest (current block) prices -- always a cache miss
+    return results, True
+
+
+def run(base_url: str) -> int:
+    """Run all comparisons and print results. Returns exit code."""
+    print("YPM Price Validator")
+    print("==================")
+    print(f"Server:    {base_url}")
+    print(f"Reference: DefiLlama (cached at {_llama_cache.directory})")
+    print()
+
+    print("Discovering live chains...", flush=True)
+    live_chains = discover_live_chains(base_url)
+    if not live_chains:
+        print("ERROR: no chain backends are responding")
+        return 1
+    print(f"Live chains: {', '.join(live_chains)}")
+    print()
+
+    tokens = _filter_tokens_by_chains(live_chains)
+    if not tokens:
+        print("ERROR: no tokens to validate after filtering by live chains")
+        return 1
+
+    historical_results, ok = _compare_historical(base_url, tokens)
+    if not ok:
+        return 1
+
+    results: list[ComparisonResult] = list(historical_results)
+
     print("------------------")
     print("Latest prices (cache miss)")
     print("------------------")
     print()
 
-    current_prices = fetch_defillama_current_prices(TOKENS)
-    for token in TOKENS:
+    current_prices = fetch_defillama_current_prices(tokens)
+    for token in tokens:
         ref = current_prices.get(token.address)
         if ref is None:
-            print(f"{token.name}: no current price from DefiLlama, skipping")
+            print(f"[{token.chain}] {token.name}: no current price from DefiLlama, skipping")
             print()
             continue
-        result = _compare_latest(base_url, token, ref)
-        results.append(result)
+        results.append(_compare_latest(base_url, token, ref))
 
-    # Summary
     total = len(results)
     passed = sum(1 for r in results if r.passed is True)
     failed = sum(1 for r in results if r.passed is False)
     skipped = sum(1 for r in results if r.passed is None)
 
     print("==================")
+    print(f"Chains validated: {', '.join(live_chains)}")
     print(f"Summary: {total} comparisons | {passed} passed | {failed} failed | {skipped} skipped")
 
     return 1 if failed > 0 else 0
@@ -456,8 +518,8 @@ def main() -> None:
     )
     parser.add_argument(
         "--url",
-        default="http://localhost:8000/ethereum",
-        help="ypricemagic-server base URL (default: %(default)s)",
+        default="http://localhost:8000",
+        help="ypricemagic-server base URL without chain path (default: %(default)s)",
     )
     args = parser.parse_args()
     sys.exit(run(args.url))
