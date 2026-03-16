@@ -88,6 +88,11 @@ TOKENS: list[Token] = [
     Token("pSLP-WBTC-ETH", "0xde74b6c547bd574c3527316a2eE30cd8F6041525", VOLATILE_TOLERANCE),
     Token("ptUSDC-v4", "0xdd4d117723C257CEe402285D3aCF218E9A8236E1", STABLECOIN_TOLERANCE),
     Token("xPREMIA", "0x16f9D564Df80376C61AC914205D3fDfB8a32f98b", VOLATILE_TOLERANCE),
+    # --- Ethereum: Curve/YieldBasis/StakeDAO ecosystem ---
+    Token("YB", "0x01791F726B4103694969820be083196cC7c045fF", VOLATILE_TOLERANCE),
+    Token("yYB", "0x22222222aea0076fca927a3f44dc0b4fdf9479d6", VOLATILE_TOLERANCE),
+    Token("CRV", "0xD533a949740bb3306d119CC777fa900bA034cd52", VOLATILE_TOLERANCE),
+    Token("SDT", "0x73968b9a57c6E53d41345FD57a6E6ae27d6CDB2F", VOLATILE_TOLERANCE),
     # --- Fantom: exotic tokens ---
     Token("xTAROT", "0x74D1D2A851e339B8cB953716445Be7E8aBdf92F4", VOLATILE_TOLERANCE, "fantom"),
 ]
@@ -115,7 +120,7 @@ class ComparisonResult:
 # HTTP helpers (stdlib only)
 # ---------------------------------------------------------------------------
 
-_TIMEOUT = 30
+_TIMEOUT = 300
 
 _CACHE_DIR = Path(os.environ.get("CACHE_DIR", Path(__file__).resolve().parent.parent / "cache"))
 _llama_cache = diskcache.Cache(_CACHE_DIR / "defillama-prices")
