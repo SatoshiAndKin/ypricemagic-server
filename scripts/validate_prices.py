@@ -78,6 +78,13 @@ TOKENS: list[Token] = [
     Token("UNI", "0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984", VOLATILE_TOLERANCE),
     Token("LINK", "0x514910771AF9Ca656af840dff83E8264EcF986CA", VOLATILE_TOLERANCE),
     Token("AAVE", "0x7Fc66500c84A76Ad7e9c93437bFc5Ac33E2DDaE9", VOLATILE_TOLERANCE),
+    # --- Ethereum: Curve/YieldBasis/StakeDAO ecosystem ---
+    # These load Curve registries (~7 GiB peak under x86 emulation), so they
+    # must run early while the process still has headroom.
+    Token("CRV", "0xD533a949740bb3306d119CC777fa900bA034cd52", VOLATILE_TOLERANCE),
+    Token("SDT", "0x73968b9a57c6E53d41345FD57a6E6ae27d6CDB2F", VOLATILE_TOLERANCE),
+    Token("YB", "0x01791F726B4103694969820be083196cC7c045fF", VOLATILE_TOLERANCE),
+    Token("yYB", "0x22222222aea0076fca927a3f44dc0b4fdf9479d6", VOLATILE_TOLERANCE),
     # --- Ethereum: exotic tokens (ypricemagic PR #15) ---
     Token("stkAAVE", "0x4da27a545c0c5B758a6BA100e3a049001de870f5", VOLATILE_TOLERANCE),
     Token("plDAI", "0x49d716DFe60b37379010A75329ae09428f17118d", STABLECOIN_TOLERANCE),
@@ -85,6 +92,9 @@ TOKENS: list[Token] = [
     Token("sDAI", "0x83F20F44975D03b1b09e64809B757c47f942BEeA", STABLECOIN_TOLERANCE),
     Token("weETH", "0xCd5fE23C85820F7B72D0926FC9b05b43E359b7ee", VOLATILE_TOLERANCE),
     Token("aDAI-v1", "0xfC1E690f61EFd961294b3e1Ce3313fBD8aa4f85d", STABLECOIN_TOLERANCE),
+    # --- Ethereum: known-heavy lookups (V2 scan / Pickle / PoolTogether) ---
+    # These tokens trigger expensive code paths. They come last so that Curve-
+    # dependent tokens above have a chance to succeed within the OOM budget.
     Token("pSLP-WBTC-ETH", "0xde74b6c547bd574c3527316a2eE30cd8F6041525", VOLATILE_TOLERANCE),
     Token("ptUSDC-v4", "0xdd4d117723C257CEe402285D3aCF218E9A8236E1", STABLECOIN_TOLERANCE),
     Token("xPREMIA", "0x16f9D564Df80376C61AC914205D3fDfB8a32f98b", VOLATILE_TOLERANCE),
@@ -115,7 +125,7 @@ class ComparisonResult:
 # HTTP helpers (stdlib only)
 # ---------------------------------------------------------------------------
 
-_TIMEOUT = 30
+_TIMEOUT = 300
 
 _CACHE_DIR = Path(os.environ.get("CACHE_DIR", Path(__file__).resolve().parent.parent / "cache"))
 _llama_cache = diskcache.Cache(_CACHE_DIR / "defillama-prices")
@@ -486,6 +496,59 @@ def _compare_historical(base_url: str, tokens: list[Token]) -> tuple[list[Compar
     return results, True
 
 
+def _wait_for_server(base_url: str, live_chains: list[str]) -> None:
+    """Wait up to ~2 minutes for the server to recover after an OOM restart."""
+    import time
+
+    print("Waiting for server to recover after heavy lookups...", flush=True)
+    for _ in range(12):
+        time.sleep(10)
+        try:
+            for chain in live_chains:
+                data = _http_get_json(f"{base_url}/{chain}/health", timeout=5)
+                if isinstance(data, dict) and data.get("status") == "ok":
+                    print()
+                    return
+        except Exception:
+            continue
+    print()
+
+
+def _compare_latest_prices(
+    base_url: str,
+    tokens: list[Token],
+    live_chains: list[str],
+    historical_results: list[ComparisonResult],
+) -> list[ComparisonResult]:
+    """Compare latest (uncached) prices, skipping tokens that already failed."""
+    historical_failed_addrs = {
+        r.token.address for r in historical_results if r.ypm_error is not None
+    }
+
+    if historical_failed_addrs:
+        _wait_for_server(base_url, live_chains)
+
+    print("------------------")
+    print("Latest prices (cache miss)")
+    print("------------------")
+    print()
+
+    results: list[ComparisonResult] = []
+    current_prices = fetch_defillama_current_prices(tokens)
+    for token in tokens:
+        if token.address in historical_failed_addrs:
+            print(f"[{token.chain}] {token.name} ({_short_addr(token.address)}) @ latest")
+            print("  -- SKIP (YPM failed in historical section)")
+            print()
+            continue
+        ref = current_prices.get(token.address)
+        if ref is None:
+            results.append(_ypm_only(base_url, token))
+            continue
+        results.append(_compare_latest(base_url, token, ref))
+    return results
+
+
 def run(base_url: str) -> int:
     """Run all comparisons and print results. Returns exit code."""
     print("YPM Price Validator")
@@ -512,19 +575,7 @@ def run(base_url: str) -> int:
         return 1
 
     results: list[ComparisonResult] = list(historical_results)
-
-    print("------------------")
-    print("Latest prices (cache miss)")
-    print("------------------")
-    print()
-
-    current_prices = fetch_defillama_current_prices(tokens)
-    for token in tokens:
-        ref = current_prices.get(token.address)
-        if ref is None:
-            results.append(_ypm_only(base_url, token))
-            continue
-        results.append(_compare_latest(base_url, token, ref))
+    results.extend(_compare_latest_prices(base_url, tokens, live_chains, historical_results))
 
     total = len(results)
     passed = sum(1 for r in results if r.passed is True)
