@@ -38,6 +38,10 @@ override-dependencies = [
     "pytest-forked>=1.6",
     "cchecksum>=0.4.3",
     "faster-eth-utils>=5.3.25",
+    "protobuf>=6.33.5,<7",
+    "urllib3>=2.6.3",
+    "wheel>=0.46.2",
+    "packaging>=24.0",
 ]
 
 [tool.ruff]
