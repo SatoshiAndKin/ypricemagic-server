@@ -198,7 +198,7 @@ services:
     labels:
       traefik.enable: "true"
       docker-rollout.pre-stop-hook: "touch /tmp/drain && sleep 10"
-      traefik.http.routers.ypm-frontend.rule: "Host(`${VIRTUAL_HOST:-localhost}`) && PathPrefix(`/`)"
+      traefik.http.routers.ypm-frontend.rule: "Host(`${VIRTUAL_HOST:-localhost}`) && !PathPrefix(`/ethereum`) && !PathPrefix(`/arbitrum`) && !PathPrefix(`/optimism`) && !PathPrefix(`/base`) && !PathPrefix(`/bsc`) && !PathPrefix(`/polygon`) && !PathPrefix(`/fantom`) && !PathPrefix(`/health`)"
       traefik.http.routers.ypm-frontend.entrypoints: web
       traefik.http.routers.ypm-frontend.priority: "1"
       traefik.http.services.ypm-frontend.loadbalancer.server.port: "8080"

@@ -639,7 +639,7 @@ wheels = [
 [[package]]
 name = "dank-mids"
 version = "4.20.205"
-source = { registry = "https://pypi.org/simple" }
+source = { git = "https://github.com/SatoshiAndKin/dank_mids.git?rev=fix%2Fmacos-semaphore-limit#b6ade972a9d0480a3fcb0e6958e5dc34368a8d0c" }
 dependencies = [
     { name = "aiofiles" },
     { name = "aiolimiter" },
@@ -654,10 +654,6 @@ dependencies = [
     { name = "multicall" },
     { name = "typed-envs" },
     { name = "web3" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/be/e5/72d649b02c9cc14761d2532adde3cbfde0e1a49dea751893c58131240281/dank_mids-4.20.205.tar.gz", hash = "sha256:b2c9f27c02950cb5cd4428670ffc70f7adf6075dcc192e7cad8e3927f22d64a9", size = 13097576, upload-time = "2026-03-02T18:23:50.632Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/11/7a/d651ced89f12e7b9800f3b06d65031a63777793f8cd348afd5999daff6e0/dank_mids-4.20.205-py3-none-any.whl", hash = "sha256:1142fbeea0010a8acf6e9ce43b34038583a0bf1f83c2a892260e5520026fc838", size = 13959443, upload-time = "2026-03-02T18:23:54.049Z" },
 ]
 
 [[package]]
@@ -2855,8 +2851,8 @@ wheels = [
 
 [[package]]
 name = "ypricemagic"
-version = "0.0.1.dev1539"
-source = { git = "https://github.com/SatoshiAndKin/ypricemagic.git?rev=perf%2Fstablecoin-shortcut#6625990b8bf98c8f7c15d4b5da9f981fcdd6f5ed" }
+version = "0.0.1.dev1544"
+source = { git = "https://github.com/SatoshiAndKin/ypricemagic.git?rev=master#9a7118a549d53151b8489eb9005d08287b3e4e12" }
 dependencies = [
     { name = "aiosqlite" },
     { name = "asyncpg" },
@@ -2930,6 +2926,6 @@ requires-dist = [
     { name = "tenacity" },
     { name = "uvicorn", extras = ["standard"] },
     { name = "vulture", marker = "extra == 'dev'" },
-    { name = "ypricemagic", git = "https://github.com/SatoshiAndKin/ypricemagic.git?rev=perf%2Fstablecoin-shortcut" },
+    { name = "ypricemagic", git = "https://github.com/SatoshiAndKin/ypricemagic.git?rev=master" },
 ]
 provides-extras = ["dev"]

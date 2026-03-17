@@ -165,17 +165,15 @@ async def lifespan(app: FastAPI) -> Any:
 
         logger.info("chain_connected", chain=CHAIN_NAME, chain_id=chain.id, block=chain.height)
 
-        # Block startup until the Curve registry is fully loaded.  Accessing
-        # ``_done`` creates the background ``_load_all`` task; awaiting
-        # ``__coin_to_pools__`` forces the full registry + coin mapping to
-        # finish before the server accepts any requests.  This prevents the
-        # memory spike that occurs when user requests trigger Curve loading
-        # concurrently with the background task.
+        # Pre-load the Curve registry and coin-to-pools mapping at startup.
+        # After the perf/curve-memory-reduction changes, coin_to_pools stores
+        # only address strings and deletes CurvePool singletons after use, so
+        # the mapping no longer holds ~7 GB of brownie Contract objects.
         from y.prices.stable_swap.curve import curve as _curve_registry
 
         if _curve_registry and hasattr(_curve_registry, "_done"):
-            _ = _curve_registry._done
             logger.info("curve_registry_loading_started")
+            _ = _curve_registry._done
             await _curve_registry.__coin_to_pools__
             logger.info("curve_registry_loading_done")
     except Exception as e:
