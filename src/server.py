@@ -165,17 +165,19 @@ async def lifespan(app: FastAPI) -> Any:
 
         logger.info("chain_connected", chain=CHAIN_NAME, chain_id=chain.id, block=chain.height)
 
-        # Eagerly kick off Curve registry loading so it doesn't block the first
-        # Curve-dependent pricing request.  Accessing ``_done`` creates the
-        # background ``_load_all`` task; scheduling ``__coin_to_pools__`` ensures
-        # the coin-to-pool mapping is also built before user requests arrive.
+        # Block startup until the Curve registry is fully loaded.  Accessing
+        # ``_done`` creates the background ``_load_all`` task; awaiting
+        # ``__coin_to_pools__`` forces the full registry + coin mapping to
+        # finish before the server accepts any requests.  This prevents the
+        # memory spike that occurs when user requests trigger Curve loading
+        # concurrently with the background task.
         from y.prices.stable_swap.curve import curve as _curve_registry
 
         if _curve_registry and hasattr(_curve_registry, "_done"):
             _ = _curve_registry._done
-            _curve_preload = asyncio.ensure_future(_curve_registry.__coin_to_pools__)
-            _curve_preload.add_done_callback(lambda t: t.exception() if not t.cancelled() else None)
             logger.info("curve_registry_loading_started")
+            await _curve_registry.__coin_to_pools__
+            logger.info("curve_registry_loading_done")
     except Exception as e:
         logger.error("startup_failed", error=str(e))
         raise
