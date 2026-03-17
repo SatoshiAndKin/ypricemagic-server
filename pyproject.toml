@@ -1,9 +1,9 @@
 [project]
 name = "ypricemagic-server"
 version = "0.12.0"
-requires-python = ">=3.12,<3.14"
+requires-python = ">=3.13,<3.14"
 dependencies = [
-    "ypricemagic @ git+https://github.com/SatoshiAndKin/ypricemagic.git@master",
+    "ypricemagic @ git+https://github.com/SatoshiAndKin/ypricemagic.git@7ffacee0",
     "fastapi",
     "uvicorn[standard]",
     "diskcache",
@@ -37,6 +37,11 @@ override-dependencies = [
     "pytest-xdist>=3.0",
     "pytest-forked>=1.6",
     "cchecksum>=0.4.3",
+    "faster-eth-utils>=5.3.25",
+    "protobuf>=6.33.5,<7",
+    "urllib3>=2.6.3",
+    "wheel>=0.46.2",
+    "packaging>=24.0",
 ]
 
 [tool.ruff]
