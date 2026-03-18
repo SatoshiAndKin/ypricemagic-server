@@ -10,7 +10,7 @@ dependencies = [
     "structlog",
     "prometheus-client",
     "tenacity",
-    "setuptools<81",
+    "setuptools<82",
     "sentry-sdk>=2.0,<3",
 ]
 
