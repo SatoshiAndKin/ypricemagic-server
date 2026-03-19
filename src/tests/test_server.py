@@ -2088,11 +2088,9 @@ class TestSerializeTradePath:
             "Step",
             (),
             {
-                "source": "uniswap_v3",
-                "input_token": DAI,
-                "output_token": WETH,
-                "pool": "0x1234567890abcdef1234567890abcdef12345678",
-                "price": 0.0005,
+                "token": DAI,
+                "price": 1.0,
+                "source": "Chainlink DAI/USD feed 0x5f4e...",
             },
         )()
         result = type("PriceResult", (), {"path": [step]})()
@@ -2101,10 +2099,9 @@ class TestSerializeTradePath:
 
         assert serialized is not None
         assert len(serialized) == 1
-        assert serialized[0]["source"] == "uniswap_v3"
-        assert serialized[0]["input_token"] == DAI
-        assert serialized[0]["output_token"] == WETH
-        assert serialized[0]["price"] == 0.0005
+        assert serialized[0]["token"] == DAI
+        assert serialized[0]["price"] == 1.0
+        assert serialized[0]["source"] == "Chainlink DAI/USD feed 0x5f4e..."
 
     def test_no_path_returns_none(self, mock_y_module: None) -> None:
         """A price result without a path attribute returns None."""

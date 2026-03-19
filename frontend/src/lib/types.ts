@@ -21,11 +21,9 @@ export interface BatchPriceResponse {
 }
 
 export interface TradeStep {
-  source: string;
-  input_token: string;
-  output_token: string;
-  pool: string;
+  token: string;
   price: number;
+  source: string;
 }
 
 
