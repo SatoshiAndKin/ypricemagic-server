@@ -97,6 +97,41 @@ describe('fetchBucket', () => {
     vi.mocked(fetch).mockResolvedValueOnce(new Response('error', { status: 500 }));
     await expect(fetchBucket('ethereum', '0xToken')).rejects.toThrow('HTTP 500');
   });
+
+  it('returns bucket response with optional metadata fields', async () => {
+    const mockBucket = {
+      bucket: 'stable usd',
+      token: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48',
+      chain: 'ethereum',
+      symbol: 'USDC',
+      name: 'USD Coin',
+      decimals: 6,
+    };
+    vi.mocked(fetch).mockResolvedValueOnce(
+      new Response(JSON.stringify(mockBucket), { status: 200 })
+    );
+    const result = await fetchBucket('ethereum', '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48');
+    expect(result.bucket).toBe('stable usd');
+    expect(result.symbol).toBe('USDC');
+    expect(result.name).toBe('USD Coin');
+    expect(result.decimals).toBe(6);
+  });
+
+  it('returns bucket response without metadata when backend omits it', async () => {
+    const mockBucket = {
+      bucket: null,
+      token: '0xDeadBeef',
+      chain: 'ethereum',
+    };
+    vi.mocked(fetch).mockResolvedValueOnce(
+      new Response(JSON.stringify(mockBucket), { status: 200 })
+    );
+    const result = await fetchBucket('ethereum', '0xDeadBeef');
+    expect(result.bucket).toBe(null);
+    expect(result.symbol).toBeUndefined();
+    expect(result.name).toBeUndefined();
+    expect(result.decimals).toBeUndefined();
+  });
 });
 
 // ---------------------------------------------------------------------------
