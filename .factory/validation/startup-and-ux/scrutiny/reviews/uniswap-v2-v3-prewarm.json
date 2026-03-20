@@ -1,0 +1,35 @@
+{
+  "featureId": "uniswap-v2-v3-prewarm",
+  "milestone": "startup-and-ux",
+  "status": "pass",
+  "assertionResults": [
+    {
+      "assertionId": "VAL-WARM-001",
+      "status": "pass",
+      "notes": "In _prewarm_uniswap(), the code iterates uniswap_multiplexer.v2_routers.items() and awaits router.__pools__ for each. Each iteration is wrapped in try/except."
+    },
+    {
+      "assertionId": "VAL-WARM-002",
+      "status": "pass",
+      "notes": "Code checks `if uniswap_multiplexer.v3:` and awaits v3.__pools__. Also iterates v3_forks and awaits fork.__pools__. Each block is individually wrapped in try/except."
+    },
+    {
+      "assertionId": "VAL-WARM-003",
+      "status": "pass",
+      "notes": "Logging calls: uniswap_v2_pools_loading_started/done (with router=name), uniswap_v3_pools_loading_started/done (with optional fork=str(fork)), uniswap_prewarm_failed (warning, with context fields). Pattern matches existing Curve pre-warming log events."
+    },
+    {
+      "assertionId": "VAL-WARM-004",
+      "status": "pass",
+      "notes": "Each pre-warming sub-step (V2 router loop body, V3 main, V3 forks loop body) is individually wrapped in try/except Exception. Exceptions are logged as warnings. The _prewarm_uniswap() function itself is called inside the lifespan try block, but failures in sub-steps don't propagate. Tests confirm exceptions are caught and server lifecycle continues."
+    },
+    {
+      "assertionId": "VAL-QUAL-001",
+      "status": "pass",
+      "notes": "All 278 tests pass (9 new tests added for Uniswap pre-warming). mypy, ruff check, ruff format --check all pass."
+    }
+  ],
+  "codeReviewIssues": [],
+  "sharedStateObservations": [],
+  "summary": "Implementation is well-structured. The _prewarm_uniswap() helper was correctly extracted to keep lifespan complexity within ruff's C901 limit. All required log events are emitted. Error handling is per-sub-step (not a single broad try/except), which is the correct approach. Tests cover all code paths including exception handling for V2, V3, V3-forks, and the V3=None skip case. Commit 4d95207 confirms 9 tests added."
+}
