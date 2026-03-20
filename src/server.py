@@ -2,6 +2,7 @@ import asyncio
 import logging
 import math
 import os
+import signal
 import time
 import uuid
 from contextlib import asynccontextmanager
@@ -45,6 +46,14 @@ if TYPE_CHECKING:
 
 configure_logging()
 logger = get_logger("server")
+
+_shutdown_event = asyncio.Event()
+
+
+def _signal_shutdown_handler() -> None:
+    """Called by the event loop when SIGTERM/SIGINT is received."""
+    logger.info("shutdown_signal_received")
+    _shutdown_event.set()
 
 
 class _HealthAccessFilter(logging.Filter):
@@ -117,6 +126,10 @@ async def lifespan(app: FastAPI) -> Any:
     # Install after uvicorn has configured its loggers (CLI resets them at startup).
     logging.getLogger("uvicorn.access").addFilter(_HealthAccessFilter())
 
+    loop = asyncio.get_running_loop()
+    for sig in (signal.SIGTERM, signal.SIGINT):
+        loop.add_signal_handler(sig, _signal_shutdown_handler)
+
     logger.info("startup", chain=CHAIN_NAME)
     try:
         from brownie import network
@@ -165,17 +178,37 @@ async def lifespan(app: FastAPI) -> Any:
 
         logger.info("chain_connected", chain=CHAIN_NAME, chain_id=chain.id, block=chain.height)
 
-        # Pre-load the Curve registry and coin-to-pools mapping at startup.
-        # After the perf/curve-memory-reduction changes, coin_to_pools stores
-        # only address strings and deletes CurvePool singletons after use, so
-        # the mapping no longer holds ~7 GB of brownie Contract objects.
+        # Pre-load the Curve registry at startup so the first pricing request
+        # doesn't block on expensive factory event scans.
+        # If a shutdown signal arrives, cancel prewarm and proceed so uvicorn
+        # can shut down immediately instead of blocking for minutes.
         from y.prices.stable_swap.curve import curve as _curve_registry
 
-        if _curve_registry and hasattr(_curve_registry, "_done"):
-            logger.info("curve_registry_loading_started")
-            _ = _curve_registry._done
-            await _curve_registry.__coin_to_pools__
-            logger.info("curve_registry_loading_done")
+        async def _prewarm_curve() -> None:
+            if _curve_registry and hasattr(_curve_registry, "_done"):
+                logger.info("curve_registry_loading_started")
+                _ = _curve_registry._done
+                await _curve_registry.__coin_to_pools__
+                logger.info("curve_registry_loading_done")
+
+        prewarm_task = asyncio.create_task(_prewarm_curve())
+
+        async def _wait_for_shutdown() -> None:
+            await _shutdown_event.wait()
+
+        shutdown_waiter = asyncio.create_task(_wait_for_shutdown())
+        done, _ = await asyncio.wait(
+            [prewarm_task, shutdown_waiter],
+            return_when=asyncio.FIRST_COMPLETED,
+        )
+
+        if shutdown_waiter in done:
+            logger.info("shutdown_during_prewarm", chain=CHAIN_NAME)
+            prewarm_task.cancel()
+            await asyncio.gather(prewarm_task, return_exceptions=True)
+        else:
+            shutdown_waiter.cancel()
+
     except Exception as e:
         logger.error("startup_failed", error=str(e))
         raise
