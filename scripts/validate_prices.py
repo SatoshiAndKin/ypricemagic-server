@@ -151,12 +151,16 @@ def discover_live_chains(base_url: str) -> list[str]:
     live: list[str] = []
     for chain in ALL_CHAINS:
         url = f"{base_url}/{chain}/health"
+        print(f"  probing {chain}...", end="", flush=True)
         try:
             data = _http_get_json(url, timeout=5)
             if isinstance(data, dict) and data.get("status") == "ok":
                 live.append(chain)
+                print(" up", flush=True)
+            else:
+                print(" down", flush=True)
         except Exception:
-            pass
+            print(" down", flush=True)
     return live
 
 
@@ -181,10 +185,18 @@ def fetch_ypm_price(
     chain_url = f"{base_url}/{token.chain}"
     if timestamp is not None:
         url = f"{chain_url}/price?token={token.address}&timestamp={timestamp}"
+        ts_label = _ts_label(timestamp)
     else:
         url = f"{chain_url}/price?token={token.address}"
+        ts_label = "latest"
+    print(
+        f"  >> YPM query: [{token.chain}] {token.name} @ {ts_label} ...",
+        end="",
+        flush=True,
+    )
     try:
         data = _http_get_json(url)
+        print(" done", flush=True)
         if not isinstance(data, dict):
             return None, f"unexpected response: {data!r}"
         price = data.get("from_price") or data.get("price")
@@ -193,11 +205,14 @@ def fetch_ypm_price(
             return None, f"server error: {error_msg} body={data!r}"
         return float(price), None
     except urllib.error.HTTPError as exc:
+        print(" error", flush=True)
         body = exc.read().decode(errors="replace") if exc.fp else ""
         return None, f"HTTP {exc.code}: {body[:200]}"
     except urllib.error.URLError as exc:
+        print(" error", flush=True)
         return None, f"network error: {exc.reason}"
     except Exception as exc:
+        print(" error", flush=True)
         return None, f"{type(exc).__name__}: {exc}"
 
 
@@ -224,8 +239,10 @@ def fetch_defillama_first_timestamps(
 
     coins = ",".join(_llama_coin(t) for t in uncached)
     url = f"https://coins.llama.fi/prices/first/{coins}"
+    print(f"  >> DefiLlama /prices/first/ for {len(uncached)} token(s)...", end="", flush=True)
     try:
         data = _http_get_json(url)
+        print(" done", flush=True)
         if isinstance(data, dict):
             for token in uncached:
                 key = _llama_coin(token)
@@ -235,7 +252,7 @@ def fetch_defillama_first_timestamps(
                     results[token.address] = int(ts)
                     _llama_cache.set(f"first:{key}", int(ts))
     except Exception:
-        pass  # non-fatal; we'll use a fallback start time
+        print(" failed (non-fatal)", flush=True)
 
     return results
 
@@ -252,10 +269,12 @@ def fetch_defillama_chart(
     """
     coins = ",".join(_llama_coin(t) for t in tokens)
     url = f"https://coins.llama.fi/chart/{coins}?start={start}&span={span}&period={period}"
+    print(f"  >> DefiLlama /chart/ for {len(tokens)} token(s)...", end="", flush=True)
     try:
         data = _http_get_json(url)
+        print(" done", flush=True)
     except Exception as exc:
-        print(f"  [chart fetch failed: {exc}]", flush=True)
+        print(f" failed: {exc}", flush=True)
         return {}
 
     if not isinstance(data, dict):
@@ -282,8 +301,10 @@ def fetch_defillama_current_prices(tokens: list[Token]) -> dict[str, float]:
     """Fetch current prices from DefiLlama /prices/current/. Returns {address: price}."""
     coins = ",".join(_llama_coin(t) for t in tokens)
     url = f"https://coins.llama.fi/prices/current/{coins}"
+    print(f"  >> DefiLlama /prices/current/ for {len(tokens)} token(s)...", end="", flush=True)
     try:
         data = _http_get_json(url)
+        print(" done", flush=True)
         if not isinstance(data, dict):
             return {}
         results: dict[str, float] = {}
@@ -295,7 +316,7 @@ def fetch_defillama_current_prices(tokens: list[Token]) -> dict[str, float]:
                 results[token.address] = float(price)
         return results
     except Exception as exc:
-        print(f"  [current price fetch failed: {exc}]", flush=True)
+        print(f" failed: {exc}", flush=True)
         return {}
 
 
