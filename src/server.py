@@ -51,7 +51,7 @@ _shutdown_event = asyncio.Event()
 
 
 def _signal_shutdown_handler() -> None:
-    """Called by the event loop when SIGTERM/SIGINT is received."""
+    """Called by the event loop when SIGTERM/SIGINT is received during prewarm."""
     logger.info("shutdown_signal_received")
     _shutdown_event.set()
 
@@ -122,31 +122,30 @@ async def _get_token_lock(token: str) -> asyncio.Lock:
 
 
 async def _prewarm_uniswap() -> None:
-    """Pre-load Uniswap V2/V3 pool indexes.
+    """Pre-load Uniswap V2/V3 pool indexes concurrently.
 
     Each sub-step is wrapped in try/except so partial failures don't prevent startup.
+    All routers (V2, V3, V3 forks) load in parallel for faster startup.
     """
     from y.prices.dex.uniswap import uniswap_multiplexer  # type: ignore[attr-defined]
 
-    # V2: iterate all V2 routers and await __pools__ for each
-    for name, router in uniswap_multiplexer.v2_routers.items():
+    async def _load_v2(name: str, router: Any) -> None:
         try:
             logger.info("uniswap_v2_pools_loading_started", router=name)
-            await router.__pools__  # type: ignore[attr-defined]
+            await router.__pools__
             logger.info("uniswap_v2_pools_loading_done", router=name)
         except Exception as v2_err:
             logger.warning("uniswap_prewarm_failed", router=name, version="v2", error=str(v2_err))
 
-    # V3: load the main V3 pool index and any V3 forks
-    if uniswap_multiplexer.v3:
+    async def _load_v3() -> None:
         try:
             logger.info("uniswap_v3_pools_loading_started")
-            await uniswap_multiplexer.v3.__pools__
+            await uniswap_multiplexer.v3.__pools__  # type: ignore[union-attr]
             logger.info("uniswap_v3_pools_loading_done")
         except Exception as v3_err:
             logger.warning("uniswap_prewarm_failed", version="v3", error=str(v3_err))
 
-    for fork in uniswap_multiplexer.v3_forks:
+    async def _load_v3_fork(fork: Any) -> None:
         try:
             logger.info("uniswap_v3_pools_loading_started", fork=str(fork))
             await fork.__pools__
@@ -158,6 +157,16 @@ async def _prewarm_uniswap() -> None:
                 fork=str(fork),
                 error=str(v3_fork_err),
             )
+
+    tasks: list[Any] = [
+        _load_v2(name, router) for name, router in uniswap_multiplexer.v2_routers.items()
+    ]
+    if uniswap_multiplexer.v3:
+        tasks.append(_load_v3())
+    for fork in uniswap_multiplexer.v3_forks:
+        tasks.append(_load_v3_fork(fork))
+
+    await asyncio.gather(*tasks, return_exceptions=True)
 
 
 async def _prewarm_with_shutdown(curve_registry: Any) -> None:
@@ -202,6 +211,9 @@ async def lifespan(app: FastAPI) -> Any:
     # Install after uvicorn has configured its loggers (CLI resets them at startup).
     logging.getLogger("uvicorn.access").addFilter(_HealthAccessFilter())
 
+    # Temporarily override signal handlers so we can cancel prewarm on shutdown.
+    # loop.add_signal_handler() replaces uvicorn's signal.signal() handler;
+    # loop.remove_signal_handler() restores it (documented Python behaviour).
     loop = asyncio.get_running_loop()
     for sig in (signal.SIGTERM, signal.SIGINT):
         loop.add_signal_handler(sig, _signal_shutdown_handler)
@@ -264,6 +276,10 @@ async def lifespan(app: FastAPI) -> Any:
     except Exception as e:
         logger.error("startup_failed", error=str(e))
         raise
+    finally:
+        # Restore uvicorn's original signal handlers so graceful shutdown works.
+        for sig in (signal.SIGTERM, signal.SIGINT):
+            loop.remove_signal_handler(sig)
 
     # Init sentry AFTER dank_mids loads -- its Cython modules are incompatible
     # with sentry's threading auto-instrumentation at import time.
