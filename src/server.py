@@ -191,10 +191,8 @@ async def _prewarm_with_shutdown(curve_registry: Any) -> None:
 
     if shutdown_waiter in done:
         logger.info("shutdown_during_prewarm", chain=CHAIN_NAME)
-        for task in prewarm_tasks:
-            task.cancel()
         prewarm_task.cancel()
-        await asyncio.gather(*prewarm_tasks, prewarm_task, return_exceptions=True)
+        await asyncio.gather(prewarm_task, return_exceptions=True)
     else:
         shutdown_waiter.cancel()
 
