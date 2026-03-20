@@ -1,0 +1,35 @@
+{
+  "assertionResults": [
+    {
+      "id": "VAL-UNK-002",
+      "status": "pass",
+      "reason": "Modal appeared and displayed real metadata fetched from backend check_bucket endpoint: Symbol=PREMIA, Name=Premia, Decimals=18. The fix in commit 5d12591 corrected the URL from '/bucket?' to '/check_bucket?', so the fetch now returns 200 with metadata instead of 404.",
+      "evidence": [
+        "/Users/bryan/.factory/missions/6c8f9822-3f26-4b34-9e7d-524b45fe2796/evidence/startup-and-ux/metadata-flow/02-after-get-price.png"
+      ]
+    },
+    {
+      "id": "VAL-UNK-003",
+      "status": "pass",
+      "reason": "Token saved to localStorage with real metadata: {chainId:1, address:'0x6399c842dd2be3de30bf99bc7d1bbf6fa3650e70', symbol:'PREMIA', name:'Premia', decimals:18}. Token appears in autocomplete with symbol 'PREMIA' not truncated address. Autocomplete option shows 'PREMIA Premia 0x6399c842dd2be3de30bf99bc7d1bbf6fa3650e70'.",
+      "evidence": [
+        "/Users/bryan/.factory/missions/6c8f9822-3f26-4b34-9e7d-524b45fe2796/evidence/startup-and-ux/metadata-flow/03-after-save.png",
+        "/Users/bryan/.factory/missions/6c8f9822-3f26-4b34-9e7d-524b45fe2796/evidence/startup-and-ux/metadata-flow/04-autocomplete-premia.png"
+      ]
+    },
+    {
+      "id": "VAL-CROSS-001",
+      "status": "pass",
+      "reason": "Full end-to-end flow confirmed: (1) Navigated to http://localhost:5173, (2) Pasted 0x6399c842dd2be3de30bf99bc7d1bbf6fa3650e70 into Token field, (3) Clicked Get Price, (4) Unknown token modal appeared with real metadata (PREMIA/Premia/18), (5) Clicked 'Save to Local List', (6) Token appeared in autocomplete as 'PREMIA Premia', (7) Price result displayed: $0.0579 via UniswapMultiplexer.",
+      "evidence": [
+        "/Users/bryan/.factory/missions/6c8f9822-3f26-4b34-9e7d-524b45fe2796/evidence/startup-and-ux/metadata-flow/01-initial-page.png",
+        "/Users/bryan/.factory/missions/6c8f9822-3f26-4b34-9e7d-524b45fe2796/evidence/startup-and-ux/metadata-flow/02-after-get-price.png",
+        "/Users/bryan/.factory/missions/6c8f9822-3f26-4b34-9e7d-524b45fe2796/evidence/startup-and-ux/metadata-flow/03-after-save.png",
+        "/Users/bryan/.factory/missions/6c8f9822-3f26-4b34-9e7d-524b45fe2796/evidence/startup-and-ux/metadata-flow/04-autocomplete-premia.png"
+      ]
+    }
+  ],
+  "frictions": [],
+  "blockers": [],
+  "toolsUsed": ["agent-browser"]
+}
