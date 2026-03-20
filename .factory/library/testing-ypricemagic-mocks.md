@@ -10,12 +10,21 @@ The `mock_y_module` fixture in `src/tests/conftest.py` mocks the `y` package and
 
 **Key rule:** Every `y.*` submodule you import in `src/server.py` must also be registered in `sys.modules` in `mock_y_module`. If you add a new `from y.something import Foo` import to server.py, you must add corresponding entries to the fixture.
 
-Currently mocked submodules (as of milestone `check-bucket-upgrade`):
-- `y` — main module (`get_price`, `check_bucket`, `time`, `exceptions`, `classes`)
+Currently mocked submodules (as of milestone `startup-and-ux`):
+- `y` — main module (`get_price`, `check_bucket`, `time`, `exceptions`, `classes`, `prices`)
 - `y.time` — `check_node_async`
 - `y.exceptions` — `NodeNotSynced`
 - `y.classes` — parent namespace, holds `.common`
 - `y.classes.common` — contains `ERC20`
+- `y.prices` — parent namespace for pricing modules
+- `y.prices.stable_swap` — parent for Curve
+- `y.prices.stable_swap.curve` — `.curve` attr (set to `None` by default)
+- `y.prices.dex` — parent for DEX modules
+- `y.prices.dex.uniswap` — `.uniswap_multiplexer` attr (has `v2_routers={}`, `v3=None`, `v3_forks=[]`)
+- `y.prices.dex.uniswap.uniswap` — alias for the uniswap module
+- `brownie` — `.network` (is_connected=True), `.chain` (id=1, height=19000000)
+- `dank_mids` / `dank_mids.helpers` — `.setup_dank_w3_from_sync` (MagicMock)
+- `web3.middleware` — geth_poa_middleware mock
 
 **Example: adding a new submodule mock**
 

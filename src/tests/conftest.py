@@ -78,12 +78,31 @@ def mock_y_module(monkeypatch: pytest.MonkeyPatch) -> None:
     mock_y_classes: Any = MagicMock()
     mock_y_classes.common = mock_y_classes_common
 
+    # Create mock y.prices subtree for Curve and Uniswap pre-warming
+    mock_y_prices: Any = MagicMock()
+    mock_y_prices_stable_swap: Any = MagicMock()
+    mock_y_prices_stable_swap_curve: Any = MagicMock()
+    mock_y_prices_stable_swap_curve.curve = None  # No Curve registry by default
+    mock_y_prices_stable_swap.curve = mock_y_prices_stable_swap_curve
+    mock_y_prices.stable_swap = mock_y_prices_stable_swap
+
+    mock_y_prices_dex: Any = MagicMock()
+    mock_y_prices_dex_uniswap: Any = MagicMock()
+    mock_uniswap_multiplexer: Any = MagicMock()
+    mock_uniswap_multiplexer.v2_routers = {}
+    mock_uniswap_multiplexer.v3 = None
+    mock_uniswap_multiplexer.v3_forks = []
+    mock_y_prices_dex_uniswap.uniswap_multiplexer = mock_uniswap_multiplexer
+    mock_y_prices_dex.uniswap = mock_y_prices_dex_uniswap
+    mock_y_prices.dex = mock_y_prices_dex
+
     # Create main mock y module
     mock_y: Any = MagicMock()
     mock_y.get_price = MagicMock()
     mock_y.time = mock_y_time
     mock_y.exceptions = mock_y_exceptions
     mock_y.classes = mock_y_classes
+    mock_y.prices = mock_y_prices
 
     # Install mocks
     monkeypatch.setitem(sys.modules, "y", mock_y)
@@ -91,3 +110,34 @@ def mock_y_module(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setitem(sys.modules, "y.exceptions", mock_y_exceptions)
     monkeypatch.setitem(sys.modules, "y.classes", mock_y_classes)
     monkeypatch.setitem(sys.modules, "y.classes.common", mock_y_classes_common)
+    monkeypatch.setitem(sys.modules, "y.prices", mock_y_prices)
+    monkeypatch.setitem(sys.modules, "y.prices.stable_swap", mock_y_prices_stable_swap)
+    monkeypatch.setitem(sys.modules, "y.prices.stable_swap.curve", mock_y_prices_stable_swap_curve)
+    monkeypatch.setitem(sys.modules, "y.prices.dex", mock_y_prices_dex)
+    monkeypatch.setitem(sys.modules, "y.prices.dex.uniswap", mock_y_prices_dex_uniswap)
+    monkeypatch.setitem(sys.modules, "y.prices.dex.uniswap.uniswap", mock_y_prices_dex_uniswap)
+
+    # Mock brownie modules needed by lifespan tests
+    mock_brownie: Any = MagicMock()
+    mock_brownie_network: Any = MagicMock()
+    mock_brownie_network.is_connected.return_value = True
+    mock_brownie.network = mock_brownie_network
+    mock_brownie_chain: Any = MagicMock()
+    mock_brownie_chain.id = 1
+    mock_brownie_chain.height = 19000000
+    mock_brownie.chain = mock_brownie_chain
+    monkeypatch.setitem(sys.modules, "brownie", mock_brownie)
+
+    # Mock dank_mids modules needed by lifespan
+    mock_dank_mids: Any = MagicMock()
+    mock_dank_mids_helpers: Any = MagicMock()
+    mock_dank_mids_helpers.setup_dank_w3_from_sync = MagicMock()
+    mock_dank_mids.helpers = mock_dank_mids_helpers
+    monkeypatch.setitem(sys.modules, "dank_mids", mock_dank_mids)
+    monkeypatch.setitem(sys.modules, "dank_mids.helpers", mock_dank_mids_helpers)
+    mock_dank_mids_helpers_helpers: Any = MagicMock()
+    monkeypatch.setitem(sys.modules, "dank_mids.helpers._helpers", mock_dank_mids_helpers_helpers)
+
+    # Mock web3.middleware for lifespan (geth_poa_middleware)
+    mock_web3_middleware: Any = MagicMock()
+    monkeypatch.setitem(sys.modules, "web3.middleware", mock_web3_middleware)

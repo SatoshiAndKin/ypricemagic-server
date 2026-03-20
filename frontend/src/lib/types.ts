@@ -32,6 +32,12 @@ export interface BucketResponse {
   bucket: string | null;
   token: string;
   chain: string;
+  /** ERC-20 token symbol, present when backend metadata fetch succeeds */
+  symbol?: string;
+  /** ERC-20 token name, present when backend metadata fetch succeeds */
+  name?: string;
+  /** ERC-20 token decimals, present when backend metadata fetch succeeds */
+  decimals?: number;
 }
 
 export interface HealthResponse {

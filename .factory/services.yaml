@@ -1,5 +1,5 @@
 commands:
-  install: uv sync
+  install: uv sync --extra dev && cd frontend && npm install
   test: uv run pytest src/tests/ -x -q
   test_params: uv run pytest src/tests/test_params.py -x -q
   test_server: uv run pytest src/tests/test_server.py -x -q
@@ -7,3 +7,6 @@ commands:
   format: uv run ruff format src/
   format_check: uv run ruff format --check src/
   typecheck: uv run mypy src/
+  frontend_test: cd frontend && npm test -- --run
+  frontend_check: cd frontend && npm run check
+  frontend_build: cd frontend && npm run build

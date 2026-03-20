@@ -1,0 +1,60 @@
+{
+  "milestone": "startup-and-ux",
+  "round": 1,
+  "status": "pass",
+  "validatorsRun": {
+    "test": {
+      "passed": true,
+      "command": "uv run pytest src/tests/ -x -q",
+      "exitCode": 0,
+      "output": "278 passed in 13.97s"
+    },
+    "typecheck": {
+      "passed": true,
+      "command": "uv run mypy src/",
+      "exitCode": 0,
+      "output": "Success: no issues found in 12 source files"
+    },
+    "lint": {
+      "passed": true,
+      "command": "uv run ruff check src/",
+      "exitCode": 0,
+      "output": "All checks passed!"
+    },
+    "format_check": {
+      "passed": true,
+      "command": "uv run ruff format --check src/",
+      "exitCode": 0,
+      "output": "12 files already formatted"
+    },
+    "frontend_test": {
+      "passed": true,
+      "command": "cd frontend && npm test -- --run",
+      "exitCode": 0,
+      "output": "92 tests passed (5 test files)"
+    },
+    "frontend_check": {
+      "passed": true,
+      "command": "cd frontend && npm run check",
+      "exitCode": 0,
+      "output": "svelte-check found 0 errors and 0 warnings"
+    },
+    "frontend_build": {
+      "passed": true,
+      "command": "cd frontend && npm run build",
+      "exitCode": 0,
+      "output": "Built in 545ms, 399 modules transformed"
+    }
+  },
+  "reviewsSummary": {
+    "total": 3,
+    "passed": 3,
+    "failed": 0,
+    "failedFeatures": []
+  },
+  "blockingIssues": [],
+  "appliedUpdates": [],
+  "suggestedGuidanceUpdates": [],
+  "rejectedObservations": [],
+  "previousRound": null
+}
