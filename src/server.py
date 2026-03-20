@@ -321,11 +321,9 @@ def _serialize_trade_path(result: Any) -> list[dict[str, Any]] | None:
         return None
     return [
         {
+            "token": step.token,
+            "price": float(step.price),
             "source": step.source,
-            "input_token": step.input_token,
-            "output_token": step.output_token,
-            "pool": step.pool,
-            "price": step.price,
         }
         for step in path
     ]

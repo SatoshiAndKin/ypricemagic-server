@@ -429,8 +429,8 @@
               {#each result.trade_path as step, i}
                 <div class="route-step">
                   <span class="route-step-num">{i + 1}.</span>
-                  <span class="route-step-tokens">{getSymbol(step.input_token)} → {getSymbol(step.output_token)}</span>
-                  <span class="route-step-pool">{step.source}{#if step.pool} <code>{step.pool.slice(0, 10)}…</code>{/if}</span>
+                  <span class="route-step-tokens">{getSymbol(step.token)} ${step.price.toFixed(4)}</span>
+                  <span class="route-step-pool">{step.source}</span>
                 </div>
               {/each}
             </span>

@@ -265,20 +265,20 @@ def test_mic_usdc_terminal(base_url: str, timeout: int) -> TestResult:
         if trade_path is not None and len(trade_path) > 0:
             # When trade_path is present, verify USDC is terminal
             terminal_step = trade_path[-1]
-            terminal_output = terminal_step.get("output_token", "").lower()
+            terminal_token = terminal_step.get("token", "").lower()
             usdc_lower = USDC.lower()
-            if terminal_output not in (usdc_lower, "usd"):
+            if terminal_token not in (usdc_lower, "usd"):
                 return TestResult(
                     "MIC: price > 0 with USDC terminal in trade_path",
                     False,
-                    f"Expected USDC as terminal output_token, got {terminal_step.get('output_token')}",
+                    f"Expected USDC as terminal token, got {terminal_step.get('token')}",
                     time.monotonic() - start,
                     data,
                 )
             return TestResult(
                 "MIC: price > 0 with USDC terminal in trade_path",
                 True,
-                f"price={price:.6f}, terminal={terminal_step.get('output_token')}",
+                f"price={price:.6f}, terminal={terminal_step.get('token')}",
                 time.monotonic() - start,
                 data,
             )
