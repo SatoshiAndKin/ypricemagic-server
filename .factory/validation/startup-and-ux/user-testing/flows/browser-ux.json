@@ -1,0 +1,38 @@
+{
+  "groupId": "browser-ux",
+  "milestone": "startup-and-ux",
+  "assertions": {
+    "VAL-UNK-001": {
+      "status": "pass",
+      "evidence": "Browser test via Vite dev server (localhost:5173, proxying to real ethereum backend). Typed 0x6399c842dd2be3de30bf99bc7d1bbf6fa3650e70 into token field, clicked Get Price. Unknown token modal appeared with title 'Unknown Token' and buttons Save to Local List, Continue, Reject. Screenshot saved to evidence/startup-and-ux/browser-ux/03-unknown-token-modal.png.",
+      "notes": "Modal triggers reliably for unknown address. Tested against localhost:5173 Vite dev server because Docker container was built before the metadata feature commit."
+    },
+    "VAL-UNK-002": {
+      "status": "fail",
+      "evidence": "Bug found: fetchBucket in frontend/src/lib/api.ts line 90 calls /${chain}/bucket?token= but the actual backend endpoint is /${chain}/check_bucket?token=. The 404 response from /ethereum/bucket?token=... triggers fetchError=true in the modal, showing 'Metadata could not be fetched.' instead of real metadata. Verified: curl to /ethereum/check_bucket?token=0x6399c842dd2be3de30bf99bc7d1bbf6fa3650e70 returns {symbol:'PREMIA',name:'Premia',decimals:18}. The endpoint is working but fetchBucket uses the wrong path.",
+      "notes": "Root cause: api.ts fetchBucket function uses '/bucket?' instead of '/check_bucket?'. The unit tests mock fetch so they don't catch this URL mismatch."
+    },
+    "VAL-UNK-003": {
+      "status": "fail",
+      "evidence": "Because fetchBucket uses wrong URL, metadata fetch fails. Modal shows fallback. When Save to Local List is clicked, localStorage stores {symbol:'0x6399c8', name:'0x6399c842dd2be3de30bf99bc7d1bbf6fa3650e70', decimals:18} (truncated address) instead of {symbol:'PREMIA', name:'Premia', decimals:18}. Autocomplete shows '0x6399c8' symbol, not 'PREMIA'.",
+      "notes": "Same root cause as VAL-UNK-002. Fix: change '/bucket?' to '/check_bucket?' in api.ts line 90."
+    },
+    "VAL-CROSS-001": {
+      "status": "fail",
+      "evidence": "The end-to-end flow partially works: paste address -> modal appears -> save works (with fallback symbol) -> autocomplete shows '0x6399c8' -> price lookup returns $0.0579. However the modal does NOT show real metadata (PREMIA symbol/name) due to the wrong URL bug. Screenshots at evidence/startup-and-ux/browser-ux/04-token-saved.png and 05-price-fetched.png show the flow completed but with truncated address symbol instead of 'PREMIA'.",
+      "notes": "Fix: change '/bucket?' to '/check_bucket?' in api.ts fetchBucket function"
+    }
+  },
+  "frictions": [
+    "Docker frontend container was built before the metadata feature commit, so tests had to run against Vite dev server on localhost:5173"
+  ],
+  "blockers": [
+    {
+      "id": "wrong-endpoint-url",
+      "description": "fetchBucket in api.ts calls /${chain}/bucket?token= instead of /${chain}/check_bucket?token=. This causes 404 and triggers fallback for all metadata fetches.",
+      "affectedAssertions": ["VAL-UNK-002", "VAL-UNK-003", "VAL-CROSS-001"],
+      "fix": "In frontend/src/lib/api.ts line 90, change '/bucket?' to '/check_bucket?'"
+    }
+  ],
+  "toolsUsed": ["agent-browser", "curl"]
+}

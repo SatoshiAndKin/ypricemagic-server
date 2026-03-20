@@ -1,0 +1,39 @@
+{
+  "groupId": "backend-warming",
+  "milestone": "startup-and-ux",
+  "assertions": {
+    "VAL-WARM-001": {
+      "status": "pass",
+      "evidence": "Code inspection of src/server.py lines 123-129: iterates uniswap_multiplexer.v2_routers.items() and awaits router.__pools__ for each. pytest test_server.py at line 2811 tests V2 pre-warming. All 278 tests pass.",
+      "notes": "_prewarm_uniswap() function at line 115 loops over v2_routers and awaits __pools__ with per-router try/except"
+    },
+    "VAL-WARM-002": {
+      "status": "pass",
+      "evidence": "Code inspection: lines 132-144 await uniswap_multiplexer.v3.__pools__ and iterate v3_forks. pytest test at line 2959 verifies V3 pre-warming. All 278 tests pass.",
+      "notes": "_prewarm_uniswap() function handles V3 and V3 forks with individual try/except blocks"
+    },
+    "VAL-WARM-003": {
+      "status": "pass",
+      "evidence": "Code inspection: logger.info('uniswap_v2_pools_loading_started', router=name), logger.info('uniswap_v2_pools_loading_done', router=name), logger.info('uniswap_v3_pools_loading_started'), logger.info('uniswap_v3_pools_loading_done'). pytest test at line 2855 verifies started/done log calls. All 278 tests pass.",
+      "notes": "Structured logging follows same pattern as curve_registry_loading_started/done"
+    },
+    "VAL-WARM-004": {
+      "status": "pass",
+      "evidence": "Code inspection: each V2 router, V3, and V3 fork pre-warming step wrapped in individual try/except that logs warning and continues. pytest test at line 2900 verifies exception handling. All 278 tests pass.",
+      "notes": "try/except Exception as v2_err/v3_err/v3_fork_err with logger.warning('uniswap_prewarm_failed', ...)"
+    },
+    "VAL-UPDATE-001": {
+      "status": "pass",
+      "evidence": "uv.lock line 2906: source = { git = 'https://github.com/SatoshiAndKin/ypricemagic.git?rev=master#e6084f1541bdbf7aad3f26ba0f26f91d09b88f02' }. All 278 tests pass.",
+      "notes": "Commit hash e6084f15 present in uv.lock"
+    },
+    "VAL-QUAL-001": {
+      "status": "pass",
+      "evidence": "uv run pytest: 278 passed in 13.88s. uv run ruff check .: All checks passed! uv run ruff format --check .: 18 files already formatted. uv run mypy src/: Success: no issues found in 12 source files.",
+      "notes": "All four validators exit 0 with zero errors"
+    }
+  },
+  "frictions": [],
+  "blockers": [],
+  "toolsUsed": ["pytest", "ruff", "mypy", "grep", "code-inspection"]
+}

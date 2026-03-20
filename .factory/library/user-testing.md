@@ -2,49 +2,57 @@
 
 ## Overview
 
-This project is a pure Python API server (FastAPI). Validation is done via pytest and code review — no browser automation needed.
+This project has a Python API server (FastAPI) backend and a Svelte 5 frontend. Validation uses both automated tests and browser automation.
 
 ## Validation Surface
 
-No services need to be started. All assertions are verified via:
-1. `uv run pytest src/tests/ -v` (automated test suite)
-2. `uv run ruff check . && uv run ruff format --check . && uv run mypy src/` (lint + types)
-3. Code inspection for behavioral assertions
+### Backend
+- `uv run pytest src/tests/ -v` (automated test suite)
+- `uv run ruff check . && uv run ruff format --check . && uv run mypy src/` (lint + types)
+
+### Frontend
+- `cd frontend && npm test -- --run` (vitest test suite)
+- `cd frontend && npm run check` (svelte-check / TypeScript)
+- `cd frontend && npm run build` (production build)
+- agent-browser against http://localhost:8000 (live app running via Docker)
 
 ## Validation Concurrency
 
-All checks are stateless (pytest, lint, code review). Multiple validators can run simultaneously without interference. Max concurrent: **5**.
+Backend checks are stateless (pytest, lint, code review). Frontend unit tests are also stateless. Browser tests need the Docker stack running (already up on ports 8000/8080). Max concurrent validators: **5** (36GB RAM, 14 cores).
 
 ## Commands
 
 ```bash
 cd /Users/bryan/code/ypricemagic-server
 
-# Run full test suite
+# Backend
 uv run pytest src/tests/ -v
-
-# Run specific test
 uv run pytest -k 'test_name_here' -v
-
-# Lint + format + types
 uv run ruff check . && uv run ruff format --check . && uv run mypy src/
+
+# Frontend
+cd frontend && npm test -- --run
+cd frontend && npm run check
+cd frontend && npm run build
 ```
 
-## Flow Validator Guidance: Automated Tests
+## Flow Validator Guidance
 
-For all milestones in this project, validation is done through automated tests, not interactive surfaces. Flow validators should:
+### Backend assertions (VAL-WARM-*, VAL-UPDATE-*, VAL-QUAL-001)
+Verify via pytest and code inspection. No running server needed.
 
-1. Check out the implementation branch or verify current branch has the implementation
-2. Run targeted pytest commands matching the evidence commands in the validation contract
-3. Run `uv run pytest src/tests/ -v` for the full suite
-4. Run `uv run ruff check . && uv run ruff format --check . && uv run mypy src/` for lint/types
-5. Check `gh pr list` for PR status, `git rev-parse --abbrev-ref HEAD` for current branch
+### Frontend assertions (VAL-UNK-*, VAL-QUAL-002)
+Verify via vitest, svelte-check, and build. For VAL-UNK-001/002/003, also use agent-browser against http://localhost:8000.
+
+### Cross-area assertions (VAL-CROSS-001)
+Use agent-browser against http://localhost:8000 for the full unknown-token flow.
+
+### Browser testing notes
+- The Docker stack is already running: Traefik on :8000, frontend on :8080 (internal), backend on :8001 (internal)
+- Navigate to http://localhost:8000 for the full app
+- **IMPORTANT**: The Docker frontend container may be built before the latest commits. If testing new frontend features, start the Vite dev server: `cd frontend && npm run dev -- --port 5173` and test against http://localhost:5173 instead. The Vite dev server proxies API calls to localhost:8000.
+- Use a known-unknown token address for testing: `0x6399c842dd2be3de30bf99bc7d1bbf6fa3650e70` (PREMIA token, returns symbol=PREMIA/name=Premia/decimals=18 from check_bucket)
+- The check_bucket call may take several seconds for unknown tokens
 
 ### Isolation
-All checks are read-only (no database writes, no shared state). Multiple validators can run in parallel safely.
-
-### For check-bucket-upgrade assertions:
-- VAL-CB-001 through VAL-CB-005: verify via `uv run pytest -k 'test_check_bucket' -v`
-- VAL-CB-006: verify via `uv run pytest -v && uv run ruff check . && uv run ruff format --check . && uv run mypy src/`
-- VAL-CB-007: verify via `gh pr list` and `git rev-parse --abbrev-ref HEAD`
-- Implementation is on branch `feat/check-bucket-metadata-and-dedup`
+Backend checks are read-only. Browser tests modify localStorage (local tokens) but each validator instance can use its own browser context.

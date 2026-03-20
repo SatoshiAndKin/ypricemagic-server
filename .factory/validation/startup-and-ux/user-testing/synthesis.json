@@ -1,0 +1,52 @@
+{
+  "milestone": "startup-and-ux",
+  "round": 1,
+  "status": "fail",
+  "assertionsSummary": {
+    "total": 13,
+    "passed": 10,
+    "failed": 3,
+    "blocked": 0
+  },
+  "passedAssertions": [
+    "VAL-WARM-001",
+    "VAL-WARM-002",
+    "VAL-WARM-003",
+    "VAL-WARM-004",
+    "VAL-UPDATE-001",
+    "VAL-UNK-001",
+    "VAL-UNK-004",
+    "VAL-UNK-005",
+    "VAL-QUAL-001",
+    "VAL-QUAL-002"
+  ],
+  "failedAssertions": [
+    {
+      "id": "VAL-UNK-002",
+      "reason": "fetchBucket in api.ts uses wrong URL path: calls /${chain}/bucket?token= instead of /${chain}/check_bucket?token=. Returns 404, triggers fallback instead of real metadata. Fix: change '/bucket?' to '/check_bucket?' on line 90 of frontend/src/lib/api.ts."
+    },
+    {
+      "id": "VAL-UNK-003",
+      "reason": "Because fetchBucket uses wrong URL, metadata fetch fails. Token is saved to localStorage with truncated address as symbol ('0x6399c8') instead of real symbol ('PREMIA'). Same root cause as VAL-UNK-002."
+    },
+    {
+      "id": "VAL-CROSS-001",
+      "reason": "End-to-end flow partially works (modal triggers, save works, price fetches) but modal does not show real metadata (PREMIA/Premia/18) due to wrong URL bug. Same root cause as VAL-UNK-002."
+    }
+  ],
+  "blockedAssertions": [],
+  "appliedUpdates": [
+    {
+      "target": "user-testing.md",
+      "description": "Noted that Docker frontend container may not have latest code (was built before metadata feature commit). Tests should use Vite dev server at localhost:5173 for frontend-only features.",
+      "source": "flow-report"
+    }
+  ],
+  "previousRound": null,
+  "rootCauseIssue": {
+    "file": "frontend/src/lib/api.ts",
+    "line": 90,
+    "description": "fetchBucket uses wrong endpoint path '/bucket?' instead of '/check_bucket?'",
+    "fix": "Change `${BASE_URL}/${chain}/bucket?${params}` to `${BASE_URL}/${chain}/check_bucket?${params}`"
+  }
+}
