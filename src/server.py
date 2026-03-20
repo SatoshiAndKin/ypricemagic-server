@@ -112,6 +112,45 @@ async def _get_token_lock(token: str) -> asyncio.Lock:
         return _bucket_locks[token]
 
 
+async def _prewarm_uniswap() -> None:
+    """Pre-load Uniswap V2/V3 pool indexes.
+
+    Each sub-step is wrapped in try/except so partial failures don't prevent startup.
+    """
+    from y.prices.dex.uniswap import uniswap_multiplexer  # type: ignore[attr-defined]
+
+    # V2: iterate all V2 routers and await __pools__ for each
+    for name, router in uniswap_multiplexer.v2_routers.items():
+        try:
+            logger.info("uniswap_v2_pools_loading_started", router=name)
+            await router.__pools__  # type: ignore[attr-defined]
+            logger.info("uniswap_v2_pools_loading_done", router=name)
+        except Exception as v2_err:
+            logger.warning("uniswap_prewarm_failed", router=name, version="v2", error=str(v2_err))
+
+    # V3: load the main V3 pool index and any V3 forks
+    if uniswap_multiplexer.v3:
+        try:
+            logger.info("uniswap_v3_pools_loading_started")
+            await uniswap_multiplexer.v3.__pools__
+            logger.info("uniswap_v3_pools_loading_done")
+        except Exception as v3_err:
+            logger.warning("uniswap_prewarm_failed", version="v3", error=str(v3_err))
+
+    for fork in uniswap_multiplexer.v3_forks:
+        try:
+            logger.info("uniswap_v3_pools_loading_started", fork=str(fork))
+            await fork.__pools__
+            logger.info("uniswap_v3_pools_loading_done", fork=str(fork))
+        except Exception as v3_fork_err:
+            logger.warning(
+                "uniswap_prewarm_failed",
+                version="v3_fork",
+                fork=str(fork),
+                error=str(v3_fork_err),
+            )
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> Any:
     # Install after uvicorn has configured its loggers (CLI resets them at startup).
@@ -176,6 +215,11 @@ async def lifespan(app: FastAPI) -> Any:
             _ = _curve_registry._done
             await _curve_registry.__coin_to_pools__
             logger.info("curve_registry_loading_done")
+
+        # Pre-load Uniswap V2 and V3 pool indexes at startup so the first
+        # pricing request for DEX-routed tokens doesn't block on expensive
+        # factory event scans.
+        await _prewarm_uniswap()
     except Exception as e:
         logger.error("startup_failed", error=str(e))
         raise
