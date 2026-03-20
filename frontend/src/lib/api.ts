@@ -87,7 +87,7 @@ export async function fetchBucket(
   signal?: AbortSignal,
 ): Promise<BucketResponse> {
   const params = new URLSearchParams({ token });
-  const res = await fetchWithTimeout(`${BASE_URL}/${chain}/bucket?${params}`, FETCH_TIMEOUT_MS, signal);
+  const res = await fetchWithTimeout(`${BASE_URL}/${chain}/check_bucket?${params}`, FETCH_TIMEOUT_MS, signal);
   return parseResponse<BucketResponse>(res);
 }
 

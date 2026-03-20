@@ -110,6 +110,11 @@
     onselect?.(token, token.address);
   }
 
+  // The `input` event fires for ALL user-initiated value changes: typing, pasting
+  // (Ctrl+V / right-click paste), drag-drop, and Playwright's .fill(). This is the
+  // single source of truth for marking user edits. Programmatic changes via
+  // `setFromAddress` explicitly set `wasUserEdited = false` to suppress the unknown
+  // token modal for URL-populated and chain-change values.
   function handleInput(e: Event): void {
     const target = e.target as HTMLInputElement;
     inputValue = target.value;

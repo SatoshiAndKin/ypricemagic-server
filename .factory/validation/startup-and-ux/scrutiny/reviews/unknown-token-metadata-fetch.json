@@ -1,0 +1,40 @@
+{
+  "featureId": "unknown-token-metadata-fetch",
+  "milestone": "startup-and-ux",
+  "status": "pass",
+  "assertionResults": [
+    {
+      "assertionId": "VAL-UNK-001",
+      "status": "pass",
+      "notes": "The Autocomplete.svelte handleInput function fires on the `input` DOM event which covers typing, Ctrl+V paste, right-click paste, drag-drop, and Playwright's .fill(). A comment was added documenting this: 'The `input` event fires for ALL user-initiated value changes: typing, pasting (Ctrl+V / right-click paste), drag-drop, and Playwright's .fill().' wasUserEdited=true is correctly set on all these paths. setFromAddress() explicitly sets wasUserEdited=false to suppress the modal for programmatic changes."
+    },
+    {
+      "assertionId": "VAL-UNK-002",
+      "status": "pass",
+      "notes": "UnknownTokenModal.svelte fetches metadata in onMount() using fetchBucket(chain, token, controller.signal) with a 10-second abort timeout. Shows loading spinner while loading=true. On success with all fields present, displays real symbol, name, decimals in .modal-metadata. Conditional rendering via {:else if metadata} and {:else} blocks."
+    },
+    {
+      "assertionId": "VAL-UNK-003",
+      "status": "pass",
+      "notes": "onsave callback passes metadata (or null on failure). QuoteForm.svelte save logic: symbol = metadata?.symbol ?? address.slice(0, 8), name = metadata?.name ?? address, decimals = metadata?.decimals ?? 18. Tests confirm this logic produces correct results for both real metadata and null cases."
+    },
+    {
+      "assertionId": "VAL-UNK-004",
+      "status": "pass",
+      "notes": "fetchBucket rejection and non-OK responses both set fetchError=true and loading=false. The template shows fallback UI when !loading && !metadata. The Save button remains enabled and calls onsave(null) which triggers the fallback symbol/name/decimals logic in QuoteForm."
+    },
+    {
+      "assertionId": "VAL-UNK-005",
+      "status": "pass",
+      "notes": "BucketResponse in types.ts now has optional symbol?: string, name?: string, decimals?: number fields with JSDoc comments. svelte-check passes with 0 errors and 0 warnings. fetchBucket correctly passes through these fields."
+    },
+    {
+      "assertionId": "VAL-QUAL-002",
+      "status": "pass",
+      "notes": "All 92 frontend tests pass (5 test files, 10 new tests added for this feature). npm run build succeeds. npm run check (svelte-check) passes with 0 errors."
+    }
+  ],
+  "codeReviewIssues": [],
+  "sharedStateObservations": [],
+  "summary": "Implementation is correct and complete. The UnknownTokenModal correctly uses onMount with AbortController for 10-second timeout, which is appropriate UX. The comment added to Autocomplete.svelte clarifying the input event coverage is helpful. The metadata extraction guard `resp.symbol && resp.name != null && resp.decimals != null` is correct (uses != null to accept 0 decimals). Save logic fallback chain is correct. 10 new tests added covering metadata fetch, fallback, and save flows."
+}

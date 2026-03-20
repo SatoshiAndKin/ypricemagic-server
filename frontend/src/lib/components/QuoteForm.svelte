@@ -40,9 +40,13 @@
   // Unknown token modal state
   let showUnknownModal = $state(false);
   let unknownToken = $state('');
-  let unknownModalResolve = $state<((action: 'save' | 'continue' | 'reject') => void) | null>(
-    null
-  );
+  let unknownModalResolve = $state<
+    | ((
+        action: 'save' | 'continue' | 'reject',
+        metadata?: { symbol: string; name: string; decimals: number } | null,
+      ) => void)
+    | null
+  >(null);
 
   // Abort controller for in-flight requests
   let abortController: AbortController | null = null;
@@ -105,16 +109,16 @@
     return new Promise<'proceed' | 'reject'>((resolve) => {
       unknownToken = address;
       showUnknownModal = true;
-      unknownModalResolve = (action) => {
+      unknownModalResolve = (action, metadata) => {
         showUnknownModal = false;
         unknownModalResolve = null;
         if (action === 'save') {
           addLocalToken({
             chainId,
             address,
-            symbol: address.slice(0, 8),
-            name: address,
-            decimals: 18,
+            symbol: metadata?.symbol ?? address.slice(0, 8),
+            name: metadata?.name ?? address,
+            decimals: metadata?.decimals ?? 18,
           });
           resolve('proceed');
         } else if (action === 'continue') {
@@ -444,7 +448,7 @@
     <UnknownTokenModal
       token={unknownToken}
       {chain}
-      onsave={() => unknownModalResolve?.('save')}
+      onsave={(metadata) => unknownModalResolve?.('save', metadata)}
       oncontinue={() => unknownModalResolve?.('continue')}
       onreject={() => unknownModalResolve?.('reject')}
     />

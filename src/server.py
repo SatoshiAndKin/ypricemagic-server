@@ -121,6 +121,84 @@ async def _get_token_lock(token: str) -> asyncio.Lock:
         return _bucket_locks[token]
 
 
+async def _prewarm_uniswap() -> None:
+    """Pre-load Uniswap V2/V3 pool indexes.
+
+    Each sub-step is wrapped in try/except so partial failures don't prevent startup.
+    """
+    from y.prices.dex.uniswap import uniswap_multiplexer  # type: ignore[attr-defined]
+
+    # V2: iterate all V2 routers and await __pools__ for each
+    for name, router in uniswap_multiplexer.v2_routers.items():
+        try:
+            logger.info("uniswap_v2_pools_loading_started", router=name)
+            await router.__pools__  # type: ignore[attr-defined]
+            logger.info("uniswap_v2_pools_loading_done", router=name)
+        except Exception as v2_err:
+            logger.warning("uniswap_prewarm_failed", router=name, version="v2", error=str(v2_err))
+
+    # V3: load the main V3 pool index and any V3 forks
+    if uniswap_multiplexer.v3:
+        try:
+            logger.info("uniswap_v3_pools_loading_started")
+            await uniswap_multiplexer.v3.__pools__
+            logger.info("uniswap_v3_pools_loading_done")
+        except Exception as v3_err:
+            logger.warning("uniswap_prewarm_failed", version="v3", error=str(v3_err))
+
+    for fork in uniswap_multiplexer.v3_forks:
+        try:
+            logger.info("uniswap_v3_pools_loading_started", fork=str(fork))
+            await fork.__pools__
+            logger.info("uniswap_v3_pools_loading_done", fork=str(fork))
+        except Exception as v3_fork_err:
+            logger.warning(
+                "uniswap_prewarm_failed",
+                version="v3_fork",
+                fork=str(fork),
+                error=str(v3_fork_err),
+            )
+
+
+async def _prewarm_with_shutdown(curve_registry: Any) -> None:
+    """Run Curve + Uniswap prewarm, cancelling immediately on shutdown signal."""
+
+    async def _prewarm_curve() -> None:
+        if curve_registry and hasattr(curve_registry, "_done"):
+            logger.info("curve_registry_loading_started")
+            _ = curve_registry._done
+            await curve_registry.__coin_to_pools__
+            logger.info("curve_registry_loading_done")
+
+    prewarm_tasks: list[asyncio.Task[None]] = [
+        asyncio.create_task(_prewarm_curve()),
+        asyncio.create_task(_prewarm_uniswap()),
+    ]
+
+    async def _wait_for_shutdown() -> None:
+        await _shutdown_event.wait()
+
+    shutdown_waiter = asyncio.create_task(_wait_for_shutdown())
+
+    async def _run_prewarm() -> None:
+        await asyncio.gather(*prewarm_tasks, return_exceptions=True)
+
+    prewarm_task = asyncio.create_task(_run_prewarm())
+    done, _ = await asyncio.wait(
+        [prewarm_task, shutdown_waiter],
+        return_when=asyncio.FIRST_COMPLETED,
+    )
+
+    if shutdown_waiter in done:
+        logger.info("shutdown_during_prewarm", chain=CHAIN_NAME)
+        for task in prewarm_tasks:
+            task.cancel()
+        prewarm_task.cancel()
+        await asyncio.gather(*prewarm_tasks, prewarm_task, return_exceptions=True)
+    else:
+        shutdown_waiter.cancel()
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> Any:
     # Install after uvicorn has configured its loggers (CLI resets them at startup).
@@ -184,31 +262,7 @@ async def lifespan(app: FastAPI) -> Any:
         # can shut down immediately instead of blocking for minutes.
         from y.prices.stable_swap.curve import curve as _curve_registry
 
-        async def _prewarm_curve() -> None:
-            if _curve_registry and hasattr(_curve_registry, "_done"):
-                logger.info("curve_registry_loading_started")
-                _ = _curve_registry._done
-                await _curve_registry.__coin_to_pools__
-                logger.info("curve_registry_loading_done")
-
-        prewarm_task = asyncio.create_task(_prewarm_curve())
-
-        async def _wait_for_shutdown() -> None:
-            await _shutdown_event.wait()
-
-        shutdown_waiter = asyncio.create_task(_wait_for_shutdown())
-        done, _ = await asyncio.wait(
-            [prewarm_task, shutdown_waiter],
-            return_when=asyncio.FIRST_COMPLETED,
-        )
-
-        if shutdown_waiter in done:
-            logger.info("shutdown_during_prewarm", chain=CHAIN_NAME)
-            prewarm_task.cancel()
-            await asyncio.gather(prewarm_task, return_exceptions=True)
-        else:
-            shutdown_waiter.cancel()
-
+        await _prewarm_with_shutdown(_curve_registry)
     except Exception as e:
         logger.error("startup_failed", error=str(e))
         raise
