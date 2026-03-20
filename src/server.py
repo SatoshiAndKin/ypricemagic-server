@@ -218,6 +218,7 @@ async def lifespan(app: FastAPI) -> Any:
     for sig in (signal.SIGTERM, signal.SIGINT):
         loop.add_signal_handler(sig, _signal_shutdown_handler)
 
+    _startup_start = time.monotonic()
     logger.info("startup", chain=CHAIN_NAME)
     try:
         from brownie import network
@@ -280,6 +281,13 @@ async def lifespan(app: FastAPI) -> Any:
         # Restore uvicorn's original signal handlers so graceful shutdown works.
         for sig in (signal.SIGTERM, signal.SIGINT):
             loop.remove_signal_handler(sig)
+
+    _startup_elapsed = time.monotonic() - _startup_start
+    logger.info(
+        "server_ready",
+        chain=CHAIN_NAME,
+        startup_seconds=round(_startup_elapsed, 2),
+    )
 
     # Init sentry AFTER dank_mids loads -- its Cython modules are incompatible
     # with sentry's threading auto-instrumentation at import time.
