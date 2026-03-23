@@ -308,36 +308,7 @@ async def lifespan(app: FastAPI) -> Any:
             network.connect(network_id)  # type: ignore[attr-defined]
         logger.info("brownie_connected", network_id=network_id)
 
-        # Workaround: dank_mids sets concurrent.futures.process.EXTRA_QUEUED_CALLS
-        # to 50,000 at import time. On macOS, SEM_VALUE_MAX is 32,767, so any
-        # ProcessPoolExecutor queue exceeding that limit fails with EINVAL.
-        # Pre-import dank_mids (triggers the monkey-patch), then cap the value.
-        import sys
-
-        if sys.platform == "darwin":
-            import concurrent.futures.process as _cfp
-
-            import dank_mids  # noqa: F401 — triggers EXTRA_QUEUED_CALLS = 50000
-
-            _sem_value_max: int = getattr(
-                __import__("multiprocessing.synchronize", fromlist=["SEM_VALUE_MAX"]),
-                "SEM_VALUE_MAX",
-                32767,
-            )
-            _cfp.EXTRA_QUEUED_CALLS = min(  # type: ignore[misc]
-                _cfp.EXTRA_QUEUED_CALLS, _sem_value_max - 1
-            )
-
-        import contextlib
-
-        from dank_mids.helpers import setup_dank_w3_from_sync
-        from web3.middleware import geth_poa_middleware  # type: ignore[attr-defined]
-
-        # Brownie injects geth_poa_middleware for PoA chains (polygon, bsc, etc.).
-        # dank_mids also injects it, causing "same un-named instance twice".
-        # Remove it first so dank_mids can re-add it cleanly.
-        with contextlib.suppress(ValueError):
-            network.web3.middleware_onion.remove(geth_poa_middleware)  # type: ignore[arg-type]
+        from dank_mids.helpers._helpers import setup_dank_w3_from_sync
 
         setup_dank_w3_from_sync(network.web3)
         logger.info("dank_mids_patched")
