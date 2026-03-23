@@ -8,10 +8,10 @@ x-ypm-service: &ypm-service
   init: true
   healthcheck:
     test: ["CMD-SHELL", "test ! -f /tmp/drain && curl -sf http://localhost:8001/health || exit 1"]
-    interval: 30s
-    timeout: 10s
-    retries: 3
-    start_period: 60s
+    interval: 10s
+    timeout: 5s
+    retries: 1
+    start_period: 300s
   networks:
     - traefik-proxy
   restart: unless-stopped
