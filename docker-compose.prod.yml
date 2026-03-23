@@ -15,7 +15,7 @@ x-ypm-service: &ypm-service
     interval: 10s
     timeout: 5s
     retries: 1
-    start_period: 300s
+    start_period: 600s
   networks:
     - traefik-proxy
   restart: unless-stopped
