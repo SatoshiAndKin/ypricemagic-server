@@ -128,7 +128,7 @@ class ComparisonResult:
 _TIMEOUT = 300
 
 _CACHE_DIR = Path(os.environ.get("CACHE_DIR", Path(__file__).resolve().parent.parent / "cache"))
-_llama_cache = diskcache.Cache(_CACHE_DIR / "defillama-prices")
+_llama_cache = diskcache.Cache(_CACHE_DIR / "defillama-prices", disk=diskcache.JSONDisk)
 
 
 def _http_get_json(url: str, timeout: int = _TIMEOUT) -> object:

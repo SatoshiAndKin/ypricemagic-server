@@ -5,6 +5,7 @@ from datetime import UTC, datetime
 from typing import cast
 
 import diskcache
+from diskcache import JSONDisk
 
 from src.logger import get_logger
 
@@ -26,7 +27,7 @@ def get_cache() -> diskcache.Cache:
         with _lock:
             if _cache is None:
                 os.makedirs(CACHE_DIR, exist_ok=True)
-                _cache = diskcache.Cache(CACHE_DIR)
+                _cache = diskcache.Cache(CACHE_DIR, disk=JSONDisk)
     return _cache
 
 
