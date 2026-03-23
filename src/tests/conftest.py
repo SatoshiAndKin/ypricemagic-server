@@ -131,13 +131,10 @@ def mock_y_module(monkeypatch: pytest.MonkeyPatch) -> None:
     # Mock dank_mids modules needed by lifespan
     mock_dank_mids: Any = MagicMock()
     mock_dank_mids_helpers: Any = MagicMock()
-    mock_dank_mids_helpers.setup_dank_w3_from_sync = MagicMock()
+    mock_dank_mids_helpers_helpers: Any = MagicMock()
+    mock_dank_mids_helpers_helpers.setup_dank_w3_from_sync = MagicMock()
     mock_dank_mids.helpers = mock_dank_mids_helpers
+    mock_dank_mids.helpers._helpers = mock_dank_mids_helpers_helpers
     monkeypatch.setitem(sys.modules, "dank_mids", mock_dank_mids)
     monkeypatch.setitem(sys.modules, "dank_mids.helpers", mock_dank_mids_helpers)
-    mock_dank_mids_helpers_helpers: Any = MagicMock()
     monkeypatch.setitem(sys.modules, "dank_mids.helpers._helpers", mock_dank_mids_helpers_helpers)
-
-    # Mock web3.middleware for lifespan (geth_poa_middleware)
-    mock_web3_middleware: Any = MagicMock()
-    monkeypatch.setitem(sys.modules, "web3.middleware", mock_web3_middleware)

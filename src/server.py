@@ -169,8 +169,83 @@ async def _prewarm_uniswap() -> None:
     await asyncio.gather(*tasks, return_exceptions=True)
 
 
+async def _prewarm_compound() -> None:
+    """Pre-load Compound-like comptroller markets so first price request is fast."""
+    try:
+        from y.prices.lending.compound import Comptroller, compound
+
+        if not compound or not hasattr(compound, "trollers"):
+            return
+        logger.info("compound_markets_loading_started", comptrollers=len(compound.trollers))
+        # Load all comptroller market lists in parallel using a_sync's map API
+        trollers = compound.trollers.values()
+        async for troller, markets in Comptroller.markets.map(trollers):  # type: ignore[arg-type,var-annotated]
+            logger.debug("compound_troller_loaded", troller=str(troller), markets=len(markets))
+        logger.info("compound_markets_loading_done")
+    except Exception as e:
+        logger.warning("compound_prewarm_failed", error=str(e))
+
+
+async def _prewarm_chainlink() -> None:
+    """Pre-load Chainlink FeedConfirmed events so first has_feed() call is fast."""
+    try:
+        from y.prices.chainlink import chainlink
+
+        if not chainlink or not hasattr(chainlink, "_feeds_from_events"):
+            return
+        if chainlink._feeds_from_events is None:
+            return
+        import dank_mids
+
+        logger.info("chainlink_feeds_loading_started")
+        # Trigger the event scan by iterating feeds up to current block
+        async for _ in chainlink._feeds_thru_block(await dank_mids.eth.block_number):  # type: ignore[attr-defined]
+            pass
+        logger.info("chainlink_feeds_loading_done")
+    except Exception as e:
+        logger.warning("chainlink_prewarm_failed", error=str(e))
+
+
+async def _prewarm_aave() -> None:
+    """Pre-load Aave pool registries (V1/V2/V3) in parallel."""
+    try:
+        from y.prices.lending.aave import aave
+
+        logger.info("aave_pools_loading_started")
+        await aave.__pools__
+        logger.info("aave_pools_loading_done")
+    except Exception as e:
+        logger.warning("aave_prewarm_failed", error=str(e))
+
+
+async def _prewarm_balancer() -> None:
+    """Pre-load Balancer V1/V2 version objects."""
+    try:
+        from y.prices.dex.balancer.balancer import balancer_multiplexer
+
+        logger.info("balancer_loading_started")
+        await balancer_multiplexer.__versions__
+        logger.info("balancer_loading_done")
+    except Exception as e:
+        logger.warning("balancer_prewarm_failed", error=str(e))
+
+
+async def _prewarm_gearbox() -> None:
+    """Pre-load Gearbox diesel pools (mainnet only)."""
+    try:
+        from y.prices.gearbox import gearbox
+
+        if not gearbox or isinstance(gearbox, set):
+            return
+        logger.info("gearbox_loading_started")
+        await gearbox.diesel_tokens()
+        logger.info("gearbox_loading_done")
+    except Exception as e:
+        logger.warning("gearbox_prewarm_failed", error=str(e))
+
+
 async def _prewarm_with_shutdown(curve_registry: Any) -> None:
-    """Run Curve + Uniswap prewarm, cancelling immediately on shutdown signal."""
+    """Run all prewarm tasks in parallel, cancelling immediately on shutdown signal."""
 
     async def _prewarm_curve() -> None:
         if curve_registry and hasattr(curve_registry, "_done"):
@@ -182,6 +257,11 @@ async def _prewarm_with_shutdown(curve_registry: Any) -> None:
     prewarm_tasks: list[asyncio.Task[None]] = [
         asyncio.create_task(_prewarm_curve()),
         asyncio.create_task(_prewarm_uniswap()),
+        asyncio.create_task(_prewarm_compound()),
+        asyncio.create_task(_prewarm_chainlink()),
+        asyncio.create_task(_prewarm_aave()),
+        asyncio.create_task(_prewarm_balancer()),
+        asyncio.create_task(_prewarm_gearbox()),
     ]
 
     async def _wait_for_shutdown() -> None:
@@ -228,36 +308,7 @@ async def lifespan(app: FastAPI) -> Any:
             network.connect(network_id)  # type: ignore[attr-defined]
         logger.info("brownie_connected", network_id=network_id)
 
-        # Workaround: dank_mids sets concurrent.futures.process.EXTRA_QUEUED_CALLS
-        # to 50,000 at import time. On macOS, SEM_VALUE_MAX is 32,767, so any
-        # ProcessPoolExecutor queue exceeding that limit fails with EINVAL.
-        # Pre-import dank_mids (triggers the monkey-patch), then cap the value.
-        import sys
-
-        if sys.platform == "darwin":
-            import concurrent.futures.process as _cfp
-
-            import dank_mids  # noqa: F401 — triggers EXTRA_QUEUED_CALLS = 50000
-
-            _sem_value_max: int = getattr(
-                __import__("multiprocessing.synchronize", fromlist=["SEM_VALUE_MAX"]),
-                "SEM_VALUE_MAX",
-                32767,
-            )
-            _cfp.EXTRA_QUEUED_CALLS = min(  # type: ignore[misc]
-                _cfp.EXTRA_QUEUED_CALLS, _sem_value_max - 1
-            )
-
-        import contextlib
-
-        from dank_mids.helpers import setup_dank_w3_from_sync
-        from web3.middleware import geth_poa_middleware  # type: ignore[attr-defined]
-
-        # Brownie injects geth_poa_middleware for PoA chains (polygon, bsc, etc.).
-        # dank_mids also injects it, causing "same un-named instance twice".
-        # Remove it first so dank_mids can re-add it cleanly.
-        with contextlib.suppress(ValueError):
-            network.web3.middleware_onion.remove(geth_poa_middleware)  # type: ignore[arg-type]
+        from dank_mids.helpers._helpers import setup_dank_w3_from_sync
 
         setup_dank_w3_from_sync(network.web3)
         logger.info("dank_mids_patched")
