@@ -1,5 +1,26 @@
 # Changelog
 
+## [0.13.0](https://github.com/SatoshiAndKin/ypricemagic-server/compare/v0.12.0...v0.13.0) (2026-03-28)
+
+
+### Features
+
+* fetch real token metadata for unknown tokens + startup UX improvements ([#136](https://github.com/SatoshiAndKin/ypricemagic-server/issues/136)) ([2f485dd](https://github.com/SatoshiAndKin/ypricemagic-server/commit/2f485ddf952d5798fefb0d167117f41e1bdbaa08))
+* use ypricemagic pool-index branch with Curve perf improvements ([#126](https://github.com/SatoshiAndKin/ypricemagic-server/issues/126)) ([08c50e7](https://github.com/SatoshiAndKin/ypricemagic-server/commit/08c50e7c3b3cb0f4606c2865d8e56f41f5edfb68))
+
+
+### Bug Fixes
+
+* concurrent uniswap prewarm and restore uvicorn signal handlers ([#139](https://github.com/SatoshiAndKin/ypricemagic-server/issues/139)) ([4efbc55](https://github.com/SatoshiAndKin/ypricemagic-server/commit/4efbc5594dffb123bcdcc2bc4b2424576c636bd1))
+* graceful shutdown during startup prewarm ([#137](https://github.com/SatoshiAndKin/ypricemagic-server/issues/137)) ([c2bb682](https://github.com/SatoshiAndKin/ypricemagic-server/commit/c2bb68287c21c525d82b6eb1492aa00758d9c300))
+* show 'Import token' option for unknown addresses in autocomplete ([#146](https://github.com/SatoshiAndKin/ypricemagic-server/issues/146)) ([b013b46](https://github.com/SatoshiAndKin/ypricemagic-server/commit/b013b461f1a6d92e424164bbbe6c286a8a005d11))
+* simplify prewarm cancellation — gather propagates cancel to children ([#138](https://github.com/SatoshiAndKin/ypricemagic-server/issues/138)) ([ac938dc](https://github.com/SatoshiAndKin/ypricemagic-server/commit/ac938dccd88136418b43a36782bccb4bbb44de11))
+
+
+### Performance Improvements
+
+* prewarm compound, chainlink, aave, balancer, and gearbox at startup ([#142](https://github.com/SatoshiAndKin/ypricemagic-server/issues/142)) ([bc77d7f](https://github.com/SatoshiAndKin/ypricemagic-server/commit/bc77d7f528f56f0de4faaddf6f7d929b9e6cf4ba))
+
 ## [0.12.0](https://github.com/SatoshiAndKin/ypricemagic-server/compare/v0.11.0...v0.12.0) (2026-03-16)
 
 
