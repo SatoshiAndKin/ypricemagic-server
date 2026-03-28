@@ -350,6 +350,13 @@ def _ypm_only(base_url: str, token: Token) -> ComparisonResult:
     ypm_price, ypm_err = fetch_ypm_price(base_url, token, timestamp=None)
     now_ts = int(datetime.now(tz=UTC).timestamp())
 
+    if ypm_err is not None:
+        passed: bool | str | None = False
+        verdict = "FAIL (YPM error, no reference)"
+    else:
+        passed = "ypm_only"
+        verdict = "YPM_ONLY (no reference)"
+
     result = ComparisonResult(
         token=token,
         timestamp=now_ts,
@@ -357,11 +364,10 @@ def _ypm_only(base_url: str, token: Token) -> ComparisonResult:
         ref_price=None,
         ypm_error=ypm_err,
         ref_error="no DefiLlama data",
-        passed="ypm_only",
+        passed=passed,
     )
 
     ypm_str = f"ERROR ({ypm_err})" if ypm_err is not None else _fmt_price(ypm_price)  # type: ignore[arg-type]
-    verdict = "YPM_ONLY (no reference)" if ypm_err is None else "YPM_ONLY (YPM also failed)"
 
     print(label)
     print(f"  YPM: {ypm_str}")
@@ -561,6 +567,18 @@ def _compare_latest_prices(
             print(f"[{token.chain}] {token.name} ({_short_addr(token.address)}) @ latest")
             print("  -- SKIP (YPM failed in historical section)")
             print()
+            now_ts = int(datetime.now(tz=UTC).timestamp())
+            results.append(
+                ComparisonResult(
+                    token=token,
+                    timestamp=now_ts,
+                    ypm_price=None,
+                    ref_price=None,
+                    ypm_error="skipped (failed in historical section)",
+                    ref_error=None,
+                    passed=None,
+                )
+            )
             continue
         ref = current_prices.get(token.address)
         if ref is None:
