@@ -23,6 +23,8 @@
 
   type MatchToken = TokenlistToken & { sourceList: string; _needsDisambiguation?: boolean };
 
+  const HEX_ADDR = /^0x[0-9a-fA-F]{40}$/;
+
   let inputValue = $state('');
   let inputAddress = $state('');
   let matches = $state<MatchToken[]>([]);
@@ -74,7 +76,8 @@
     }));
 
     highlightIndex = -1;
-    isOpen = true;
+    // Keep dropdown open for valid hex addresses even with no matches (shows "Import token")
+    isOpen = matches.length > 0 || HEX_ADDR.test(query.trim());
   }
 
   // Re-run search when chain or tokenIndex changes
@@ -129,7 +132,7 @@
   }
 
   function handleFocus(): void {
-    if (matches.length > 0) {
+    if (matches.length > 0 || HEX_ADDR.test(inputValue.trim())) {
       isOpen = true;
     }
   }
@@ -156,9 +159,15 @@
       }
     } else if (e.key === 'Enter') {
       e.preventDefault();
-      const idx = highlightIndex >= 0 ? highlightIndex : 0;
       if (matches.length > 0) {
+        const idx = highlightIndex >= 0 ? highlightIndex : 0;
         selectToken(matches[idx]);
+      } else if (HEX_ADDR.test(inputValue.trim())) {
+        const addr = inputValue.trim();
+        inputAddress = addr;
+        isOpen = false;
+        highlightIndex = -1;
+        onselect?.(null, addr);
       }
     } else if (e.key === 'Escape') {
       isOpen = false;
@@ -239,7 +248,34 @@
   {#if isOpen}
     <div bind:this={dropdownEl} class="autocomplete-dropdown" role="listbox">
       {#if matches.length === 0}
-        <div class="autocomplete-no-match">No matches</div>
+        {#if HEX_ADDR.test(inputValue.trim())}
+          <div
+            class="autocomplete-item"
+            class:highlighted={highlightIndex === 0}
+            role="option"
+            aria-selected={highlightIndex === 0}
+            tabindex={-1}
+            onmouseenter={() => (highlightIndex = 0)}
+            onmousedown={(e) => {
+              e.preventDefault();
+              const addr = inputValue.trim();
+              inputValue = addr;
+              inputAddress = addr;
+              isOpen = false;
+              highlightIndex = -1;
+              onselect?.(null, addr);
+            }}
+          >
+            <div class="autocomplete-meta">
+              <div class="autocomplete-title">
+                <span class="autocomplete-symbol">Import token</span>
+              </div>
+              <div class="autocomplete-addr">{inputValue.trim()}</div>
+            </div>
+          </div>
+        {:else}
+          <div class="autocomplete-no-match">No matches</div>
+        {/if}
       {:else}
         {#each matches as token, i}
           <div

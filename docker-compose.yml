@@ -27,6 +27,8 @@ services:
       ETHERSCAN_TOKEN: ${ETHERSCAN_TOKEN}
       SENTRY_DSN: ${SENTRY_DSN:-}
       LOG_LEVEL: ${LOG_LEVEL:-DEBUG}
+      DANKMIDS_REQUESTS_PER_SECOND: 500
+      DANKMIDS_MAX_JSONRPC_BATCH_SIZE: 1000
     volumes:
       - cache-ethereum:/data/cache
       - brownie-ethereum:/root/.brownie
@@ -45,7 +47,6 @@ services:
       traefik.http.routers.ypm-health.rule: "Host(`${VIRTUAL_HOST:-localhost}`) && Path(`/health`)"
       traefik.http.routers.ypm-health.entrypoints: web
       traefik.http.routers.ypm-health.service: ypm-ethereum
-
 
   frontend:
     build:
