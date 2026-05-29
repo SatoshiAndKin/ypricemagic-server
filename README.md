@@ -244,6 +244,20 @@ The gear icon (⚙) opens a tokenlist manager where you can toggle lists on/off,
 
 ## Deployment
 
+### Subtree Synchronization
+
+The `traefik-proxy` directory is managed as a git subtree. To sync changes with the upstream repository:
+
+**Pull latest changes from upstream:**
+```bash
+git subtree pull --prefix traefik-proxy git@github.com:SatoshiAndKin/traefik-proxy.git main --squash
+```
+
+**Push local changes to upstream:**
+```bash
+git subtree push --prefix traefik-proxy git@github.com:SatoshiAndKin/traefik-proxy.git main
+```
+
 ### Docker Compose (development)
 
 ```bash
