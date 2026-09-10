@@ -233,7 +233,7 @@ The gear icon (⚙) opens a tokenlist manager where you can toggle lists on/off,
 ## Tech Stack
 
 - **Python 3.12**, managed by [uv](https://github.com/astral-sh/uv)
-- **ypricemagic** (latest master) — price resolution
+- **ypricemagic** (fork revision pinned in `pyproject.toml` and `uv.lock`) — price resolution
 - **brownie** — EVM network/web3 management
 - **dank_mids** — batched async RPC calls
 - **FastAPI** + **uvicorn** — HTTP server
