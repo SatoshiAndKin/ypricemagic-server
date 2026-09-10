@@ -84,9 +84,11 @@ jobs:
     steps:
       - name: Trigger deploy webhook
         env:
-          WEBHOOK_URL: https://webhook.stytt.com/hooks/ypricemagic-server
+          WEBHOOK_URL: ${{ vars.DEPLOY_WEBHOOK_URL }}
           WEBHOOK_SECRET: ${{ secrets.WEBHOOK_SECRET }}
         run: |
+          : "${WEBHOOK_URL:?DEPLOY_WEBHOOK_URL must be set}"
+          : "${WEBHOOK_SECRET:?WEBHOOK_SECRET must be set}"
           curl --fail --show-error --silent \
             -X POST \
             -H "X-Webhook-Secret: ${WEBHOOK_SECRET}" \
