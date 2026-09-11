@@ -1,81 +1,33 @@
 networks:
   traefik-proxy:
-    external: true
     name: traefik-proxy
 
-x-ypm-service: &ypm-service
-  build: .
-  init: true
-  healthcheck:
-    test: ["CMD-SHELL", "test ! -f /tmp/drain && curl -sf http://localhost:8001/health || exit 1"]
-    interval: 10s
-    timeout: 5s
-    retries: 1
-    start_period: 600s
-  networks:
-    - traefik-proxy
-  restart: unless-stopped
-  stop_grace_period: 310s
-
 services:
-  ypm-ethereum:
-    <<: *ypm-service
-    environment:
-      CHAIN_NAME: ethereum
-      CHAIN_ID: 1
-      RPC_URL: ${RPC_URL_ETHEREUM}
-      ETHERSCAN_TOKEN: ${ETHERSCAN_TOKEN}
-      SENTRY_DSN: ${SENTRY_DSN:-}
-      LOG_LEVEL: ${LOG_LEVEL:-DEBUG}
-      DANKMIDS_REQUESTS_PER_SECOND: 500
-      DANKMIDS_MAX_JSONRPC_BATCH_SIZE: 1000
-    volumes:
-      - cache-ethereum:/data/cache
-      - brownie-ethereum:/root/.brownie
-      - solcx:/root/.solcx
-      - vvm:/root/.vvm
-      - ypricemagic-ethereum:/root/.ypricemagic
-      - appcache-ethereum:/app/cache
-    labels:
-      traefik.enable: "true"
-      docker-rollout.pre-stop-hook: "touch /tmp/drain && sleep 10"
-      traefik.http.routers.ypm-ethereum.rule: "Host(`${VIRTUAL_HOST:-localhost}`) && PathPrefix(`/ethereum`)"
-      traefik.http.routers.ypm-ethereum.entrypoints: web
-      traefik.http.middlewares.ypm-strip-ethereum.stripprefix.prefixes: /ethereum
-      traefik.http.routers.ypm-ethereum.middlewares: ypm-strip-ethereum
-      traefik.http.services.ypm-ethereum.loadbalancer.server.port: "8001"
-      traefik.http.routers.ypm-health.rule: "Host(`${VIRTUAL_HOST:-localhost}`) && Path(`/health`)"
-      traefik.http.routers.ypm-health.entrypoints: web
-      traefik.http.routers.ypm-health.service: ypm-ethereum
-
-  frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-      args:
-        VITE_SENTRY_DSN: ${VITE_SENTRY_DSN:-}
-    labels:
-      traefik.enable: "true"
-      docker-rollout.pre-stop-hook: "touch /tmp/drain && sleep 10"
-      traefik.http.routers.ypm-frontend.rule: "Host(`${VIRTUAL_HOST:-localhost}`) && !PathPrefix(`/ethereum`) && !PathPrefix(`/arbitrum`) && !PathPrefix(`/optimism`) && !PathPrefix(`/base`) && !PathPrefix(`/bsc`) && !PathPrefix(`/polygon`) && !PathPrefix(`/fantom`) && !PathPrefix(`/health`)"
-      traefik.http.routers.ypm-frontend.entrypoints: web
-      traefik.http.routers.ypm-frontend.priority: "1"
-      traefik.http.services.ypm-frontend.loadbalancer.server.port: "8080"
+  traefik:
+    image: traefik:v3
+    command:
+      - "--api.insecure=true"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--providers.docker.network=traefik-proxy"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.web.forwardedheaders.trustedips=${TRUSTED_PROXY_IPS:-127.0.0.1/32,::1/128}"
+      - "--entrypoints.web2.address=:81"
+      - "--entrypoints.web2.forwardedheaders.trustedips=${TRUSTED_PROXY_IPS:-127.0.0.1/32,::1/128}"
+      - "--api.dashboard=true"
+      - "--api.insecure=true"
+      - "--ping=true"
+    ports:
+      - "127.0.0.1:${PORT:-8000}:80"
+      - "127.0.0.1:${SECONDARY_PORT:-8001}:81"
+      - "127.0.0.1:${DASHBOARD_PORT:-8080}:8080"
     networks:
       - traefik-proxy
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-sf", "http://localhost:8080/"]
-      interval: 30s
+      test: ["CMD", "traefik", "healthcheck", "--ping"]
+      interval: 10s
       timeout: 5s
       retries: 3
-      start_period: 10s
-    restart: unless-stopped
-    stop_grace_period: 30s
-
-volumes:
-  cache-ethereum:
-  brownie-ethereum:
-  solcx:
-  vvm:
-  ypricemagic-ethereum:
-  appcache-ethereum:
