@@ -40,12 +40,12 @@ services:
       traefik.enable: "true"
       docker-rollout.pre-stop-hook: "touch /tmp/drain && sleep 10"
       traefik.http.routers.ypm-ethereum.rule: "Host(`${VIRTUAL_HOST:-localhost}`) && PathPrefix(`/ethereum`)"
-      traefik.http.routers.ypm-ethereum.entrypoints: web
+      traefik.http.routers.ypm-ethereum.entrypoints: ${TRAEFIK_ENTRYPOINT:-web}
       traefik.http.middlewares.ypm-strip-ethereum.stripprefix.prefixes: /ethereum
       traefik.http.routers.ypm-ethereum.middlewares: ypm-strip-ethereum
       traefik.http.services.ypm-ethereum.loadbalancer.server.port: "8001"
       traefik.http.routers.ypm-health.rule: "Host(`${VIRTUAL_HOST:-localhost}`) && Path(`/health`)"
-      traefik.http.routers.ypm-health.entrypoints: web
+      traefik.http.routers.ypm-health.entrypoints: ${TRAEFIK_ENTRYPOINT:-web}
       traefik.http.routers.ypm-health.service: ypm-ethereum
 
   frontend:
@@ -58,7 +58,7 @@ services:
       traefik.enable: "true"
       docker-rollout.pre-stop-hook: "touch /tmp/drain && sleep 10"
       traefik.http.routers.ypm-frontend.rule: "Host(`${VIRTUAL_HOST:-localhost}`) && !PathPrefix(`/ethereum`) && !PathPrefix(`/arbitrum`) && !PathPrefix(`/optimism`) && !PathPrefix(`/base`) && !PathPrefix(`/bsc`) && !PathPrefix(`/polygon`) && !PathPrefix(`/fantom`) && !PathPrefix(`/health`)"
-      traefik.http.routers.ypm-frontend.entrypoints: web
+      traefik.http.routers.ypm-frontend.entrypoints: ${TRAEFIK_ENTRYPOINT:-web}
       traefik.http.routers.ypm-frontend.priority: "1"
       traefik.http.services.ypm-frontend.loadbalancer.server.port: "8080"
     networks:
