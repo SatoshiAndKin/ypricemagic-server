@@ -47,7 +47,7 @@ docker compose up --build
 
 For local usage, open `http://localhost:<PORT>` from `traefik-proxy/.env`.
 
-For a deployed host-based setup, set `VIRTUAL_HOST` in `.env` (for example `VIRTUAL_HOST=ypricemagic.stytt.com`) and access:
+For a deployed host-based setup, set `VIRTUAL_HOST` in `.env` (for example `VIRTUAL_HOST=ski-nuc-3.shorthair-fir.ts.net`) and access:
 
 - `https://<VIRTUAL_HOST>/` — frontend UI
 - `https://<VIRTUAL_HOST>/ethereum/docs` — Swagger for ethereum backend
@@ -282,3 +282,15 @@ A GitHub Actions workflow (`.github/workflows/cd.yml`) runs on every push to `ma
 3. Polls `/health` on `VIRTUAL_HOST` to verify the deployment succeeded
 
 Required GitHub Actions variables: `SSH_HOST`, `SSH_USER`, `SSH_KEY`.
+
+## Private production access
+
+The production UI is https://ski-nuc-3.shorthair-fir.ts.net:9443/. Connect to
+Tailscale first. Chain APIs keep their existing paths, such as `/ethereum` and
+`/arbitrum`. The previous `ypricemagic.stytt.com` route is retired.
+
+Set `VIRTUAL_HOST=ski-nuc-3.shorthair-fir.ts.net` and
+`TRAEFIK_ENTRYPOINT=web2` in the production `.env`. Set
+`RPC_URL_ETHEREUM=https://ski-lambo-1.shorthair-fir.ts.net:18544`. The shared
+Traefik `web2` entrypoint receives traffic on loopback port 8001. See
+`traefik-proxy/README.md` for its private Tailscale Serve configuration.

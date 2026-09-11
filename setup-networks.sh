@@ -39,7 +39,12 @@ fi
 
 OUTPUT=$(eval $ADD_ARGS 2>&1) || {
   if echo "$OUTPUT" | grep -qi "already exists"; then
-    echo "Network ${NETWORK_ID} already exists, continuing..."
+    echo "Updating existing network ${NETWORK_ID} from the configured RPC settings..."
+    MODIFY_ARGS=(networks modify "$NETWORK_ID" "host=$RPC_URL" "chainid=$CHAIN_ID")
+    if [ -n "$EXPLORER" ]; then
+      MODIFY_ARGS+=("explorer=$EXPLORER")
+    fi
+    brownie "${MODIFY_ARGS[@]}"
   else
     echo "ERROR: Failed to register brownie network ${NETWORK_ID}"
     echo "$OUTPUT"

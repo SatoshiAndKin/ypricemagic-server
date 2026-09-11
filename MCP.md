@@ -10,10 +10,10 @@ ypricemagic exposes an OpenAPI spec on each chain endpoint. You can use [awslabs
 
 | Chain    | Base URL                                    | OpenAPI spec                                            |
 |----------|---------------------------------------------|---------------------------------------------------------|
-| Ethereum | `https://ypricemagic.stytt.com/ethereum`    | `https://ypricemagic.stytt.com/ethereum/openapi.json`   |
-| Arbitrum | `https://ypricemagic.stytt.com/arbitrum`    | `https://ypricemagic.stytt.com/arbitrum/openapi.json`   |
-| Optimism | `https://ypricemagic.stytt.com/optimism`    | `https://ypricemagic.stytt.com/optimism/openapi.json`   |
-| Base     | `https://ypricemagic.stytt.com/base`        | `https://ypricemagic.stytt.com/base/openapi.json`       |
+| Ethereum | `https://ski-nuc-3.shorthair-fir.ts.net:9443/ethereum`    | `https://ski-nuc-3.shorthair-fir.ts.net:9443/ethereum/openapi.json`   |
+| Arbitrum | `https://ski-nuc-3.shorthair-fir.ts.net:9443/arbitrum`    | `https://ski-nuc-3.shorthair-fir.ts.net:9443/arbitrum/openapi.json`   |
+| Optimism | `https://ski-nuc-3.shorthair-fir.ts.net:9443/optimism`    | `https://ski-nuc-3.shorthair-fir.ts.net:9443/optimism/openapi.json`   |
+| Base     | `https://ski-nuc-3.shorthair-fir.ts.net:9443/base`        | `https://ski-nuc-3.shorthair-fir.ts.net:9443/base/openapi.json`       |
 
 ## Configuration
 
@@ -32,8 +32,8 @@ Each chain needs its own MCP server entry because `awslabs.openapi-mcp-server` t
       "args": ["awslabs.openapi-mcp-server@latest"],
       "env": {
         "API_NAME": "ypricemagic-ethereum",
-        "API_BASE_URL": "https://ypricemagic.stytt.com/ethereum",
-        "API_SPEC_URL": "https://ypricemagic.stytt.com/ethereum/openapi.json",
+        "API_BASE_URL": "https://ski-nuc-3.shorthair-fir.ts.net:9443/ethereum",
+        "API_SPEC_URL": "https://ski-nuc-3.shorthair-fir.ts.net:9443/ethereum/openapi.json",
         "LOG_LEVEL": "ERROR",
         "ENABLE_PROMETHEUS": "false",
         "ENABLE_OPERATION_PROMPTS": "true"
@@ -44,8 +44,8 @@ Each chain needs its own MCP server entry because `awslabs.openapi-mcp-server` t
       "args": ["awslabs.openapi-mcp-server@latest"],
       "env": {
         "API_NAME": "ypricemagic-arbitrum",
-        "API_BASE_URL": "https://ypricemagic.stytt.com/arbitrum",
-        "API_SPEC_URL": "https://ypricemagic.stytt.com/arbitrum/openapi.json",
+        "API_BASE_URL": "https://ski-nuc-3.shorthair-fir.ts.net:9443/arbitrum",
+        "API_SPEC_URL": "https://ski-nuc-3.shorthair-fir.ts.net:9443/arbitrum/openapi.json",
         "LOG_LEVEL": "ERROR",
         "ENABLE_PROMETHEUS": "false",
         "ENABLE_OPERATION_PROMPTS": "true"
@@ -56,8 +56,8 @@ Each chain needs its own MCP server entry because `awslabs.openapi-mcp-server` t
       "args": ["awslabs.openapi-mcp-server@latest"],
       "env": {
         "API_NAME": "ypricemagic-optimism",
-        "API_BASE_URL": "https://ypricemagic.stytt.com/optimism",
-        "API_SPEC_URL": "https://ypricemagic.stytt.com/optimism/openapi.json",
+        "API_BASE_URL": "https://ski-nuc-3.shorthair-fir.ts.net:9443/optimism",
+        "API_SPEC_URL": "https://ski-nuc-3.shorthair-fir.ts.net:9443/optimism/openapi.json",
         "LOG_LEVEL": "ERROR",
         "ENABLE_PROMETHEUS": "false",
         "ENABLE_OPERATION_PROMPTS": "true"
@@ -68,8 +68,8 @@ Each chain needs its own MCP server entry because `awslabs.openapi-mcp-server` t
       "args": ["awslabs.openapi-mcp-server@latest"],
       "env": {
         "API_NAME": "ypricemagic-base",
-        "API_BASE_URL": "https://ypricemagic.stytt.com/base",
-        "API_SPEC_URL": "https://ypricemagic.stytt.com/base/openapi.json",
+        "API_BASE_URL": "https://ski-nuc-3.shorthair-fir.ts.net:9443/base",
+        "API_SPEC_URL": "https://ski-nuc-3.shorthair-fir.ts.net:9443/base/openapi.json",
         "LOG_LEVEL": "ERROR",
         "ENABLE_PROMETHEUS": "false",
         "ENABLE_OPERATION_PROMPTS": "true"
@@ -88,8 +88,8 @@ droid mcp add ypricemagic-ethereum \
   --command uvx \
   --args 'awslabs.openapi-mcp-server@latest' \
   --env API_NAME=ypricemagic-ethereum \
-  --env API_BASE_URL=https://ypricemagic.stytt.com/ethereum \
-  --env API_SPEC_URL=https://ypricemagic.stytt.com/ethereum/openapi.json \
+  --env API_BASE_URL=https://ski-nuc-3.shorthair-fir.ts.net:9443/ethereum \
+  --env API_SPEC_URL=https://ski-nuc-3.shorthair-fir.ts.net:9443/ethereum/openapi.json \
   --env LOG_LEVEL=ERROR \
   --env ENABLE_PROMETHEUS=false \
   --env ENABLE_OPERATION_PROMPTS=true
@@ -112,6 +112,6 @@ No auth is required. All endpoints are public.
 
 **"uvx: command not found"** -- install uv: `curl -LsSf https://astral.sh/uv/install.sh | sh`
 
-**Server starts but no tools appear** -- check that the spec URL is reachable: `curl -s https://ypricemagic.stytt.com/ethereum/openapi.json | head -c 200`
+**Server starts but no tools appear** -- check that the spec URL is reachable: `curl -s https://ski-nuc-3.shorthair-fir.ts.net:9443/ethereum/openapi.json | head -c 200`
 
 **Timeout errors** -- price lookups can take up to 30 seconds for cold tokens. This is normal.
