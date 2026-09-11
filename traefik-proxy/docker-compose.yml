@@ -1,6 +1,7 @@
 networks:
   traefik-proxy:
     name: traefik-proxy
+    driver: bridge
 
 services:
   traefik:

@@ -13,6 +13,10 @@ This starts Traefik on loopback and creates the shared Docker network
 `traefik-proxy`. The `web` entrypoint uses port `${PORT:-8000}`; `web2` uses
 `${SECONDARY_PORT:-8001}`. The dashboard uses `${DASHBOARD_PORT:-8080}`.
 
+Keep `driver: bridge` explicit. Existing deployments record that setting in the
+network configuration hash. Removing it makes Compose try to recreate the shared
+network, which fails while other app containers remain attached.
+
 For Tailscale HTTPS, assign apps that share the machine's Tailscale hostname to
 different entrypoints. On ski-nuc-3, use `web` for Compare DEX Routers and `web2`
 for ypricemagic-server, with `VIRTUAL_HOST=ski-nuc-3.shorthair-fir.ts.net` in each
