@@ -30,24 +30,26 @@ CATEGORY_MAP_fantom="Fantom Opera"
 CATEGORY_VAR="CATEGORY_MAP_${CHAIN_NAME}"
 CATEGORY="${!CATEGORY_VAR:-${CHAIN_NAME}}"
 
-echo "Registering brownie network: id=${NETWORK_ID} host=${RPC_URL} chainid=${CHAIN_ID}"
+echo "Registering brownie network: id=${NETWORK_ID} chainid=${CHAIN_ID}"
 
-ADD_ARGS="brownie networks add \"${CATEGORY}\" ${NETWORK_ID} host=${RPC_URL} chainid=${CHAIN_ID}"
+ADD_ARGS=(networks add "$CATEGORY" "$NETWORK_ID" "host=$RPC_URL" "chainid=$CHAIN_ID")
 if [ -n "$EXPLORER" ]; then
-  ADD_ARGS="${ADD_ARGS} explorer=${EXPLORER}"
+  ADD_ARGS+=("explorer=$EXPLORER")
 fi
 
-OUTPUT=$(eval $ADD_ARGS 2>&1) || {
+OUTPUT=$(brownie "${ADD_ARGS[@]}" 2>&1) || {
   if echo "$OUTPUT" | grep -qi "already exists"; then
     echo "Updating existing network ${NETWORK_ID} from the configured RPC settings..."
     MODIFY_ARGS=(networks modify "$NETWORK_ID" "host=$RPC_URL" "chainid=$CHAIN_ID")
     if [ -n "$EXPLORER" ]; then
       MODIFY_ARGS+=("explorer=$EXPLORER")
     fi
-    brownie "${MODIFY_ARGS[@]}"
+    if ! OUTPUT=$(brownie "${MODIFY_ARGS[@]}" 2>&1); then
+      echo "ERROR: Failed to update brownie network ${NETWORK_ID}"
+      exit 1
+    fi
   else
     echo "ERROR: Failed to register brownie network ${NETWORK_ID}"
-    echo "$OUTPUT"
     exit 1
   fi
 }
