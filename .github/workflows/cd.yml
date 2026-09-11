@@ -90,14 +90,19 @@ jobs:
     needs: build-and-push
     runs-on: ubuntu-latest
     steps:
-      - name: Trigger deploy webhook
+      - name: Queue production deployment
         env:
           WEBHOOK_URL: ${{ vars.DEPLOY_WEBHOOK_URL }}
           WEBHOOK_SECRET: ${{ secrets.WEBHOOK_SECRET }}
+          REPOSITORY: ${{ github.repository }}
+          MERGED_COMMIT: ${{ github.event.pull_request.merge_commit_sha || github.sha }}
         run: |
+          set -euo pipefail
           : "${WEBHOOK_URL:?DEPLOY_WEBHOOK_URL must be set}"
           : "${WEBHOOK_SECRET:?WEBHOOK_SECRET must be set}"
-          curl --fail --show-error --silent \
-            -X POST \
-            -H "X-Webhook-Secret: ${WEBHOOK_SECRET}" \
-            "${WEBHOOK_URL}"
+          payload=$(jq -cn --arg repository "$REPOSITORY" --arg commit "$MERGED_COMMIT" \
+            '{repository: $repository, commit: $commit, targets: ["ypricemagic-server"]}')
+          curl --fail-with-body --silent --show-error --connect-timeout 10 --max-time 60 \
+            --header "X-Webhook-Secret: $WEBHOOK_SECRET" \
+            --header 'Content-Type: application/json' --data "$payload" "$WEBHOOK_URL"
+          echo 'Tank stored the deployment request. Its worker records the final result separately.'
