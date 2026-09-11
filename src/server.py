@@ -270,20 +270,24 @@ async def _prewarm_with_shutdown(curve_registry: Any) -> None:
     shutdown_waiter = asyncio.create_task(_wait_for_shutdown())
 
     async def _run_prewarm() -> None:
-        await asyncio.gather(*prewarm_tasks, return_exceptions=True)
+        await asyncio.gather(*prewarm_tasks)
 
     prewarm_task = asyncio.create_task(_run_prewarm())
-    done, _ = await asyncio.wait(
-        [prewarm_task, shutdown_waiter],
-        return_when=asyncio.FIRST_COMPLETED,
-    )
-
-    if shutdown_waiter in done:
-        logger.info("shutdown_during_prewarm", chain=CHAIN_NAME)
-        prewarm_task.cancel()
-        await asyncio.gather(prewarm_task, return_exceptions=True)
-    else:
-        shutdown_waiter.cancel()
+    try:
+        done, _ = await asyncio.wait(
+            [prewarm_task, shutdown_waiter],
+            return_when=asyncio.FIRST_COMPLETED,
+        )
+        if shutdown_waiter in done:
+            logger.info("shutdown_during_prewarm", chain=CHAIN_NAME)
+        else:
+            # Surface required registry failures through the lifespan startup error.
+            await prewarm_task
+    finally:
+        for task in [prewarm_task, shutdown_waiter, *prewarm_tasks]:
+            if not task.done():
+                task.cancel()
+        await asyncio.gather(prewarm_task, shutdown_waiter, *prewarm_tasks, return_exceptions=True)
 
 
 @asynccontextmanager
