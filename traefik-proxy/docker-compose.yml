@@ -11,12 +11,16 @@ services:
       - "--providers.docker.exposedbydefault=false"
       - "--providers.docker.network=traefik-proxy"
       - "--entrypoints.web.address=:80"
+      - "--entrypoints.web.forwardedheaders.trustedips=${TRUSTED_PROXY_IPS:-127.0.0.1/32,::1/128}"
+      - "--entrypoints.web2.address=:81"
+      - "--entrypoints.web2.forwardedheaders.trustedips=${TRUSTED_PROXY_IPS:-127.0.0.1/32,::1/128}"
       - "--api.dashboard=true"
       - "--api.insecure=true"
       - "--ping=true"
     ports:
-      - "${PORT:-8000}:80"
-      - "${DASHBOARD_PORT:-8080}:8080"
+      - "127.0.0.1:${PORT:-8000}:80"
+      - "127.0.0.1:${SECONDARY_PORT:-8001}:81"
+      - "127.0.0.1:${DASHBOARD_PORT:-8080}:8080"
     networks:
       - traefik-proxy
     volumes:
