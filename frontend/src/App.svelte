@@ -17,7 +17,7 @@
 
     // Chain
     const chainParam = params.get('chain');
-    if (chainParam && ['ethereum', 'arbitrum', 'optimism', 'base'].includes(chainParam)) {
+    if (chainParam && Object.hasOwn(CHAIN_IDS, chainParam)) {
       selectedChain.set(chainParam as Chain);
     }
 

@@ -11,8 +11,6 @@
   <label for="chain">Chain</label>
   <select id="chain" value={$selectedChain} onchange={handleChange}>
     <option value="ethereum">Ethereum</option>
-    <option value="arbitrum">Arbitrum</option>
-    <option value="optimism">Optimism</option>
     <option value="base">Base</option>
   </select>
 

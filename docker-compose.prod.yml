@@ -49,54 +49,6 @@ services:
       traefik.http.routers.ypm-health.entrypoints: ${TRAEFIK_ENTRYPOINT:-web}
       traefik.http.routers.ypm-health.service: ypm-ethereum
 
-  ypm-arbitrum:
-    <<: *ypm-service
-    environment:
-      CHAIN_NAME: arbitrum
-      CHAIN_ID: 42161
-      RPC_URL: ${RPC_URL_ARBITRUM}
-      ETHERSCAN_TOKEN: ${ETHERSCAN_TOKEN}
-      SENTRY_DSN: ${SENTRY_DSN:-}
-    volumes:
-      - cache-arbitrum:/data/cache
-      - brownie-arbitrum:/root/.brownie
-      - solcx:/root/.solcx
-      - vvm:/root/.vvm
-      - ypricemagic-arbitrum:/root/.ypricemagic
-      - appcache-arbitrum:/app/cache
-    labels:
-      traefik.enable: "true"
-      docker-rollout.pre-stop-hook: "touch /tmp/drain && sleep 10"
-      traefik.http.routers.ypm-arbitrum.rule: "Host(`${VIRTUAL_HOST:-localhost}`) && PathPrefix(`/arbitrum`)"
-      traefik.http.routers.ypm-arbitrum.entrypoints: ${TRAEFIK_ENTRYPOINT:-web}
-      traefik.http.middlewares.ypm-strip-arbitrum.stripprefix.prefixes: /arbitrum
-      traefik.http.routers.ypm-arbitrum.middlewares: ypm-strip-arbitrum
-      traefik.http.services.ypm-arbitrum.loadbalancer.server.port: "8001"
-
-  ypm-optimism:
-    <<: *ypm-service
-    environment:
-      CHAIN_NAME: optimism
-      CHAIN_ID: 10
-      RPC_URL: ${RPC_URL_OPTIMISM}
-      ETHERSCAN_TOKEN: ${ETHERSCAN_TOKEN}
-      SENTRY_DSN: ${SENTRY_DSN:-}
-    volumes:
-      - cache-optimism:/data/cache
-      - brownie-optimism:/root/.brownie
-      - solcx:/root/.solcx
-      - vvm:/root/.vvm
-      - ypricemagic-optimism:/root/.ypricemagic
-      - appcache-optimism:/app/cache
-    labels:
-      traefik.enable: "true"
-      docker-rollout.pre-stop-hook: "touch /tmp/drain && sleep 10"
-      traefik.http.routers.ypm-optimism.rule: "Host(`${VIRTUAL_HOST:-localhost}`) && PathPrefix(`/optimism`)"
-      traefik.http.routers.ypm-optimism.entrypoints: ${TRAEFIK_ENTRYPOINT:-web}
-      traefik.http.middlewares.ypm-strip-optimism.stripprefix.prefixes: /optimism
-      traefik.http.routers.ypm-optimism.middlewares: ypm-strip-optimism
-      traefik.http.services.ypm-optimism.loadbalancer.server.port: "8001"
-
   ypm-base:
     <<: *ypm-service
     environment:
@@ -120,78 +72,6 @@ services:
       traefik.http.middlewares.ypm-strip-base.stripprefix.prefixes: /base
       traefik.http.routers.ypm-base.middlewares: ypm-strip-base
       traefik.http.services.ypm-base.loadbalancer.server.port: "8001"
-
-  # ypm-bsc:
-  #   <<: *ypm-service
-  #   environment:
-  #     CHAIN_NAME: bsc
-  #     CHAIN_ID: 56
-  #     RPC_URL: ${RPC_URL_BSC}
-  #     ETHERSCAN_TOKEN: ${ETHERSCAN_TOKEN}
-  #     SENTRY_DSN: ${SENTRY_DSN:-}
-  #   volumes:
-  #     - cache-bsc:/data/cache
-  #     - brownie-bsc:/root/.brownie
-  #     - solcx:/root/.solcx
-  #     - vvm:/root/.vvm
-  #     - ypricemagic-bsc:/root/.ypricemagic
-  #     - appcache-bsc:/app/cache
-  #   labels:
-  #     traefik.enable: "true"
-  #     docker-rollout.pre-stop-hook: "touch /tmp/drain && sleep 10"
-  #     traefik.http.routers.ypm-bsc.rule: "Host(`${VIRTUAL_HOST:-localhost}`) && PathPrefix(`/bsc`)"
-  #     traefik.http.routers.ypm-bsc.entrypoints: ${TRAEFIK_ENTRYPOINT:-web}
-  #     traefik.http.middlewares.ypm-strip-bsc.stripprefix.prefixes: /bsc
-  #     traefik.http.routers.ypm-bsc.middlewares: ypm-strip-bsc
-  #     traefik.http.services.ypm-bsc.loadbalancer.server.port: "8001"
-
-  # ypm-polygon:
-  #   <<: *ypm-service
-  #   environment:
-  #     CHAIN_NAME: polygon
-  #     CHAIN_ID: 137
-  #     RPC_URL: ${RPC_URL_POLYGON}
-  #     ETHERSCAN_TOKEN: ${ETHERSCAN_TOKEN}
-  #     SENTRY_DSN: ${SENTRY_DSN:-}
-  #   volumes:
-  #     - cache-polygon:/data/cache
-  #     - brownie-polygon:/root/.brownie
-  #     - solcx:/root/.solcx
-  #     - vvm:/root/.vvm
-  #     - ypricemagic-polygon:/root/.ypricemagic
-  #     - appcache-polygon:/app/cache
-  #   labels:
-  #     traefik.enable: "true"
-  #     docker-rollout.pre-stop-hook: "touch /tmp/drain && sleep 10"
-  #     traefik.http.routers.ypm-polygon.rule: "Host(`${VIRTUAL_HOST:-localhost}`) && PathPrefix(`/polygon`)"
-  #     traefik.http.routers.ypm-polygon.entrypoints: ${TRAEFIK_ENTRYPOINT:-web}
-  #     traefik.http.middlewares.ypm-strip-polygon.stripprefix.prefixes: /polygon
-  #     traefik.http.routers.ypm-polygon.middlewares: ypm-strip-polygon
-  #     traefik.http.services.ypm-polygon.loadbalancer.server.port: "8001"
-
-  # ypm-fantom:
-  #   <<: *ypm-service
-  #   environment:
-  #     CHAIN_NAME: fantom
-  #     CHAIN_ID: 250
-  #     RPC_URL: ${RPC_URL_FANTOM}
-  #     ETHERSCAN_TOKEN: ${ETHERSCAN_TOKEN}
-  #     SENTRY_DSN: ${SENTRY_DSN:-}
-  #   volumes:
-  #     - cache-fantom:/data/cache
-  #     - brownie-fantom:/root/.brownie
-  #     - solcx:/root/.solcx
-  #     - vvm:/root/.vvm
-  #     - ypricemagic-fantom:/root/.ypricemagic
-  #     - appcache-fantom:/app/cache
-  #   labels:
-  #     traefik.enable: "true"
-  #     docker-rollout.pre-stop-hook: "touch /tmp/drain && sleep 10"
-  #     traefik.http.routers.ypm-fantom.rule: "Host(`${VIRTUAL_HOST:-localhost}`) && PathPrefix(`/fantom`)"
-  #     traefik.http.routers.ypm-fantom.entrypoints: ${TRAEFIK_ENTRYPOINT:-web}
-  #     traefik.http.middlewares.ypm-strip-fantom.stripprefix.prefixes: /fantom
-  #     traefik.http.routers.ypm-fantom.middlewares: ypm-strip-fantom
-  #     traefik.http.services.ypm-fantom.loadbalancer.server.port: "8001"
 
   frontend:
     image: ghcr.io/satoshiandkin/ypricemagic-server-frontend:latest
@@ -220,27 +100,7 @@ volumes:
   vvm:
   ypricemagic-ethereum:
   appcache-ethereum:
-  cache-arbitrum:
-  brownie-arbitrum:
-  ypricemagic-arbitrum:
-  appcache-arbitrum:
-  cache-optimism:
-  brownie-optimism:
-  ypricemagic-optimism:
-  appcache-optimism:
   cache-base:
   brownie-base:
   ypricemagic-base:
   appcache-base:
-  cache-bsc:
-  brownie-bsc:
-  ypricemagic-bsc:
-  appcache-bsc:
-  cache-polygon:
-  brownie-polygon:
-  ypricemagic-polygon:
-  appcache-polygon:
-  cache-fantom:
-  brownie-fantom:
-  ypricemagic-fantom:
-  appcache-fantom:
