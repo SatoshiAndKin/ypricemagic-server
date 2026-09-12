@@ -462,7 +462,7 @@ wheels = [
 [[package]]
 name = "dank-mids"
 version = "4.20.206"
-source = { git = "https://github.com/SatoshiAndKin/dank_mids.git?rev=master#3f0db6bab986060db1991be5c879f7e7b79b0ea9" }
+source = { git = "https://github.com/SatoshiAndKin/dank_mids.git?rev=master#b19c9b8fc8461942a9915f8b01f661d34518c5c9" }
 dependencies = [
     { name = "aiofiles" },
     { name = "aiolimiter" },
@@ -2304,8 +2304,8 @@ wheels = [
 
 [[package]]
 name = "ypricemagic"
-version = "0.0.1.dev1457"
-source = { git = "https://github.com/SatoshiAndKin/ypricemagic.git?rev=master#36a93801f8326e972029a3633dd17a7657f40269" }
+version = "0.0.1.dev1458"
+source = { git = "https://github.com/SatoshiAndKin/ypricemagic.git?rev=master#28f92034095e0cad5714f3f3cdc70146264c951d" }
 dependencies = [
     { name = "aiosqlite" },
     { name = "asyncpg" },

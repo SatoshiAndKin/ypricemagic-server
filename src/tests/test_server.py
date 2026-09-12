@@ -3171,3 +3171,67 @@ class TestUniswapV3Prewarm:
         info_calls = list(mock_logger.info.call_args_list)
         v3_calls = [c for c in info_calls if c.args and "v3" in c.args[0]]
         assert len(v3_calls) == 0
+
+
+class TestPrewarmReadiness:
+    @pytest.mark.asyncio
+    async def test_curve_failure_fails_startup_and_cancels_other_loaders(
+        self, mock_y_module: None, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        import asyncio
+        from types import SimpleNamespace
+
+        from src import server
+
+        started = asyncio.Event()
+        stopped = asyncio.Event()
+
+        async def slow_loader() -> None:
+            started.set()
+            try:
+                await asyncio.Event().wait()
+            finally:
+                stopped.set()
+
+        async def failed_curve() -> None:
+            await started.wait()
+            raise RuntimeError("required curve registry failed")
+
+        monkeypatch.setattr(server, "_shutdown_event", asyncio.Event())
+        monkeypatch.setattr(server, "_prewarm_uniswap", slow_loader)
+        for name in ("compound", "chainlink", "aave", "balancer", "gearbox"):
+            monkeypatch.setattr(server, f"_prewarm_{name}", AsyncMock())
+        curve = SimpleNamespace(_done=object(), __coin_to_pools__=failed_curve())
+        with pytest.raises(RuntimeError, match="required curve registry failed"):
+            await asyncio.wait_for(server._prewarm_with_shutdown(curve), 1)
+        assert stopped.is_set()
+
+    @pytest.mark.asyncio
+    async def test_shutdown_cancels_and_joins_pending_loaders(
+        self, mock_y_module: None, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        import asyncio
+        from types import SimpleNamespace
+
+        from src import server
+
+        started = asyncio.Event()
+        stopped = asyncio.Event()
+        shutdown = asyncio.Event()
+
+        async def slow_curve() -> None:
+            started.set()
+            try:
+                await asyncio.Event().wait()
+            finally:
+                stopped.set()
+
+        monkeypatch.setattr(server, "_shutdown_event", shutdown)
+        for name in ("uniswap", "compound", "chainlink", "aave", "balancer", "gearbox"):
+            monkeypatch.setattr(server, f"_prewarm_{name}", AsyncMock())
+        curve = SimpleNamespace(_done=object(), __coin_to_pools__=slow_curve())
+        task = asyncio.create_task(server._prewarm_with_shutdown(curve))
+        await started.wait()
+        shutdown.set()
+        await asyncio.wait_for(task, 1)
+        assert stopped.is_set()
