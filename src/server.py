@@ -366,7 +366,7 @@ async def lifespan(app: FastAPI) -> Any:
     logger.info("shutdown", chain=CHAIN_NAME)
 
 
-_CHAINS = ["ethereum", "arbitrum", "optimism", "base", "bsc", "polygon", "fantom"]
+_CHAINS = ["ethereum", "base"]
 
 app = FastAPI(
     title="ypricemagic API",

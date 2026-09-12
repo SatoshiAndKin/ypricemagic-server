@@ -9,6 +9,6 @@ docker compose pull --ignore-pull-failures
 docker compose build --pull always
 
 # Rolling update each service
-for service in ypm-ethereum ypm-arbitrum ypm-optimism ypm-base frontend; do
+for service in ypm-ethereum ypm-base frontend; do
     docker rollout "$service"
 done

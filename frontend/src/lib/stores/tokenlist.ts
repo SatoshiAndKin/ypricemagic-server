@@ -5,12 +5,11 @@ import uniswapDefaultList from '../../../public/tokenlists/uniswap-default.json'
 // Re-export TokenlistToken for convenience
 export type { TokenlistToken };
 
-export type Chain = 'ethereum' | 'arbitrum' | 'optimism' | 'base';
+import type { Chain } from './chain';
+export type { Chain } from './chain';
 
 export const CHAIN_IDS: Record<Chain, number> = {
   ethereum: 1,
-  arbitrum: 42161,
-  optimism: 10,
   base: 8453,
 };
 
@@ -36,14 +35,6 @@ export const DEFAULT_PAIRS: Record<Chain, { from: string; to: string }> = {
     from: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48',
     to: USD_SENTINEL,
   },
-  arbitrum: {
-    from: '0xaf88d065e77c8cC2239327C5EDb3A432268e5831',
-    to: USD_SENTINEL,
-  },
-  optimism: {
-    from: '0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85',
-    to: USD_SENTINEL,
-  },
   base: {
     from: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',
     to: USD_SENTINEL,
@@ -62,8 +53,6 @@ export const USD_TOKEN: TokenlistToken = {
 // Chain-appropriate names for the native gas token
 const NATIVE_TOKEN_BY_CHAIN: Record<number, { symbol: string; name: string }> = {
   1: { symbol: 'ETH', name: 'Ether (ETH)' },
-  42161: { symbol: 'ETH', name: 'Ether (ETH)' },
-  10: { symbol: 'ETH', name: 'Ether (ETH)' },
   8453: { symbol: 'ETH', name: 'Ether (ETH)' },
 };
 
@@ -91,34 +80,6 @@ const DEFAULT_PAIR_TOKENS: TokenlistToken[] = [
     symbol: 'USDC',
     name: 'USD Coin',
     decimals: 6,
-  },
-  {
-    chainId: 42161,
-    address: '0xaf88d065e77c8cC2239327C5EDb3A432268e5831',
-    symbol: 'USDC',
-    name: 'USD Coin',
-    decimals: 6,
-  },
-  {
-    chainId: 42161,
-    address: '0x82aF49447D8a07e3bd95BD0d56f35241523fBab1',
-    symbol: 'WETH',
-    name: 'Wrapped Ether',
-    decimals: 18,
-  },
-  {
-    chainId: 10,
-    address: '0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85',
-    symbol: 'USDC',
-    name: 'USD Coin',
-    decimals: 6,
-  },
-  {
-    chainId: 10,
-    address: '0x4200000000000000000000000000000000000006',
-    symbol: 'WETH',
-    name: 'Wrapped Ether',
-    decimals: 18,
   },
   {
     chainId: 8453,

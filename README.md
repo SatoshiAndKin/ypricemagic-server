@@ -7,8 +7,6 @@ A multi-chain token price API backed by [ypricemagic](https://github.com/BobTheB
 ```
 client → traefik-proxy:8000 → frontend:8080
                             → ypm-ethereum:8001
-                            → ypm-arbitrum:8001
-                            → ypm-optimism:8001
                             → ypm-base:8001
 ```
 
@@ -64,7 +62,7 @@ Fetch the USD price for a single token on a specific chain.
 
 | Parameter | In | Required | Description |
 |-----------|----|----------|-------------|
-| `chain` | path | yes | `ethereum`, `arbitrum`, `optimism`, or `base` |
+| `chain` | path | yes | `ethereum` or `base` |
 | `token` | query | yes | ERC-20 token address (`0x...`) |
 | `block` | query | no | Block number; mutually exclusive with `timestamp` |
 | `timestamp` | query | no | Unix epoch or ISO-8601 timestamp; resolves to a block |
@@ -130,7 +128,7 @@ Batch USD pricing for multiple tokens.
 
 | Parameter | In | Required | Description |
 |-----------|----|----------|-------------|
-| `chain` | path | yes | `ethereum`, `arbitrum`, `optimism`, or `base` |
+| `chain` | path | yes | `ethereum` or `base` |
 | `tokens` | query | yes | Comma-separated ERC-20 token addresses |
 | `block` | query | no | Block number; mutually exclusive with `timestamp` |
 | `timestamp` | query | no | Unix epoch or ISO-8601 timestamp; resolves to a block |
@@ -158,7 +156,7 @@ Returns the ypricemagic pricing bucket classification for a token (for example `
 
 | Parameter | In | Required | Description |
 |-----------|----|----------|-------------|
-| `chain` | path | yes | `ethereum`, `arbitrum`, `optimism`, or `base` |
+| `chain` | path | yes | `ethereum` or `base` |
 | `token` | query | yes | ERC-20 token address |
 
 **Response schema (`200`):**
@@ -192,11 +190,11 @@ Aggregate health check (proxied to ethereum backend).
 
 ### `GET /health/<chain>`
 
-Per-chain health check (externally reached as `GET /<chain>/health`, for example `/arbitrum/health`).
+Per-chain health check (externally reached as `GET /<chain>/health`, for example `/base/health`).
 
 | Parameter | In | Required | Description |
 |-----------|----|----------|-------------|
-| `chain` | path | yes | `ethereum`, `arbitrum`, `optimism`, or `base` |
+| `chain` | path | yes | `ethereum` or `base` |
 
 **Response schema (`200`):** same schema as `GET /health`.
 
@@ -226,8 +224,6 @@ The gear icon (⚙) opens a tokenlist manager where you can toggle lists on/off,
 | Chain     | Chain ID |
 |-----------|----------|
 | ethereum  | 1        |
-| arbitrum  | 42161    |
-| optimism  | 10       |
 | base      | 8453     |
 
 ## Tech Stack
@@ -275,19 +271,24 @@ Brownie cache volumes (`brownie-<chain>`) persist across deploys so contract met
 
 ### CD pipeline
 
-A GitHub Actions workflow (`.github/workflows/cd.yml`) runs on every push to `main`:
+The GitHub Actions workflow (`.github/workflows/cd.yml`) builds and publishes both
+images after a PR merges to `main`, or after a manual workflow dispatch. It then
+posts the merged commit to Tank's deployment webhook. Tank rolls out the services
+and records the final health result separately from the GitHub delivery result.
 
-1. Starts or reuses the shared Traefik stack from `traefik-proxy/`
-2. Builds and updates the ypricemagic app services
-3. Polls `/health` on `VIRTUAL_HOST` to verify the deployment succeeded
+Production runs Ethereum, Base, and the frontend. The frontend and API documentation
+list only these two chains. Removing a service from Compose does not remove an
+existing container; retire its containers separately and keep the named cache
+volumes. Do not use volume removal during this change.
 
-Required GitHub Actions variables: `SSH_HOST`, `SSH_USER`, `SSH_KEY`.
+Required GitHub Actions settings: `DEPLOY_WEBHOOK_URL` variable and `WEBHOOK_SECRET`
+secret.
 
 ## Private production access
 
 The production UI is https://ski-nuc-3.shorthair-fir.ts.net:9443/. Connect to
 Tailscale first. Chain APIs keep their existing paths, such as `/ethereum` and
-`/arbitrum`. The previous `ypricemagic.stytt.com` route is retired.
+`/base`. The previous `ypricemagic.stytt.com` route is retired.
 
 Set `VIRTUAL_HOST=ski-nuc-3.shorthair-fir.ts.net` and
 `TRAEFIK_ENTRYPOINT=web2` in the production `.env`. Set
