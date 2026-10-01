@@ -74,15 +74,13 @@ All endpoints are chain-scoped via path prefix (`/{chain}/...`), routed by Traef
 
 ## Supported Chains
 
-`ethereum` (1), `arbitrum` (42161), `optimism` (10), `base` (8453)
+`ethereum` (1), `base` (8453)
 
 ## Architecture
 
 ```
 client → traefik-proxy:8000 → frontend:8080
                              → ypm-ethereum:8001
-                             → ypm-arbitrum:8001
-                             → ypm-optimism:8001
                              → ypm-base:8001
 ```
 
@@ -110,8 +108,6 @@ Each chain container: brownie network connect → dank_mids patch → uvicorn Fa
 | Variable | Required | Description |
 |----------|----------|-------------|
 | `RPC_URL_ETHEREUM` | yes | Ethereum RPC endpoint |
-| `RPC_URL_ARBITRUM` | yes | Arbitrum RPC endpoint |
-| `RPC_URL_OPTIMISM` | yes | Optimism RPC endpoint |
 | `RPC_URL_BASE` | yes | Base RPC endpoint |
 | `ETHERSCAN_TOKEN` | yes | Etherscan API key (used for all explorer APIs) |
 | `PORT` | no | External port for Traefik proxy (default: 8000) |

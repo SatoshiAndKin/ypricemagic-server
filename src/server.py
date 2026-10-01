@@ -6,6 +6,7 @@ import signal
 import time
 import uuid
 from contextlib import asynccontextmanager
+from decimal import Decimal
 from importlib.metadata import PackageNotFoundError
 from importlib.metadata import version as _pkg_version
 from typing import TYPE_CHECKING, Any
@@ -127,7 +128,7 @@ async def _prewarm_uniswap() -> None:
     Each sub-step is wrapped in try/except so partial failures don't prevent startup.
     All routers (V2, V3, V3 forks) load in parallel for faster startup.
     """
-    from y.prices.dex.uniswap import uniswap_multiplexer  # type: ignore[attr-defined]
+    from y.prices.dex.uniswap import uniswap_multiplexer
 
     async def _load_v2(name: str, router: Any) -> None:
         try:
@@ -179,7 +180,7 @@ async def _prewarm_compound() -> None:
         logger.info("compound_markets_loading_started", comptrollers=len(compound.trollers))
         # Load all comptroller market lists in parallel using a_sync's map API
         trollers = compound.trollers.values()
-        async for troller, markets in Comptroller.markets.map(trollers):  # type: ignore[arg-type,var-annotated]
+        async for troller, markets in Comptroller.markets.map(trollers):
             logger.debug("compound_troller_loaded", troller=str(troller), markets=len(markets))
         logger.info("compound_markets_loading_done")
     except Exception as e:
@@ -199,7 +200,7 @@ async def _prewarm_chainlink() -> None:
 
         logger.info("chainlink_feeds_loading_started")
         # Trigger the event scan by iterating feeds up to current block
-        async for _ in chainlink._feeds_thru_block(await dank_mids.eth.block_number):  # type: ignore[attr-defined]
+        async for _ in chainlink._feeds_thru_block(await dank_mids.eth.block_number):  # type: ignore[attr-defined,union-attr]
             pass
         logger.info("chainlink_feeds_loading_done")
     except Exception as e:
@@ -270,20 +271,24 @@ async def _prewarm_with_shutdown(curve_registry: Any) -> None:
     shutdown_waiter = asyncio.create_task(_wait_for_shutdown())
 
     async def _run_prewarm() -> None:
-        await asyncio.gather(*prewarm_tasks, return_exceptions=True)
+        await asyncio.gather(*prewarm_tasks)
 
     prewarm_task = asyncio.create_task(_run_prewarm())
-    done, _ = await asyncio.wait(
-        [prewarm_task, shutdown_waiter],
-        return_when=asyncio.FIRST_COMPLETED,
-    )
-
-    if shutdown_waiter in done:
-        logger.info("shutdown_during_prewarm", chain=CHAIN_NAME)
-        prewarm_task.cancel()
-        await asyncio.gather(prewarm_task, return_exceptions=True)
-    else:
-        shutdown_waiter.cancel()
+    try:
+        done, _ = await asyncio.wait(
+            [prewarm_task, shutdown_waiter],
+            return_when=asyncio.FIRST_COMPLETED,
+        )
+        if shutdown_waiter in done:
+            logger.info("shutdown_during_prewarm", chain=CHAIN_NAME)
+        else:
+            # Surface required registry failures through the lifespan startup error.
+            await prewarm_task
+    finally:
+        for task in [prewarm_task, shutdown_waiter, *prewarm_tasks]:
+            if not task.done():
+                task.cancel()
+        await asyncio.gather(prewarm_task, shutdown_waiter, *prewarm_tasks, return_exceptions=True)
 
 
 @asynccontextmanager
@@ -362,7 +367,7 @@ async def lifespan(app: FastAPI) -> Any:
     logger.info("shutdown", chain=CHAIN_NAME)
 
 
-_CHAINS = ["ethereum", "arbitrum", "optimism", "base", "bsc", "polygon", "fantom"]
+_CHAINS = ["ethereum", "base"]
 
 app = FastAPI(
     title="ypricemagic API",
@@ -497,7 +502,7 @@ def _serialize_trade_path(result: Any) -> list[dict[str, Any]] | None:
 async def _fetch_price(
     token: str,
     block: int,
-    amount: float | None = None,
+    amount: Decimal | None = None,
     ignore_pools: tuple[str, ...] = (),
 ) -> tuple[float, list[dict[str, Any]] | None] | None:
     """Fetch a single token price. Returns (price, trade_path) or None."""
@@ -529,7 +534,7 @@ async def _fetch_price(
 async def _fetch_price_and_cache(
     token: str,
     block: int,
-    amount: float | None = None,
+    amount: Decimal | None = None,
     ignore_pools: tuple[str, ...] = (),
 ) -> tuple[float, list[dict[str, Any]] | None, int | None] | None:
     """Fetch price, timestamp, and write cache in one shieldable coroutine."""
@@ -543,27 +548,53 @@ async def _fetch_price_and_cache(
     return price_float, trade_path, block_timestamp
 
 
+async def _lookup_batch_prices(
+    tokens: tuple[str, ...],
+    block: int,
+    amounts: tuple[Decimal | None, ...] | None,
+) -> list[Any]:
+    """Adapt optional per-token amounts to the fork's all-amounts batch API."""
+    from y import get_prices
+
+    kwargs: dict[str, Any] = {"fail_to_None": True, "sync": False}
+    if amounts is None or all(amount is None for amount in amounts):
+        return list(await get_prices(tokens, block, **kwargs))
+    if all(amount is not None for amount in amounts):
+        kwargs["amounts"] = amounts
+        return list(await get_prices(tokens, block, **kwargs))
+
+    spot_indices = [i for i, amount in enumerate(amounts) if amount is None]
+    quote_indices = [i for i, amount in enumerate(amounts) if amount is not None]
+    quote_kwargs = {**kwargs, "amounts": tuple(amounts[i] for i in quote_indices)}
+    spot_results, quote_results = await asyncio.gather(
+        get_prices(tuple(tokens[i] for i in spot_indices), block, **kwargs),
+        get_prices(
+            tuple(tokens[i] for i in quote_indices),
+            block,
+            **quote_kwargs,
+        ),
+    )
+    results: list[Any] = [None] * len(tokens)
+    for indices, values in ((spot_indices, spot_results), (quote_indices, quote_results)):
+        for index, value in zip(indices, values, strict=True):
+            results[index] = value
+    return results
+
+
 async def _fetch_batch_prices(
     tokens: tuple[str, ...],
     block: int,
-    amounts: tuple[float | None, ...] | None = None,
+    amounts: tuple[Decimal | None, ...] | None = None,
 ) -> list[tuple[float, list[dict[str, Any]] | None] | None]:
     """Fetch prices for multiple tokens in parallel.
 
     Returns a list of (price, trade_path) tuples or None for tokens that couldn't be priced.
     Does not raise exceptions - errors are logged and None is returned for that token.
     """
-    from y import get_prices
-
-    kwargs: dict[str, Any] = {
-        "fail_to_None": True,
-        "sync": False,
-    }
-    if amounts is not None:
-        kwargs["amounts"] = amounts
-
     try:
-        results = await asyncio.wait_for(get_prices(tokens, block, **kwargs), timeout=PRICE_TIMEOUT)
+        results = await asyncio.wait_for(
+            _lookup_batch_prices(tokens, block, amounts), timeout=PRICE_TIMEOUT
+        )
         prices: list[tuple[float, list[dict[str, Any]] | None] | None] = []
         for i, p in enumerate(results):
             if p is None:
@@ -968,7 +999,7 @@ async def prices(
     # Fetch prices for tokens not in cache
     if tokens_to_fetch:
         # Prepare amounts for the tokens we need to fetch (preserve positional correspondence)
-        fetch_amounts: tuple[float | None, ...] | None = None
+        fetch_amounts: tuple[Decimal | None, ...] | None = None
         if params.amounts is not None:
             fetch_amounts = tuple(params.amounts[i] for i in indices_to_fetch)
 
@@ -1053,9 +1084,9 @@ async def check_bucket(
 
                 erc20 = ERC20(token, asynchronous=True)
                 symbol, name, decimals = await asyncio.gather(
-                    erc20.symbol,  # type: ignore[call-overload]
-                    erc20.name,  # type: ignore[call-overload]
-                    erc20.decimals,  # type: ignore[call-overload]
+                    erc20.symbol,
+                    erc20.name,
+                    erc20.decimals,
                 )
                 metadata = {"symbol": symbol, "name": name, "decimals": decimals}
             except Exception as meta_err:

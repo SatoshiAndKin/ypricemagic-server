@@ -1,6 +1,7 @@
 import re
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
+from decimal import Decimal, InvalidOperation
 
 ADDRESS_REGEX = re.compile(r"^0x[a-fA-F0-9]{40}$")
 
@@ -18,7 +19,7 @@ def is_valid_address(address: str) -> bool:
 class PriceParams:
     token: str
     block: int | None = None
-    amount: float | None = None
+    amount: Decimal | None = None
     ignore_pools: tuple[str, ...] = ()
     timestamp: int | None = None
 
@@ -27,7 +28,7 @@ class PriceParams:
 class BatchParams:
     tokens: tuple[str, ...]
     block: int | None = None
-    amounts: tuple[float | None, ...] | None = None
+    amounts: tuple[Decimal | None, ...] | None = None
     timestamp: int | None = None
 
 
@@ -48,7 +49,7 @@ class ParseError:
 ParseResult = ParseSuccess | ParseError
 
 
-def parse_bool_param(value: str | None, name: str) -> bool | None | ParseError:
+def parse_bool_param(value: str | None, name: str) -> bool | ParseError | None:
     """Parse a boolean query parameter.
 
     Accepts: true, false, 1, 0 (case-insensitive).
@@ -93,7 +94,7 @@ def parse_ignore_pools(value: str | None) -> tuple[str, ...] | ParseError:
     return tuple(addresses)
 
 
-def parse_timestamp(value: str | None) -> int | None | ParseError:
+def parse_timestamp(value: str | None) -> int | ParseError | None:
     """Parse timestamp parameter.
 
     Accepts:
@@ -124,7 +125,7 @@ def parse_timestamp(value: str | None) -> int | None | ParseError:
     return _parse_iso8601_timestamp(stripped)
 
 
-def _parse_unix_timestamp(value: str) -> int | None | ParseError:
+def _parse_unix_timestamp(value: str) -> int | ParseError | None:
     """Parse Unix epoch timestamp string."""
     try:
         parsed_float = float(value)
@@ -182,7 +183,7 @@ def _parse_iso8601_timestamp(value: str) -> int | ParseError:
     return epoch
 
 
-def _parse_block(block: str | None) -> int | None | ParseError:
+def _parse_block(block: str | None) -> int | ParseError | None:
     """Parse block parameter."""
     if block is None:
         return None
@@ -195,15 +196,15 @@ def _parse_block(block: str | None) -> int | None | ParseError:
     return parsed
 
 
-def _parse_amount(amount: str | None) -> float | None | ParseError:
+def _parse_amount(amount: str | None) -> Decimal | ParseError | None:
     """Parse amount parameter."""
     if amount is None:
         return None
     try:
-        parsed = float(amount)
-    except (ValueError, TypeError):
+        parsed = Decimal(amount)
+    except (InvalidOperation, ValueError, TypeError):
         return ParseError(f"Invalid amount: {amount}")
-    if parsed <= 0:
+    if not parsed.is_finite() or parsed <= 0:
         return ParseError(f"Invalid amount: {amount}")
     return parsed
 
@@ -270,7 +271,7 @@ class BatchParseSuccess:
 BatchParseResult = BatchParseSuccess | ParseError
 
 
-def _parse_amounts(value: str | None) -> tuple[float | None, ...] | None | ParseError:
+def _parse_amounts(value: str | None) -> tuple[Decimal | None, ...] | ParseError | None:
     """Parse comma-separated amounts.
 
     Splits on comma, strips whitespace.
@@ -287,7 +288,7 @@ def _parse_amounts(value: str | None) -> tuple[float | None, ...] | None | Parse
         return None
 
     segments = value.split(",")
-    amounts: list[float | None] = []
+    amounts: list[Decimal | None] = []
     for i, segment in enumerate(segments):
         stripped = segment.strip()
         if stripped == "":
@@ -295,10 +296,10 @@ def _parse_amounts(value: str | None) -> tuple[float | None, ...] | None | Parse
             amounts.append(None)
         else:
             try:
-                parsed = float(stripped)
-            except (ValueError, TypeError):
+                parsed = Decimal(stripped)
+            except (InvalidOperation, ValueError, TypeError):
                 return ParseError(f"Invalid amount at position {i + 1}: '{stripped}'")
-            if parsed <= 0:
+            if not parsed.is_finite() or parsed <= 0:
                 return ParseError(
                     f"Invalid amount at position {i + 1}: '{stripped}' (must be positive)"
                 )

@@ -3,7 +3,7 @@ name = "ypricemagic-server"
 version = "0.12.0"
 requires-python = ">=3.12,<3.13"
 dependencies = [
-    "ypricemagic @ git+https://github.com/SatoshiAndKin/ypricemagic.git@07ca6db87c5f33c3272b52fba6d90f7533cb5e1c",
+    "ypricemagic @ git+https://github.com/SatoshiAndKin/ypricemagic.git@9d781b39d57f83557202a66563b933af3e3523e5",
     "fastapi",
     "uvicorn[standard]",
     "diskcache",
@@ -30,11 +30,24 @@ dev = [
 
 [tool.uv]
 prerelease = "allow"
+# UV's isolated Linux build must explicitly allow dank-mids' nested Git source.
+build-constraint-dependencies = [
+    "evmspec @ git+https://github.com/SatoshiAndKin/evmspec.git@f0df0d9d8e4e7a7000580054ce2c0b6b6193a14c",
+]
 override-dependencies = [
+    # Brownie's frozen dependency list includes vulnerable and incompatible pins.
+    # Keep its Web3 6 API while allowing patched, compatible runtime packages.
+    "aiohttp>=3.14.3,<4",
+    "cbor2>=5.9.0,<6",
+    "idna>=3.20,<4",
+    "pygments>=2.21.0,<3",
+    "python-dotenv>=1.2.4,<2",
+    "requests>=2.34.2,<3",
     "pytest>=8.0",
     "pytest-xdist>=3.0",
     "pytest-forked>=1.6",
     "cchecksum>=0.4.3",
+    "faster-eth-abi>=5.2.30,<6",
     "faster-eth-utils>=5.3.25",
     "protobuf>=6.33.5,<7",
     "ujson>=5.12.0",
@@ -45,7 +58,8 @@ override-dependencies = [
 
 [tool.ruff]
 line-length = 100
-target-version = "py313"
+target-version = "py312"
+extend-exclude = [".factory"]
 
 [tool.ruff.lint.per-file-ignores]
 "scripts/*" = ["T201"]  # CLI scripts use print() for output

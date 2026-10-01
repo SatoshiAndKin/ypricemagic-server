@@ -64,8 +64,6 @@
 
   const BLOCK_EXPLORER: Record<string, string> = {
     ethereum: 'https://etherscan.io',
-    arbitrum: 'https://arbiscan.io',
-    optimism: 'https://optimistic.etherscan.io',
     base: 'https://basescan.org',
   };
 

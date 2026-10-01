@@ -1,6 +1,7 @@
 """Tests for server._fetch_price behavior."""
 
 import asyncio
+from decimal import Decimal
 from unittest.mock import AsyncMock, patch
 
 import pytest
@@ -8,6 +9,90 @@ import pytest
 DAI = "0x6B175474E89094C44Da98b954EedeAC495271d0F"
 USDC = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"
 WETH = "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"
+
+
+class TestForkAmountContract:
+    def test_single_amount_keeps_exact_decimal(self, mock_y_module: None) -> None:
+        from fastapi.testclient import TestClient
+
+        from src.server import app
+
+        amount = "9007199254740993.000000000000000001"
+
+        async def get_price(token: str, block: int, **kwargs: object) -> float:
+            assert kwargs["amount"] == Decimal(amount)
+            assert isinstance(kwargs["amount"], Decimal)
+            return 1.25
+
+        with (
+            patch("y.get_price", get_price),
+            patch("y.get_block_timestamp_async", AsyncMock(return_value=1700000000)),
+        ):
+            response = TestClient(app).get(
+                "/price", params={"token": DAI, "block": "18000000", "amount": amount}
+            )
+
+        assert response.status_code == 200
+        assert response.json()["price"] == 1.25
+
+    def test_mixed_batch_preserves_order_duplicates_and_spot_cache(
+        self, mock_y_module: None
+    ) -> None:
+        from fastapi.testclient import TestClient
+
+        from src.server import app
+
+        calls: list[tuple[tuple[str, ...], object]] = []
+
+        async def get_prices(tokens: tuple[str, ...], block: int, **kwargs: object) -> list[float]:
+            amounts = kwargs.get("amounts")
+            calls.append((tokens, amounts))
+            if amounts is None:
+                return [2.0 for _ in tokens]
+            assert isinstance(amounts, tuple)
+            assert all(isinstance(amount, Decimal) for amount in amounts)
+            return [float(amount) for amount in amounts]
+
+        with (
+            patch("y.get_prices", get_prices),
+            patch("y.get_block_timestamp_async", AsyncMock(return_value=1700000000)),
+            patch("src.server.get_cached_price", return_value=None),
+            patch("src.server.set_cached_price") as set_price,
+        ):
+            response = TestClient(app).get(
+                "/prices",
+                params={
+                    "tokens": f"{DAI},{USDC},{DAI}",
+                    "block": "18000000",
+                    "amounts": "1.000000000000000001,,3",
+                },
+            )
+            assert response.status_code == 200
+            assert [(item["token"], item["price"]) for item in response.json()] == [
+                (DAI, 1.0),
+                (USDC, 2.0),
+                (DAI, 3.0),
+            ]
+            set_price.assert_called_once_with(USDC, 18000000, 2.0, block_timestamp=1700000000)
+
+        assert sorted(calls, key=lambda call: len(call[0])) == [
+            ((USDC,), None),
+            ((DAI, DAI), (Decimal("1.000000000000000001"), Decimal("3"))),
+        ]
+
+    @pytest.mark.parametrize("amount", ["NaN", "sNaN", "Infinity", "-Infinity"])
+    @pytest.mark.parametrize("endpoint", ["/price", "/prices"])
+    def test_nonfinite_amount_is_bad_request(self, amount: str, endpoint: str) -> None:
+        from fastapi.testclient import TestClient
+
+        from src.server import app
+
+        params = (
+            {"token": DAI, "amount": amount}
+            if endpoint == "/price"
+            else {"tokens": DAI, "amounts": amount}
+        )
+        assert TestClient(app).get(endpoint, params=params).status_code == 400
 
 
 class TestTimestampResolution:
@@ -265,10 +350,10 @@ class TestFetchPriceNoneReturn:
 
         mock_get_price = AsyncMock(return_value=None)
         with patch("y.get_price", mock_get_price):
-            result = await _fetch_price(DAI, 18000000, amount=1000.0)
+            result = await _fetch_price(DAI, 18000000, amount=Decimal("1000"))
             assert result is None
             mock_get_price.assert_called_once_with(
-                DAI, 18000000, amount=1000.0, fail_to_None=True, sync=False
+                DAI, 18000000, amount=Decimal("1000"), fail_to_None=True, sync=False
             )
 
 
@@ -427,10 +512,10 @@ class TestFetchPriceSuccess:
 
         mock_get_price = AsyncMock(return_value=0.99)
         with patch("y.get_price", mock_get_price):
-            result = await _fetch_price(DAI, 18000000, amount=1000.0)
+            result = await _fetch_price(DAI, 18000000, amount=Decimal("1000"))
             assert result == (0.99, None)
             mock_get_price.assert_called_once_with(
-                DAI, 18000000, amount=1000.0, fail_to_None=True, sync=False
+                DAI, 18000000, amount=Decimal("1000"), fail_to_None=True, sync=False
             )
 
     @pytest.mark.asyncio
@@ -472,14 +557,14 @@ class TestFetchPriceNewParams:
             result = await _fetch_price(
                 DAI,
                 18000000,
-                amount=1000.0,
+                amount=Decimal("1000"),
                 ignore_pools=ignore_pools,
             )
             assert result == (1.0, None)
             mock_get_price.assert_called_once_with(
                 DAI,
                 18000000,
-                amount=1000.0,
+                amount=Decimal("1000"),
                 fail_to_None=True,
                 sync=False,
                 ignore_pools=ignore_pools,
@@ -1141,13 +1226,13 @@ class TestBatchPricesMixedAmounts:
     """
 
     @pytest.mark.asyncio
-    async def test_mixed_amounts_passed_to_get_prices(self, mock_y_module: None) -> None:
-        """Mixed amounts list with None values is passed to get_prices correctly."""
+    async def test_mixed_amounts_split_by_quote_mode(self, mock_y_module: None) -> None:
+        """Spot prices and amount quotes use separate fork batches."""
         from fastapi.testclient import TestClient
 
         from src.server import app
 
-        mock_get_prices = AsyncMock(return_value=[1.0, 2.0, 3.0])
+        mock_get_prices = AsyncMock(side_effect=[[2.0], [1.0, 3.0]])
         mock_get_block_timestamp = AsyncMock(return_value=1700000000)
         mock_chain = type("MockChain", (), {"height": 19000000})()
 
@@ -1172,9 +1257,15 @@ class TestBatchPricesMixedAmounts:
             data = response.json()
             assert len(data) == 3
 
-            # Verify amounts were passed correctly to get_prices
-            call_kwargs = mock_get_prices.call_args[1]
-            assert call_kwargs.get("amounts") == (1000.0, None, 500.0)
+            mock_get_prices.assert_any_await((USDC,), 18000000, fail_to_None=True, sync=False)
+            mock_get_prices.assert_any_await(
+                (DAI, WETH),
+                18000000,
+                amounts=(Decimal("1000"), Decimal("500")),
+                fail_to_None=True,
+                sync=False,
+            )
+            assert [item["price"] for item in data] == [1.0, 2.0, 3.0]
 
     @pytest.mark.asyncio
     async def test_mixed_amounts_caching_semantics(self, mock_y_module: None) -> None:
@@ -1183,7 +1274,7 @@ class TestBatchPricesMixedAmounts:
 
         from src.server import app
 
-        mock_get_prices = AsyncMock(return_value=[1.0, 2.0, 3.0])
+        mock_get_prices = AsyncMock(side_effect=[[2.0], [1.0, 3.0]])
         mock_get_block_timestamp = AsyncMock(return_value=1700000000)
         mock_chain = type("MockChain", (), {"height": 19000000})()
 
@@ -3171,3 +3262,67 @@ class TestUniswapV3Prewarm:
         info_calls = list(mock_logger.info.call_args_list)
         v3_calls = [c for c in info_calls if c.args and "v3" in c.args[0]]
         assert len(v3_calls) == 0
+
+
+class TestPrewarmReadiness:
+    @pytest.mark.asyncio
+    async def test_curve_failure_fails_startup_and_cancels_other_loaders(
+        self, mock_y_module: None, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        import asyncio
+        from types import SimpleNamespace
+
+        from src import server
+
+        started = asyncio.Event()
+        stopped = asyncio.Event()
+
+        async def slow_loader() -> None:
+            started.set()
+            try:
+                await asyncio.Event().wait()
+            finally:
+                stopped.set()
+
+        async def failed_curve() -> None:
+            await started.wait()
+            raise RuntimeError("required curve registry failed")
+
+        monkeypatch.setattr(server, "_shutdown_event", asyncio.Event())
+        monkeypatch.setattr(server, "_prewarm_uniswap", slow_loader)
+        for name in ("compound", "chainlink", "aave", "balancer", "gearbox"):
+            monkeypatch.setattr(server, f"_prewarm_{name}", AsyncMock())
+        curve = SimpleNamespace(_done=object(), __coin_to_pools__=failed_curve())
+        with pytest.raises(RuntimeError, match="required curve registry failed"):
+            await asyncio.wait_for(server._prewarm_with_shutdown(curve), 1)
+        assert stopped.is_set()
+
+    @pytest.mark.asyncio
+    async def test_shutdown_cancels_and_joins_pending_loaders(
+        self, mock_y_module: None, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        import asyncio
+        from types import SimpleNamespace
+
+        from src import server
+
+        started = asyncio.Event()
+        stopped = asyncio.Event()
+        shutdown = asyncio.Event()
+
+        async def slow_curve() -> None:
+            started.set()
+            try:
+                await asyncio.Event().wait()
+            finally:
+                stopped.set()
+
+        monkeypatch.setattr(server, "_shutdown_event", shutdown)
+        for name in ("uniswap", "compound", "chainlink", "aave", "balancer", "gearbox"):
+            monkeypatch.setattr(server, f"_prewarm_{name}", AsyncMock())
+        curve = SimpleNamespace(_done=object(), __coin_to_pools__=slow_curve())
+        task = asyncio.create_task(server._prewarm_with_shutdown(curve))
+        await started.wait()
+        shutdown.set()
+        await asyncio.wait_for(task, 1)
+        assert stopped.is_set()
