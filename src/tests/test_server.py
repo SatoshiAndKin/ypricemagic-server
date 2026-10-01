@@ -1,7 +1,9 @@
 """Tests for server._fetch_price behavior."""
 
 import asyncio
+from collections.abc import AsyncIterator
 from decimal import Decimal
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
 
 import pytest
@@ -2912,11 +2914,17 @@ class TestUniswapV2Prewarm:
         pools_a: asyncio.Future[list[str]] = asyncio.Future()
         pools_a.set_result(["pool1", "pool2"])
         mock_router_a.__pools__ = pools_a
+        index: asyncio.Future[dict[str, object]] = asyncio.Future()
+        index.set_result({})
+        mock_router_a.__pools_by_token__ = index
 
         mock_router_b = MagicMock()
         pools_b: asyncio.Future[list[str]] = asyncio.Future()
         pools_b.set_result(["pool3"])
         mock_router_b.__pools__ = pools_b
+        index_b: asyncio.Future[dict[str, object]] = asyncio.Future()
+        index_b.set_result({})
+        mock_router_b.__pools_by_token__ = index_b
 
         # Patch the multiplexer in sys.modules
         mock_multiplexer = sys.modules["y.prices.dex.uniswap"].uniswap_multiplexer
@@ -2956,6 +2964,9 @@ class TestUniswapV2Prewarm:
         pools_fut: asyncio.Future[list[str]] = asyncio.Future()
         pools_fut.set_result([])
         mock_router.__pools__ = pools_fut
+        index: asyncio.Future[dict[str, object]] = asyncio.Future()
+        index.set_result({})
+        mock_router.__pools_by_token__ = index
 
         mock_multiplexer = sys.modules["y.prices.dex.uniswap"].uniswap_multiplexer
         mock_multiplexer.v2_routers = {"sushiswap": mock_router}
@@ -3008,6 +3019,9 @@ class TestUniswapV2Prewarm:
         pools_good: asyncio.Future[list[str]] = asyncio.Future()
         pools_good.set_result(["pool1"])
         mock_router_good.__pools__ = pools_good
+        index: asyncio.Future[dict[str, object]] = asyncio.Future()
+        index.set_result({})
+        mock_router_good.__pools_by_token__ = index
 
         mock_multiplexer = sys.modules["y.prices.dex.uniswap"].uniswap_multiplexer
         mock_multiplexer.v2_routers = {
@@ -3056,8 +3070,14 @@ class TestUniswapV3Prewarm:
         mock_app = MagicMock()
 
         mock_v3 = MagicMock()
-        v3_pools: asyncio.Future[list[str]] = asyncio.Future()
-        v3_pools.set_result(["v3pool1", "v3pool2"])
+
+        async def objects(*, to_block: int) -> AsyncIterator[str]:
+            assert to_block == 19000000
+            for pool in ["v3pool1", "v3pool2"]:
+                yield pool
+
+        v3_pools: asyncio.Future[SimpleNamespace] = asyncio.Future()
+        v3_pools.set_result(SimpleNamespace(objects=objects))
         mock_v3.__pools__ = v3_pools
 
         mock_multiplexer = sys.modules["y.prices.dex.uniswap"].uniswap_multiplexer
@@ -3089,8 +3109,14 @@ class TestUniswapV3Prewarm:
         mock_app = MagicMock()
 
         mock_fork = MagicMock()
-        fork_pools: asyncio.Future[list[str]] = asyncio.Future()
-        fork_pools.set_result(["forkpool1"])
+
+        async def objects(*, to_block: int) -> AsyncIterator[str]:
+            assert to_block == 19000000
+            for pool in ["forkpool1"]:
+                yield pool
+
+        fork_pools: asyncio.Future[SimpleNamespace] = asyncio.Future()
+        fork_pools.set_result(SimpleNamespace(objects=objects))
         mock_fork.__pools__ = fork_pools
 
         mock_multiplexer = sys.modules["y.prices.dex.uniswap"].uniswap_multiplexer
@@ -3122,8 +3148,15 @@ class TestUniswapV3Prewarm:
         mock_app = MagicMock()
 
         mock_v3 = MagicMock()
-        v3_pools: asyncio.Future[list[str]] = asyncio.Future()
-        v3_pools.set_result([])
+
+        async def objects(*, to_block: int) -> AsyncIterator[str]:
+            assert to_block == 19000000
+            empty_pools: list[str] = []
+            for pool in empty_pools:
+                yield pool
+
+        v3_pools: asyncio.Future[SimpleNamespace] = asyncio.Future()
+        v3_pools.set_result(SimpleNamespace(objects=objects))
         mock_v3.__pools__ = v3_pools
 
         mock_multiplexer = sys.modules["y.prices.dex.uniswap"].uniswap_multiplexer
@@ -3265,6 +3298,113 @@ class TestUniswapV3Prewarm:
 
 
 class TestPrewarmReadiness:
+    @pytest.mark.asyncio
+    async def test_v2_warmup_waits_for_token_index(self, mock_y_module: None) -> None:
+        import sys
+
+        from src import server
+
+        started = asyncio.Event()
+        finish = asyncio.Event()
+
+        async def pools() -> list[object]:
+            return []
+
+        async def index() -> dict[str, object]:
+            started.set()
+            await finish.wait()
+            return {}
+
+        multiplexer = sys.modules["y.prices.dex.uniswap"].uniswap_multiplexer
+        multiplexer.v2_routers = {
+            "test": SimpleNamespace(__pools__=pools(), __pools_by_token__=index())
+        }
+        warmup = asyncio.create_task(server._prewarm_uniswap())
+        try:
+            await asyncio.wait_for(started.wait(), 1)
+            assert not warmup.done()
+            finish.set()
+            await asyncio.wait_for(warmup, 1)
+        finally:
+            warmup.cancel()
+            await asyncio.gather(warmup, return_exceptions=True)
+
+    @pytest.mark.asyncio
+    async def test_v3_warmup_waits_for_inventory_consumption(
+        self, mock_y_module: None, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        import sys
+        from types import SimpleNamespace
+
+        from src import server
+
+        started = asyncio.Event()
+        finish = asyncio.Event()
+        consumed: list[int] = []
+
+        async def objects(*, to_block: int) -> AsyncIterator[object]:
+            assert to_block == 19000000
+            started.set()
+            await finish.wait()
+            consumed.append(to_block)
+            yield "pool"
+
+        async def pool_inventory() -> object:
+            return SimpleNamespace(objects=objects)
+
+        multiplexer = sys.modules["y.prices.dex.uniswap"].uniswap_multiplexer
+        multiplexer.v2_routers = {}
+        multiplexer.v3 = SimpleNamespace(__pools__=pool_inventory())
+        multiplexer.v3_forks = []
+        monkeypatch.setattr(server, "_shutdown_event", asyncio.Event())
+        for name in ("compound", "chainlink", "aave", "balancer", "gearbox"):
+            monkeypatch.setattr(server, f"_prewarm_{name}", AsyncMock())
+
+        warmup = asyncio.create_task(server._prewarm_with_shutdown(None))
+        try:
+            await asyncio.wait_for(started.wait(), 0.2)
+            assert not warmup.done()
+            finish.set()
+            await asyncio.wait_for(warmup, 1)
+            assert consumed == [19000000]
+        finally:
+            warmup.cancel()
+            await asyncio.gather(warmup, return_exceptions=True)
+
+    @pytest.mark.asyncio
+    async def test_balancer_warmup_consumes_vault_inventory(
+        self, mock_y_module: None, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        import sys
+        from types import SimpleNamespace
+
+        from src import server
+
+        consumed: list[int] = []
+
+        async def pools(*, block: int) -> AsyncIterator[object]:
+            consumed.append(block)
+            yield "pool"
+
+        async def v2() -> object:
+            return SimpleNamespace(vaults=[SimpleNamespace(pools=pools)])
+
+        async def versions() -> list[object]:
+            return []
+
+        multiplexer = SimpleNamespace(__versions__=versions(), __v2__=v2())
+        monkeypatch.setitem(
+            sys.modules,
+            "y.prices.dex.balancer.balancer",
+            SimpleNamespace(balancer_multiplexer=multiplexer),
+        )
+        try:
+            await server._prewarm_balancer()
+            assert consumed == [19000000]
+        finally:
+            if not consumed:
+                multiplexer.__v2__.close()
+
     @pytest.mark.asyncio
     async def test_curve_failure_fails_startup_and_cancels_other_loaders(
         self, mock_y_module: None, monkeypatch: pytest.MonkeyPatch

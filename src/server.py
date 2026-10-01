@@ -5,6 +5,7 @@ import os
 import signal
 import time
 import uuid
+from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from decimal import Decimal
 from importlib.metadata import PackageNotFoundError
@@ -122,18 +123,29 @@ async def _get_token_lock(token: str) -> asyncio.Lock:
         return _bucket_locks[token]
 
 
+async def _consume_pool_inventory(pools: AsyncIterator[Any]) -> int:
+    count = 0
+    async for _ in pools:
+        count += 1
+    return count
+
+
 async def _prewarm_uniswap() -> None:
     """Pre-load Uniswap V2/V3 pool indexes concurrently.
 
     Each sub-step is wrapped in try/except so partial failures don't prevent startup.
     All routers (V2, V3, V3 forks) load in parallel for faster startup.
     """
+    from brownie import chain
     from y.prices.dex.uniswap import uniswap_multiplexer
+
+    block = chain.height
 
     async def _load_v2(name: str, router: Any) -> None:
         try:
             logger.info("uniswap_v2_pools_loading_started", router=name)
             await router.__pools__
+            await router.__pools_by_token__
             logger.info("uniswap_v2_pools_loading_done", router=name)
         except Exception as v2_err:
             logger.warning("uniswap_prewarm_failed", router=name, version="v2", error=str(v2_err))
@@ -141,16 +153,18 @@ async def _prewarm_uniswap() -> None:
     async def _load_v3() -> None:
         try:
             logger.info("uniswap_v3_pools_loading_started")
-            await uniswap_multiplexer.v3.__pools__  # type: ignore[union-attr]
-            logger.info("uniswap_v3_pools_loading_done")
+            pools = await uniswap_multiplexer.v3.__pools__  # type: ignore[union-attr]
+            count = await _consume_pool_inventory(pools.objects(to_block=block))
+            logger.info("uniswap_v3_pools_loading_done", pools=count, block=block)
         except Exception as v3_err:
             logger.warning("uniswap_prewarm_failed", version="v3", error=str(v3_err))
 
     async def _load_v3_fork(fork: Any) -> None:
         try:
             logger.info("uniswap_v3_pools_loading_started", fork=str(fork))
-            await fork.__pools__
-            logger.info("uniswap_v3_pools_loading_done", fork=str(fork))
+            pools = await fork.__pools__
+            count = await _consume_pool_inventory(pools.objects(to_block=block))
+            logger.info("uniswap_v3_pools_loading_done", fork=str(fork), pools=count, block=block)
         except Exception as v3_fork_err:
             logger.warning(
                 "uniswap_prewarm_failed",
@@ -220,13 +234,23 @@ async def _prewarm_aave() -> None:
 
 
 async def _prewarm_balancer() -> None:
-    """Pre-load Balancer V1/V2 version objects."""
+    """Pre-load Balancer versions and consume V2 vault pool events through the head."""
     try:
+        from brownie import chain
         from y.prices.dex.balancer.balancer import balancer_multiplexer
 
         logger.info("balancer_loading_started")
         await balancer_multiplexer.__versions__
-        logger.info("balancer_loading_done")
+        v2 = await balancer_multiplexer.__v2__
+        block = chain.height
+        counts = (
+            await asyncio.gather(
+                *(_consume_pool_inventory(vault.pools(block=block)) for vault in v2.vaults)
+            )
+            if v2
+            else []
+        )
+        logger.info("balancer_loading_done", pools=sum(counts), block=block)
     except Exception as e:
         logger.warning("balancer_prewarm_failed", error=str(e))
 

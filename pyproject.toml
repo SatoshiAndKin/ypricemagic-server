@@ -32,7 +32,7 @@ dev = [
 prerelease = "allow"
 # Allow old Brownie/ABI build pins and dank-mids' nested Git source in isolation.
 build-constraint-dependencies = [
-    "cchecksum>=0.3.7.dev0",
+    "cchecksum>=0.3.0.dev0",
     "evmspec @ git+https://github.com/SatoshiAndKin/evmspec.git@f0df0d9d8e4e7a7000580054ce2c0b6b6193a14c",
 ]
 override-dependencies = [

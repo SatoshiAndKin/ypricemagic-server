@@ -26,7 +26,7 @@ overrides = [
     { name = "wheel", specifier = ">=0.46.2" },
 ]
 build-constraints = [
-    { name = "cchecksum", specifier = ">=0.3.7.dev0" },
+    { name = "cchecksum", specifier = ">=0.3.0.dev0" },
     { name = "evmspec", git = "https://github.com/SatoshiAndKin/evmspec.git?rev=f0df0d9d8e4e7a7000580054ce2c0b6b6193a14c" },
 ]
 
