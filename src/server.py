@@ -131,57 +131,39 @@ async def _consume_pool_inventory(pools: AsyncIterator[Any]) -> int:
 
 
 async def _prewarm_uniswap() -> None:
-    """Pre-load Uniswap V2/V3 pool indexes concurrently.
+    """Load indexed USDC pools through the startup head.
 
-    Each sub-step is wrapped in try/except so partial failures don't prevent startup.
-    All routers (V2, V3, V3 forks) load in parallel for faster startup.
+    Other tokens are discovered on demand. Each router completes the anchor
+    index before readiness; independent router failures remain non-fatal.
     """
     from brownie import chain
+    from y.constants import STABLECOINS
     from y.prices.dex.uniswap import uniswap_multiplexer
 
     block = chain.height
+    tokens = tuple(str(token) for token, label in STABLECOINS.items() if label == "usdc")
 
-    async def _load_v2(name: str, router: Any) -> None:
+    async def _load(router: Any, version: str, name: str) -> None:
         try:
-            logger.info("uniswap_v2_pools_loading_started", router=name)
-            await router.__pools__
-            await router.__pools_by_token__
-            logger.info("uniswap_v2_pools_loading_done", router=name)
-        except Exception as v2_err:
-            logger.warning("uniswap_prewarm_failed", router=name, version="v2", error=str(v2_err))
-
-    async def _load_v3() -> None:
-        try:
-            logger.info("uniswap_v3_pools_loading_started")
-            pools = await uniswap_multiplexer.v3.__pools__  # type: ignore[union-attr]
-            count = await _consume_pool_inventory(pools.objects(to_block=block))
-            logger.info("uniswap_v3_pools_loading_done", pools=count, block=block)
-        except Exception as v3_err:
-            logger.warning("uniswap_prewarm_failed", version="v3", error=str(v3_err))
-
-    async def _load_v3_fork(fork: Any) -> None:
-        try:
-            logger.info("uniswap_v3_pools_loading_started", fork=str(fork))
-            pools = await fork.__pools__
-            count = await _consume_pool_inventory(pools.objects(to_block=block))
-            logger.info("uniswap_v3_pools_loading_done", fork=str(fork), pools=count, block=block)
-        except Exception as v3_fork_err:
-            logger.warning(
-                "uniswap_prewarm_failed",
-                version="v3_fork",
-                fork=str(fork),
-                error=str(v3_fork_err),
+            logger.info(f"uniswap_{version}_pools_loading_started", router=name, tokens=tokens)
+            counts = await asyncio.gather(
+                *(_consume_pool_inventory(router.pools_for_token(token, block)) for token in tokens)
             )
+            logger.info(
+                f"uniswap_{version}_pools_loading_done",
+                router=name,
+                tokens=tokens,
+                pools=sum(counts),
+                block=block,
+            )
+        except Exception as error:
+            logger.warning("uniswap_prewarm_failed", router=name, version=version, error=str(error))
 
-    tasks: list[Any] = [
-        _load_v2(name, router) for name, router in uniswap_multiplexer.v2_routers.items()
-    ]
+    tasks = [_load(router, "v2", name) for name, router in uniswap_multiplexer.v2_routers.items()]
     if uniswap_multiplexer.v3:
-        tasks.append(_load_v3())
-    for fork in uniswap_multiplexer.v3_forks:
-        tasks.append(_load_v3_fork(fork))
-
-    await asyncio.gather(*tasks, return_exceptions=True)
+        tasks.append(_load(uniswap_multiplexer.v3, "v3", str(uniswap_multiplexer.v3)))
+    tasks.extend(_load(fork, "v3", str(fork)) for fork in uniswap_multiplexer.v3_forks)
+    await asyncio.gather(*tasks)
 
 
 async def _prewarm_compound() -> None:

@@ -45,7 +45,7 @@ docker compose up --build
 
 For local usage, open `http://localhost:<PORT>` from `traefik-proxy/.env`.
 
-Startup consumes the V2 token indexes, V3 factory events, and Balancer vault events before reporting readiness. Keep the pricing cache volumes across restarts to reuse event history. The fork keeps its provider-specific event-log ranges. On Base, larger ranges can exceed RPC response limits even when a recent-block probe succeeds, so increasing the chunk size is not a reliable warmup fix.
+Startup consumes indexed USDC pool events for each V2/V3 router, plus Balancer vault events, before reporting readiness. Other tokens are discovered on demand through their indexed creation events. Keep the pricing cache volumes across restarts to reuse event history. Sparse token scans use larger log ranges with bounded splitting when the RPC rejects them. Explicit range settings and known providers with smaller limits are respected. Full-inventory log ranges remain unchanged.
 
 CCIP reads are disabled on both pricing providers, so contract reverts cannot automatically trigger HTTP requests to contract-supplied URLs. The API cache rejects pickle metadata even if its SQLite records are tampered with. CI retains the full vulnerability inventory; `.trivyignore.yaml` documents three application-specific findings, their mitigations or build-context limits, and a November 1, 2026 review deadline. These exceptions do not mean the dependency packages are universally patched.
 

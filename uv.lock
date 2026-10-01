@@ -2337,8 +2337,8 @@ wheels = [
 
 [[package]]
 name = "ypricemagic"
-version = "0.0.1.dev1557"
-source = { git = "https://github.com/SatoshiAndKin/ypricemagic.git?rev=9d781b39d57f83557202a66563b933af3e3523e5#9d781b39d57f83557202a66563b933af3e3523e5" }
+version = "0.0.1.dev1559"
+source = { git = "https://github.com/SatoshiAndKin/ypricemagic.git?rev=1087bd933ef3aea2f38bbfb05550a79c5c96f5d8#1087bd933ef3aea2f38bbfb05550a79c5c96f5d8" }
 dependencies = [
     { name = "aiosqlite" },
     { name = "asyncpg" },
@@ -2413,6 +2413,6 @@ requires-dist = [
     { name = "tenacity" },
     { name = "uvicorn", extras = ["standard"] },
     { name = "vulture", marker = "extra == 'dev'" },
-    { name = "ypricemagic", git = "https://github.com/SatoshiAndKin/ypricemagic.git?rev=9d781b39d57f83557202a66563b933af3e3523e5" },
+    { name = "ypricemagic", git = "https://github.com/SatoshiAndKin/ypricemagic.git?rev=1087bd933ef3aea2f38bbfb05550a79c5c96f5d8" },
 ]
 provides-extras = ["dev"]
