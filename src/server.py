@@ -339,7 +339,10 @@ async def lifespan(app: FastAPI) -> Any:
 
         from dank_mids.helpers._helpers import setup_dank_w3_from_sync
 
-        setup_dank_w3_from_sync(network.web3)
+        # Pricing contracts must not trigger HTTP requests to contract-supplied URLs.
+        network.web3.provider.global_ccip_read_enabled = False
+        dank_w3 = setup_dank_w3_from_sync(network.web3)
+        dank_w3.eth.w3.provider.global_ccip_read_enabled = False
         logger.info("dank_mids_patched")
 
         from brownie import chain

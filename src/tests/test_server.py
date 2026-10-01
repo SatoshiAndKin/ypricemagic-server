@@ -3297,6 +3297,60 @@ class TestUniswapV3Prewarm:
         assert len(v3_calls) == 0
 
 
+class TestContractURLPolicy:
+    @pytest.mark.asyncio
+    async def test_lifespan_disables_automatic_offchain_http(
+        self, mock_y_module: None, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        import sys
+
+        from web3 import AsyncHTTPProvider, AsyncWeb3, Web3
+        from web3.exceptions import OffchainLookup
+
+        from src import server
+
+        sync_w3 = Web3()
+        async_w3 = AsyncWeb3(AsyncHTTPProvider("https://example.invalid"))
+        sys.modules["brownie"].network.web3 = sync_w3
+        for name in ("uniswap", "compound", "chainlink", "aave", "balancer", "gearbox"):
+            monkeypatch.setattr(server, f"_prewarm_{name}", AsyncMock())
+        payload = {
+            "sender": DAI,
+            "urls": ["http://127.0.0.1/private"],
+            "callData": b"",
+            "callbackFunction": b"",
+            "extraData": b"",
+        }
+        with patch(
+            "dank_mids.helpers._helpers.setup_dank_w3_from_sync",
+            return_value=SimpleNamespace(eth=SimpleNamespace(w3=async_w3)),
+        ):
+            async with server.lifespan(server.app):
+                with (
+                    patch("web3.eth.eth.Eth._call", side_effect=OffchainLookup(payload)),
+                    patch(
+                        "web3.eth.eth.handle_offchain_lookup",
+                        side_effect=AssertionError("contract URL followed"),
+                    ) as sync_http,
+                    pytest.raises(OffchainLookup),
+                ):
+                    sync_w3.eth.call({"to": DAI})
+                sync_http.assert_not_called()
+                with (
+                    patch(
+                        "web3.eth.async_eth.AsyncEth._call",
+                        new=AsyncMock(side_effect=OffchainLookup(payload)),
+                    ),
+                    patch(
+                        "web3.eth.async_eth.async_handle_offchain_lookup",
+                        side_effect=AssertionError("contract URL followed"),
+                    ) as async_http,
+                    pytest.raises(OffchainLookup),
+                ):
+                    await async_w3.eth.call({"to": DAI})
+                async_http.assert_not_called()
+
+
 class TestPrewarmReadiness:
     @pytest.mark.asyncio
     async def test_v2_warmup_waits_for_token_index(self, mock_y_module: None) -> None:
