@@ -1,0 +1,39 @@
+{
+  "chain": "ethereum",
+  "empty_cache": true,
+  "provider": "production web3-proxy",
+  "passed": true,
+  "startup_seconds": 591.9939527920214,
+  "healthy_within_600": true,
+  "cold_quote_seconds": 2.2092920830473304,
+  "cold_quote_status": 200,
+  "cold_quote": {
+    "token": "0xdAC17F958D2ee523a2206206994597C13D831ec7",
+    "price": 0.999275,
+    "block": 24085045,
+    "chain": "ethereum",
+    "block_timestamp": 1766610227,
+    "cached": false,
+    "trade_path": [
+      {
+        "token": "0xdAC17F958D2ee523a2206206994597C13D831ec7",
+        "price": 0.999275,
+        "source": "Chainlink historical stablecoin USD for 0xdAC17F958D2ee523a2206206994597C13D831ec7"
+      }
+    ]
+  },
+  "shutdown_seconds": 0.9431780410232022,
+  "state": {
+    "Status": "exited",
+    "Running": false,
+    "Paused": false,
+    "Restarting": false,
+    "OOMKilled": false,
+    "Dead": false,
+    "Pid": 0,
+    "ExitCode": 0,
+    "Error": "",
+    "StartedAt": "2026-10-02T18:28:39.28122892Z",
+    "FinishedAt": "2026-10-02T18:38:34.158804758Z"
+  }
+}

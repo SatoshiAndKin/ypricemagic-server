@@ -1,0 +1,52 @@
+{
+  "chain": "ethereum",
+  "block": 19000000,
+  "hash": "0xcf384012b91b081230cdf17a3f7dd370d8e67056058af6b272b3d54aa2714fac",
+  "token": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+  "rows": [
+    {
+      "router": "uniswap v2",
+      "version": "v2",
+      "streamed": 3189,
+      "existing": 3189,
+      "passed": true,
+      "only_streamed": [],
+      "only_existing": [],
+      "pool_set_sha256": "f6c92154d4cf3d0281c0418f2422e58832b47f0bbdcb08c5ff30715802f780c9",
+      "seconds": 0.7211042479611933
+    },
+    {
+      "router": "sushiswap",
+      "version": "v2",
+      "streamed": 242,
+      "existing": 242,
+      "passed": true,
+      "only_streamed": [],
+      "only_existing": [],
+      "pool_set_sha256": "9bb51fcd047f179a491478e8964c36be3e49d768a1a96a49f71f2b8366a0866c",
+      "seconds": 0.10658627504017204
+    },
+    {
+      "router": "shibaswap",
+      "version": "v2",
+      "streamed": 14,
+      "existing": 14,
+      "passed": true,
+      "only_streamed": [],
+      "only_existing": [],
+      "pool_set_sha256": "572d41a51300c3c73292dd4c8f07a5637bb3328b1eb8a001848b5c9eb9f19f29",
+      "seconds": 0.14342360000591725
+    },
+    {
+      "router": "<UniswapV3 factory=0x1F98431c8aD98523631AE4a59f267346ea31F984 quoter=0xb27308f9F90D607463bb33eA1BeBb41C27CE5AB6>",
+      "version": "v3",
+      "streamed": 1825,
+      "existing": 1825,
+      "passed": true,
+      "only_streamed": [],
+      "only_existing": [],
+      "pool_set_sha256": "42c3066542b1563d40fe65dc5b44784ebde2b182a118031f48bb66286cb39a74",
+      "seconds": 0.461340551963076
+    }
+  ]
+}

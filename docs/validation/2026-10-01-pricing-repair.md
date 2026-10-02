@@ -21,6 +21,11 @@ factory coverage was ignored for both token topic positions and alternatives;
 disjoint scans falsely claimed the gap; and plDAI/plUSDC mappings were absent.
 Token discovery's repeated scans were exposed by fork PR 46. The cache coverage
 and missing mapping behavior also exist in its parent, the PR 43 merge.
+Chainlink feed selection awaited the entire feed catalog before querying its
+authoritative registry. An empty-cache candidate reproduced historical USDT
+HTTP 504 responses at the single 300-second deadline. The event-first selection
+order dates to commit `50e1d057` (September 11), before the recent fork PRs;
+it was exposed by the smaller log ranges and concurrent cold warmup.
 The smoke validator's xPREMIA address had no code; the real deployment is
 `0x16f9D564Df80376C61AC914205D3fDfF7057d610`. The no-code address remains a
 separate expected-unavailable test.
@@ -49,14 +54,17 @@ allow 315 seconds to receive the server's 300-second timeout response.
 - Saturation test fills exactly two active slots and 32 queued requests; additional
   work returns 503 while cached price and health requests return 200.
 - Frontend: Svelte check, 89 tests, and production build passed.
-- Fork: the final-source targeted native Python 3.12 run passed 404 tests,
+- Fork: the earlier targeted native Python 3.12 run passed 404 tests,
   strict mypy covered all 240 Python files, and ten extension imports were
   confirmed to resolve to compiled `.so` modules. Two native xPREMIA
   deployment-boundary checks also passed. Black/isort checks cover the full trees.
 - A full native run passed 2,259 tests with 17 skips and no OOM. Its source
   predates the final native-call transport and shared broad factory repairs.
-  The final-source full suite is running with 8 GiB/no swap and remains a merge
-  gate. The initial run failed on a full validation disk; the next passed 2,240
+  The latest runtime-source full suite is running with 8 GiB/no swap and remains a merge
+  gate. The preceding run passed 2,225 tests and failed 44 controlled quote
+  fixtures that still mocked the previous SDK transport. All 128 tests in those
+  two historical/address modules now pass at the native RPC boundary, preserving
+  their exact fallback, packed-path, amount, and error-propagation assertions. The initial run failed on a full validation disk; the next passed 2,240
   tests with 17 skips but failed an outdated scaling fixture. Both failures are
   retained. The corrected fixture verifies streamed metadata, exact native
   quotes, ordering, and historical cache turnover.
@@ -67,8 +75,9 @@ seconds, exited with startup-failure status 3, and never emitted readiness.
 
 Only Curve initialization is required for readiness. Optional protocol warmups
 run as owned background work after required initialization; SIGTERM cancels and
-joins them. In the empty-cache Base check, readiness took 573.71 seconds, within
-the existing 600-second health grace. The earlier 633-second run failed that
+joins them. The latest [empty-cache Base check](pricing-repair/empty-base-startup-grouped.json)
+became ready in 587.04 seconds and stopped on SIGTERM in 0.68 seconds, within
+the existing startup and stop graces. The earlier passing check took 573.71 seconds. The earlier 633-second run failed that
 grace and remains recorded. The successful process stopped normally on SIGTERM
 without an OOM. Persisted-cache candidates stayed below approximately 1.1 GiB
 during the measured quotes; this is candidate evidence, not production soak proof.
@@ -123,6 +132,60 @@ production-proxy improvement. Base new-block quotes took approximately 14–16
 seconds, versus the previous 104.871-second first current quote. These are
 different cache phases; final production timings remain a delivery gate.
 
+The historical pool inventories also match the existing pool-object iterator
+exactly at the pinned quote blocks. [Ethereum](pricing-repair/historical-pool-discovery-ethereum.json)
+retained 3,189 Uniswap V2, 242 SushiSwap, 14 ShibaSwap, and 1,825 V3 USDC pools.
+[Base](pricing-repair/historical-pool-discovery-base.json) retained 1,031 Uniswap
+V2, 57 SushiSwap, 633 Aerodrome V2, 2,200 Uniswap V3, and 49 Slipstream USDC pools. Their address-set digests
+and differences are recorded; every difference set is empty.
+
+Two [empty-cache Ethereum](pricing-repair/empty-ethereum-startup-before-provider-trace.json)
+[startup attempts](pricing-repair/empty-ethereum-startup-traced-before-grouping.json)
+failed the 600-second grace. A traced restart completed required initialization
+in 98.77 seconds using the partially populated isolated cache, which is not an
+empty-cache pass. The fresh trace showed two registry histories being scanned
+separately. Their overlapping history now uses one bounded multiple-address
+scan, then each registry consumes its own persisted events.
+
+The [fresh grouped-registry startup](pricing-repair/empty-ethereum-startup-grouped.json)
+passed in 534.95 seconds through the production web3-proxy. Actual SIGTERM after
+readiness completed in 1.21 seconds with exit code 0 and no OOM. Six targeted
+regressions cover coverage reuse, integration order, cancellation, and errors;
+the relevant 47-test group and strict mypy passed. The [complete Curve inventory](pricing-repair/curve-inventory-parity.json)
+also matched at the same canonical block: 2,564 LP mappings, two registries,
+seven factories, and 1,416 coin entries, with an identical inventory digest.
+
+Read-only probes after host recovery found a historical 10,000-block Curve
+address-provider scan took 5.154 seconds through web3-proxy, 1.413 seconds on
+Geth, and 0.334 seconds on Reth; all returned the same empty result. All three
+reported the same fully synced head. No provider was changed.
+
+The [empty-cache matrix](pricing-repair/empty-cache-matrix-before-registry-first.json)
+then exposed historical USDT timeouts while Chainlink's full feed catalog was
+loading. Its [completed report](pricing-repair/empty-cache-matrix-before-registry-first-complete.json)
+also includes failures caused by deliberately stopping that obsolete candidate;
+it is retained as a failed run. Quotes now query `getFeed` at the canonical hash
+first. If no feed is active, `getCurrentPhaseId` distinguishes a removed feed
+from an asset with no registry history, preserving static aliases. Event metadata
+remains the fallback when phase data is unavailable. Fifteen new tests failed
+before the repair; all 436 tests in the relevant group passed after repair,
+including independent native feed comparisons, same-hash feed/value checks,
+static aliases, removals, unavailable phase data, and timeout/cancellation propagation.
+The final 17-case fixture audit also verifies recovery after transient errors.
+Strict mypy covered 241 files and all ten compiled extension imports passed.
+The [uncached historical USDT API replay](pricing-repair/chainlink-uncached-api-after.json)
+returned the native historical value in 0.21 seconds. The [corrected copied-cache
+matrix](pricing-repair/candidate-matrix-registry-first.json) again passed all 104
+comparisons on both existing production providers. The [fully fresh startup and uncached replay](pricing-repair/empty-ethereum-startup-registry-first.json)
+with this latest repair passed: readiness in 591.99 seconds within the 600-second
+grace, the formerly failing USDT quote in 2.21 seconds with no cache hit, then
+a clean SIGTERM shutdown in 0.94 seconds with no OOM. This check ran concurrently
+with the copied-cache amount benchmark on the same production proxy.
+
+The pre-deployment public browser smoke passed USDC, USDT, and WETH using isolated
+Playwright Chromium after the browser connector reported no connected browser.
+Post-deployment browser proof remains pending.
+
 ## Final-source amount benchmark
 
 The [production-provider benchmark](pricing-repair/candidate-benchmark-production-provider.json)
@@ -139,6 +202,21 @@ is not an empty-cache production benchmark.
 | Previously unseen WETH amount at the historical block | 37.767 | 164.855 |
 | Three distinct new blocks | 11.381 / 9.517 / 10.517 | 15.077 / 13.649 / 13.259 |
 | Their repeats | 0.046 / 0.048 / 0.045 | 0.062 / 0.057 / 0.055 |
+
+The [latest registry-first runtime benchmark](pricing-repair/candidate-benchmark-registry-first.json)
+also passed all 24 requests after both candidates restarted. It ran concurrently
+with a separate empty-cache Ethereum startup through the same proxy, so these
+measurements include that additional validation traffic.
+
+| Phase | Ethereum seconds | Base seconds |
+| --- | ---: | ---: |
+| Historical USDC amount, first after restart | 24.272 | 17.103 |
+| Same request repeated | 0.057 | 0.084 |
+| Changed amount | 0.265 | 0.767 |
+| Mixed batch with duplicate token order | 0.091 | 0.092 |
+| Previously unseen WETH amount at the historical block | 99.101 | 187.262 |
+| Three distinct new blocks | 14.479 / 12.081 / 11.594 | 32.305 / 28.309 / 19.531 |
+| Their repeats | 0.044 / 0.047 / 0.036 | 0.229 / 0.179 / 0.135 |
 
 An [earlier production-provider benchmark](pricing-repair/candidate-benchmark-before-native-calls.json)
 failed its first historical USDC amount at 300 seconds, despite the preceding
@@ -200,8 +278,7 @@ node during the outage. No provider switch or task deployment was performed.
 
 Fork repair [PR #47](https://github.com/SatoshiAndKin/ypricemagic/pull/47) is a
 draft, linked to server [PR #158](https://github.com/SatoshiAndKin/ypricemagic-server/pull/158).
-The production frontend Dockerfile built successfully. Remaining gates: final fork validation, production image builds, linked
-server feature-branch PR, fork
+The production frontend Dockerfile built successfully. Remaining gates: final fork validation, production image builds, fork
 merge then server lock refresh against `master`, pipeline deployment with image
 and installed dependency revision checks, corrected historical/current matrix,
 public redirect and browser smoke, and a 60-minute production soak with cache

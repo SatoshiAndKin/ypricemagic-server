@@ -1,0 +1,22 @@
+{
+  "chain": "base",
+  "empty_cache": true,
+  "provider": "production Base provider",
+  "passed": true,
+  "startup_seconds": 587.035340124974,
+  "healthy_within_600": true,
+  "shutdown_seconds": 0.6754347499227151,
+  "state": {
+    "Status": "exited",
+    "Running": false,
+    "Paused": false,
+    "Restarting": false,
+    "OOMKilled": false,
+    "Dead": false,
+    "Pid": 0,
+    "ExitCode": 0,
+    "Error": "",
+    "StartedAt": "2026-10-02T18:13:56.371166011Z",
+    "FinishedAt": "2026-10-02T18:23:43.909673921Z"
+  }
+}

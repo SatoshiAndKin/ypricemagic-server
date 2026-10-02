@@ -1,0 +1,1677 @@
+{
+  "required_chains": [
+    "ethereum",
+    "base"
+  ],
+  "live_chains": [
+    "ethereum",
+    "base"
+  ],
+  "passed": false,
+  "results": [
+    {
+      "token": {
+        "name": "USDC",
+        "address": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+        "tolerance": 0.02,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1766610229,
+      "ypm_price": 1.0,
+      "ref_price": 0.9999017003588037,
+      "ypm_error": null,
+      "ref_error": null,
+      "passed": true,
+      "ypm_seconds": 1.0784527499927208
+    },
+    {
+      "token": {
+        "name": "USDC",
+        "address": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+        "tolerance": 0.02,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1774386241,
+      "ypm_price": 1.0,
+      "ref_price": 0.9998283200395653,
+      "ypm_error": null,
+      "ref_error": null,
+      "passed": true,
+      "ypm_seconds": 1.364914666977711
+    },
+    {
+      "token": {
+        "name": "USDC",
+        "address": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+        "tolerance": 0.02,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1782162237,
+      "ypm_price": 1.0,
+      "ref_price": 0.9998078962911873,
+      "ypm_error": null,
+      "ref_error": null,
+      "passed": true,
+      "ypm_seconds": 1.3699259579880163
+    },
+    {
+      "token": {
+        "name": "USDC",
+        "address": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+        "tolerance": 0.02,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1789938220,
+      "ypm_price": 1.0,
+      "ref_price": 0.9997134057820749,
+      "ypm_error": null,
+      "ref_error": null,
+      "passed": true,
+      "ypm_seconds": 1.1036384999752045
+    },
+    {
+      "token": {
+        "name": "USDT",
+        "address": "0xdAC17F958D2ee523a2206206994597C13D831ec7",
+        "tolerance": 0.02,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1766610229,
+      "ypm_price": null,
+      "ref_price": 0.9994863030232269,
+      "ypm_error": "HTTP 504: {\"error\":\"Price lookup timed out after 300 seconds\"}",
+      "ref_error": null,
+      "passed": false,
+      "ypm_seconds": 300.0039881669218
+    },
+    {
+      "token": {
+        "name": "USDT",
+        "address": "0xdAC17F958D2ee523a2206206994597C13D831ec7",
+        "tolerance": 0.02,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1774386241,
+      "ypm_price": null,
+      "ref_price": 0.9995203711007122,
+      "ypm_error": "HTTP 504: {\"error\":\"Price lookup timed out after 300 seconds\"}",
+      "ref_error": null,
+      "passed": false,
+      "ypm_seconds": 300.0045517079998
+    },
+    {
+      "token": {
+        "name": "USDT",
+        "address": "0xdAC17F958D2ee523a2206206994597C13D831ec7",
+        "tolerance": 0.02,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1782162237,
+      "ypm_price": 0.99889,
+      "ref_price": 0.9989643152742992,
+      "ypm_error": null,
+      "ref_error": null,
+      "passed": true,
+      "ypm_seconds": 141.31458420795389
+    },
+    {
+      "token": {
+        "name": "USDT",
+        "address": "0xdAC17F958D2ee523a2206206994597C13D831ec7",
+        "tolerance": 0.02,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1789938220,
+      "ypm_price": 0.99965,
+      "ref_price": 0.9997347365066176,
+      "ypm_error": null,
+      "ref_error": null,
+      "passed": true,
+      "ypm_seconds": 19.302607583929785
+    },
+    {
+      "token": {
+        "name": "DAI",
+        "address": "0x6B175474E89094C44Da98b954EedeAC495271d0F",
+        "tolerance": 0.02,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1766610347,
+      "ypm_price": 0.99963664,
+      "ref_price": 0.9991830118569837,
+      "ypm_error": null,
+      "ref_error": null,
+      "passed": true,
+      "ypm_seconds": 1.239404583000578
+    },
+    {
+      "token": {
+        "name": "DAI",
+        "address": "0x6B175474E89094C44Da98b954EedeAC495271d0F",
+        "tolerance": 0.02,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1774386238,
+      "ypm_price": 0.99995,
+      "ref_price": 1.0000401969477482,
+      "ypm_error": null,
+      "ref_error": null,
+      "passed": true,
+      "ypm_seconds": 1.0837837499566376
+    },
+    {
+      "token": {
+        "name": "DAI",
+        "address": "0x6B175474E89094C44Da98b954EedeAC495271d0F",
+        "tolerance": 0.02,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1782162232,
+      "ypm_price": 0.99955064,
+      "ref_price": 0.9997293454249023,
+      "ypm_error": null,
+      "ref_error": null,
+      "passed": true,
+      "ypm_seconds": 0.5129911249969155
+    },
+    {
+      "token": {
+        "name": "DAI",
+        "address": "0x6B175474E89094C44Da98b954EedeAC495271d0F",
+        "tolerance": 0.02,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1789938220,
+      "ypm_price": 0.99971611,
+      "ref_price": 1.000073662164266,
+      "ypm_error": null,
+      "ref_error": null,
+      "passed": true,
+      "ypm_seconds": 0.06876212498173118
+    },
+    {
+      "token": {
+        "name": "WETH",
+        "address": "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
+        "tolerance": 0.1,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1766610334,
+      "ypm_price": null,
+      "ref_price": 2944.1043597179005,
+      "ypm_error": "HTTP 500: Internal Server Error",
+      "ref_error": null,
+      "passed": false,
+      "ypm_seconds": 16.571664041955955
+    },
+    {
+      "token": {
+        "name": "WETH",
+        "address": "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
+        "tolerance": 0.1,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1774386235,
+      "ypm_price": null,
+      "ref_price": 2148.3795850378024,
+      "ypm_error": "RemoteDisconnected: Remote end closed connection without response",
+      "ref_error": null,
+      "passed": false,
+      "ypm_seconds": 0.15045333304442465
+    },
+    {
+      "token": {
+        "name": "WETH",
+        "address": "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
+        "tolerance": 0.1,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1782161991,
+      "ypm_price": null,
+      "ref_price": 1730.7762447482023,
+      "ypm_error": "RemoteDisconnected: Remote end closed connection without response",
+      "ref_error": null,
+      "passed": false,
+      "ypm_seconds": 0.0014135839883238077
+    },
+    {
+      "token": {
+        "name": "WETH",
+        "address": "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
+        "tolerance": 0.1,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1789938220,
+      "ypm_price": null,
+      "ref_price": 2623.4375589215288,
+      "ypm_error": "RemoteDisconnected: Remote end closed connection without response",
+      "ref_error": null,
+      "passed": false,
+      "ypm_seconds": 0.0014537919778376818
+    },
+    {
+      "token": {
+        "name": "WBTC",
+        "address": "0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599",
+        "tolerance": 0.1,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1766610228,
+      "ypm_price": null,
+      "ref_price": 87234.72269651946,
+      "ypm_error": "RemoteDisconnected: Remote end closed connection without response",
+      "ref_error": null,
+      "passed": false,
+      "ypm_seconds": 0.00178920803591609
+    },
+    {
+      "token": {
+        "name": "WBTC",
+        "address": "0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599",
+        "tolerance": 0.1,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1774386235,
+      "ypm_price": null,
+      "ref_price": 69924.79497515279,
+      "ypm_error": "RemoteDisconnected: Remote end closed connection without response",
+      "ref_error": null,
+      "passed": false,
+      "ypm_seconds": 0.0013234589714556932
+    },
+    {
+      "token": {
+        "name": "WBTC",
+        "address": "0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599",
+        "tolerance": 0.1,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1782162231,
+      "ypm_price": null,
+      "ref_price": 64302.967009459695,
+      "ypm_error": "RemoteDisconnected: Remote end closed connection without response",
+      "ref_error": null,
+      "passed": false,
+      "ypm_seconds": 0.002322874963283539
+    },
+    {
+      "token": {
+        "name": "WBTC",
+        "address": "0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599",
+        "tolerance": 0.1,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1789938300,
+      "ypm_price": null,
+      "ref_price": 80819.66767166286,
+      "ypm_error": "RemoteDisconnected: Remote end closed connection without response",
+      "ref_error": null,
+      "passed": false,
+      "ypm_seconds": 0.001590500003658235
+    },
+    {
+      "token": {
+        "name": "UNI",
+        "address": "0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984",
+        "tolerance": 0.1,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1766610229,
+      "ypm_price": null,
+      "ref_price": 5.7654363226575285,
+      "ypm_error": "RemoteDisconnected: Remote end closed connection without response",
+      "ref_error": null,
+      "passed": false,
+      "ypm_seconds": 0.001806915970519185
+    },
+    {
+      "token": {
+        "name": "UNI",
+        "address": "0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984",
+        "tolerance": 0.1,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1774386234,
+      "ypm_price": null,
+      "ref_price": 3.5964356175368812,
+      "ypm_error": "RemoteDisconnected: Remote end closed connection without response",
+      "ref_error": null,
+      "passed": false,
+      "ypm_seconds": 0.0021484169410541654
+    },
+    {
+      "token": {
+        "name": "UNI",
+        "address": "0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984",
+        "tolerance": 0.1,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1782162245,
+      "ypm_price": null,
+      "ref_price": 3.0051570196047908,
+      "ypm_error": "RemoteDisconnected: Remote end closed connection without response",
+      "ref_error": null,
+      "passed": false,
+      "ypm_seconds": 0.0035355420550331473
+    },
+    {
+      "token": {
+        "name": "UNI",
+        "address": "0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984",
+        "tolerance": 0.1,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1789938220,
+      "ypm_price": null,
+      "ref_price": 8.64858807618047,
+      "ypm_error": "RemoteDisconnected: Remote end closed connection without response",
+      "ref_error": null,
+      "passed": false,
+      "ypm_seconds": 0.002583916997537017
+    },
+    {
+      "token": {
+        "name": "LINK",
+        "address": "0x514910771AF9Ca656af840dff83E8264EcF986CA",
+        "tolerance": 0.1,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1766610238,
+      "ypm_price": null,
+      "ref_price": 12.233939497173518,
+      "ypm_error": "RemoteDisconnected: Remote end closed connection without response",
+      "ref_error": null,
+      "passed": false,
+      "ypm_seconds": 0.0018325409619137645
+    },
+    {
+      "token": {
+        "name": "LINK",
+        "address": "0x514910771AF9Ca656af840dff83E8264EcF986CA",
+        "tolerance": 0.1,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1774386238,
+      "ypm_price": null,
+      "ref_price": 9.20617653977834,
+      "ypm_error": "RemoteDisconnected: Remote end closed connection without response",
+      "ref_error": null,
+      "passed": false,
+      "ypm_seconds": 0.0018007500329986215
+    },
+    {
+      "token": {
+        "name": "LINK",
+        "address": "0x514910771AF9Ca656af840dff83E8264EcF986CA",
+        "tolerance": 0.1,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1782162231,
+      "ypm_price": null,
+      "ref_price": 7.911343443245072,
+      "ypm_error": "RemoteDisconnected: Remote end closed connection without response",
+      "ref_error": null,
+      "passed": false,
+      "ypm_seconds": 0.002867958042770624
+    },
+    {
+      "token": {
+        "name": "LINK",
+        "address": "0x514910771AF9Ca656af840dff83E8264EcF986CA",
+        "tolerance": 0.1,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1789938220,
+      "ypm_price": null,
+      "ref_price": 12.398049929411359,
+      "ypm_error": "RemoteDisconnected: Remote end closed connection without response",
+      "ref_error": null,
+      "passed": false,
+      "ypm_seconds": 0.0017194580286741257
+    },
+    {
+      "token": {
+        "name": "AAVE",
+        "address": "0x7Fc66500c84A76Ad7e9c93437bFc5Ac33E2DDaE9",
+        "tolerance": 0.1,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1766610235,
+      "ypm_price": null,
+      "ref_price": 147.6845279528043,
+      "ypm_error": "RemoteDisconnected: Remote end closed connection without response",
+      "ref_error": null,
+      "passed": false,
+      "ypm_seconds": 0.0014729580143466592
+    },
+    {
+      "token": {
+        "name": "AAVE",
+        "address": "0x7Fc66500c84A76Ad7e9c93437bFc5Ac33E2DDaE9",
+        "tolerance": 0.1,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1774386235,
+      "ypm_price": null,
+      "ref_price": 111.12811856297914,
+      "ypm_error": "RemoteDisconnected: Remote end closed connection without response",
+      "ref_error": null,
+      "passed": false,
+      "ypm_seconds": 0.0014061250258237123
+    },
+    {
+      "token": {
+        "name": "AAVE",
+        "address": "0x7Fc66500c84A76Ad7e9c93437bFc5Ac33E2DDaE9",
+        "tolerance": 0.1,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1782162244,
+      "ypm_price": null,
+      "ref_price": 75.28031619119122,
+      "ypm_error": "RemoteDisconnected: Remote end closed connection without response",
+      "ref_error": null,
+      "passed": false,
+      "ypm_seconds": 0.0011656249407678843
+    },
+    {
+      "token": {
+        "name": "AAVE",
+        "address": "0x7Fc66500c84A76Ad7e9c93437bFc5Ac33E2DDaE9",
+        "tolerance": 0.1,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1789938220,
+      "ypm_price": null,
+      "ref_price": 136.06186870754112,
+      "ypm_error": "RemoteDisconnected: Remote end closed connection without response",
+      "ref_error": null,
+      "passed": false,
+      "ypm_seconds": 0.0012019169516861439
+    },
+    {
+      "token": {
+        "name": "CRV",
+        "address": "0xD533a949740bb3306d119CC777fa900bA034cd52",
+        "tolerance": 0.1,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1766610005,
+      "ypm_price": null,
+      "ref_price": 0.3746305349180522,
+      "ypm_error": "RemoteDisconnected: Remote end closed connection without response",
+      "ref_error": null,
+      "passed": false,
+      "ypm_seconds": 0.0014739170437678695
+    },
+    {
+      "token": {
+        "name": "CRV",
+        "address": "0xD533a949740bb3306d119CC777fa900bA034cd52",
+        "tolerance": 0.1,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1774385996,
+      "ypm_price": null,
+      "ref_price": 0.22417920349848303,
+      "ypm_error": "RemoteDisconnected: Remote end closed connection without response",
+      "ref_error": null,
+      "passed": false,
+      "ypm_seconds": 0.0017045829445123672
+    },
+    {
+      "token": {
+        "name": "CRV",
+        "address": "0xD533a949740bb3306d119CC777fa900bA034cd52",
+        "tolerance": 0.1,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1782162005,
+      "ypm_price": null,
+      "ref_price": 0.20999645403054026,
+      "ypm_error": "RemoteDisconnected: Remote end closed connection without response",
+      "ref_error": null,
+      "passed": false,
+      "ypm_seconds": 0.0014550000196322799
+    },
+    {
+      "token": {
+        "name": "CRV",
+        "address": "0xD533a949740bb3306d119CC777fa900bA034cd52",
+        "tolerance": 0.1,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1789938100,
+      "ypm_price": null,
+      "ref_price": 0.3507215170496773,
+      "ypm_error": "RemoteDisconnected: Remote end closed connection without response",
+      "ref_error": null,
+      "passed": false,
+      "ypm_seconds": 0.001290458021685481
+    },
+    {
+      "token": {
+        "name": "SDT",
+        "address": "0x73968b9a57c6E53d41345FD57a6E6ae27d6CDB2F",
+        "tolerance": 0.1,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1766609947,
+      "ypm_price": null,
+      "ref_price": 0.2550040237389995,
+      "ypm_error": "RemoteDisconnected: Remote end closed connection without response",
+      "ref_error": null,
+      "passed": false,
+      "ypm_seconds": 0.0011685409117490053
+    },
+    {
+      "token": {
+        "name": "SDT",
+        "address": "0x73968b9a57c6E53d41345FD57a6E6ae27d6CDB2F",
+        "tolerance": 0.1,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1774385949,
+      "ypm_price": null,
+      "ref_price": 0.143966136444881,
+      "ypm_error": "RemoteDisconnected: Remote end closed connection without response",
+      "ref_error": null,
+      "passed": false,
+      "ypm_seconds": 0.0016820419114083052
+    },
+    {
+      "token": {
+        "name": "SDT",
+        "address": "0x73968b9a57c6E53d41345FD57a6E6ae27d6CDB2F",
+        "tolerance": 0.1,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1782161923,
+      "ypm_price": null,
+      "ref_price": 0.10380059348729848,
+      "ypm_error": "RemoteDisconnected: Remote end closed connection without response",
+      "ref_error": null,
+      "passed": false,
+      "ypm_seconds": 0.002249915967695415
+    },
+    {
+      "token": {
+        "name": "SDT",
+        "address": "0x73968b9a57c6E53d41345FD57a6E6ae27d6CDB2F",
+        "tolerance": 0.1,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1789937500,
+      "ypm_price": null,
+      "ref_price": 0.11111333723780961,
+      "ypm_error": "RemoteDisconnected: Remote end closed connection without response",
+      "ref_error": null,
+      "passed": false,
+      "ypm_seconds": 0.001993749989196658
+    },
+    {
+      "token": {
+        "name": "YB",
+        "address": "0x01791F726B4103694969820be083196cC7c045fF",
+        "tolerance": 0.1,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1766609997,
+      "ypm_price": null,
+      "ref_price": 0.38073497892263597,
+      "ypm_error": "RemoteDisconnected: Remote end closed connection without response",
+      "ref_error": null,
+      "passed": false,
+      "ypm_seconds": 0.0012240830110386014
+    },
+    {
+      "token": {
+        "name": "YB",
+        "address": "0x01791F726B4103694969820be083196cC7c045fF",
+        "tolerance": 0.1,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1774385941,
+      "ypm_price": null,
+      "ref_price": 0.11501711726611383,
+      "ypm_error": "RemoteDisconnected: Remote end closed connection without response",
+      "ref_error": null,
+      "passed": false,
+      "ypm_seconds": 0.0011638749856501818
+    },
+    {
+      "token": {
+        "name": "YB",
+        "address": "0x01791F726B4103694969820be083196cC7c045fF",
+        "tolerance": 0.1,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1782161928,
+      "ypm_price": null,
+      "ref_price": 0.07785373941293226,
+      "ypm_error": "RemoteDisconnected: Remote end closed connection without response",
+      "ref_error": null,
+      "passed": false,
+      "ypm_seconds": 0.0014938329113647342
+    },
+    {
+      "token": {
+        "name": "YB",
+        "address": "0x01791F726B4103694969820be083196cC7c045fF",
+        "tolerance": 0.1,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1789937500,
+      "ypm_price": null,
+      "ref_price": 0.0858592101221501,
+      "ypm_error": "RemoteDisconnected: Remote end closed connection without response",
+      "ref_error": null,
+      "passed": false,
+      "ypm_seconds": 0.0019063750514760613
+    },
+    {
+      "token": {
+        "name": "yYB",
+        "address": "0x22222222aea0076fca927a3f44dc0b4fdf9479d6",
+        "tolerance": 0.1,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1766610235,
+      "ypm_price": null,
+      "ref_price": 0.3796519604799721,
+      "ypm_error": "RemoteDisconnected: Remote end closed connection without response",
+      "ref_error": null,
+      "passed": false,
+      "ypm_seconds": 0.0016228749882429838
+    },
+    {
+      "token": {
+        "name": "yYB",
+        "address": "0x22222222aea0076fca927a3f44dc0b4fdf9479d6",
+        "tolerance": 0.1,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1774383228,
+      "ypm_price": null,
+      "ref_price": 0.11258597476464567,
+      "ypm_error": "RemoteDisconnected: Remote end closed connection without response",
+      "ref_error": null,
+      "passed": false,
+      "ypm_seconds": 0.0028462500777095556
+    },
+    {
+      "token": {
+        "name": "yYB",
+        "address": "0x22222222aea0076fca927a3f44dc0b4fdf9479d6",
+        "tolerance": 0.1,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1782159328,
+      "ypm_price": null,
+      "ref_price": 0.07737302882409751,
+      "ypm_error": "RemoteDisconnected: Remote end closed connection without response",
+      "ref_error": null,
+      "passed": false,
+      "ypm_seconds": 0.0023663329193368554
+    },
+    {
+      "token": {
+        "name": "yYB",
+        "address": "0x22222222aea0076fca927a3f44dc0b4fdf9479d6",
+        "tolerance": 0.1,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1789944231,
+      "ypm_price": null,
+      "ref_price": 0.08124213581853827,
+      "ypm_error": "RemoteDisconnected: Remote end closed connection without response",
+      "ref_error": null,
+      "passed": false,
+      "ypm_seconds": 0.002974624978378415
+    },
+    {
+      "token": {
+        "name": "stkAAVE",
+        "address": "0x4da27a545c0c5B758a6BA100e3a049001de870f5",
+        "tolerance": 0.1,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1766609908,
+      "ypm_price": null,
+      "ref_price": 146.99789931622027,
+      "ypm_error": "RemoteDisconnected: Remote end closed connection without response",
+      "ref_error": null,
+      "passed": false,
+      "ypm_seconds": 0.0038494999753311276
+    },
+    {
+      "token": {
+        "name": "stkAAVE",
+        "address": "0x4da27a545c0c5B758a6BA100e3a049001de870f5",
+        "tolerance": 0.1,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1774385949,
+      "ypm_price": null,
+      "ref_price": 110.07351067274764,
+      "ypm_error": "RemoteDisconnected: Remote end closed connection without response",
+      "ref_error": null,
+      "passed": false,
+      "ypm_seconds": 0.002971624955534935
+    },
+    {
+      "token": {
+        "name": "stkAAVE",
+        "address": "0x4da27a545c0c5B758a6BA100e3a049001de870f5",
+        "tolerance": 0.1,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1782161931,
+      "ypm_price": null,
+      "ref_price": 74.19914825856081,
+      "ypm_error": "RemoteDisconnected: Remote end closed connection without response",
+      "ref_error": null,
+      "passed": false,
+      "ypm_seconds": 0.003584458027034998
+    },
+    {
+      "token": {
+        "name": "stkAAVE",
+        "address": "0x4da27a545c0c5B758a6BA100e3a049001de870f5",
+        "tolerance": 0.1,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1789937500,
+      "ypm_price": null,
+      "ref_price": 136.57844409064276,
+      "ypm_error": "RemoteDisconnected: Remote end closed connection without response",
+      "ref_error": null,
+      "passed": false,
+      "ypm_seconds": 0.0016952920705080032
+    },
+    {
+      "token": {
+        "name": "plDAI",
+        "address": "0x49d716DFe60b37379010A75329ae09428f17118d",
+        "tolerance": 0.02,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1790965686,
+      "ypm_price": null,
+      "ref_price": null,
+      "ypm_error": "RemoteDisconnected: Remote end closed connection without response",
+      "ref_error": "no DefiLlama data",
+      "passed": false,
+      "ypm_seconds": 0.0018993340199813247
+    },
+    {
+      "token": {
+        "name": "plUSDC",
+        "address": "0xBD87447F48ad729C5c4b8bcb503e1395F62e8B98",
+        "tolerance": 0.02,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1790965686,
+      "ypm_price": null,
+      "ref_price": null,
+      "ypm_error": "RemoteDisconnected: Remote end closed connection without response",
+      "ref_error": "no DefiLlama data",
+      "passed": false,
+      "ypm_seconds": 0.0026215830584988
+    },
+    {
+      "token": {
+        "name": "sDAI",
+        "address": "0x83F20F44975D03b1b09e64809B757c47f942BEeA",
+        "tolerance": 0.02,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1766611301,
+      "ypm_price": null,
+      "ref_price": 1.169016803207125,
+      "ypm_error": "RemoteDisconnected: Remote end closed connection without response",
+      "ref_error": null,
+      "passed": false,
+      "ypm_seconds": 0.003616624977439642
+    },
+    {
+      "token": {
+        "name": "sDAI",
+        "address": "0x83F20F44975D03b1b09e64809B757c47f942BEeA",
+        "tolerance": 0.02,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1774387372,
+      "ypm_price": null,
+      "ref_price": 1.1735268933647078,
+      "ypm_error": "RemoteDisconnected: Remote end closed connection without response",
+      "ref_error": null,
+      "passed": false,
+      "ypm_seconds": 0.004990415996871889
+    },
+    {
+      "token": {
+        "name": "sDAI",
+        "address": "0x83F20F44975D03b1b09e64809B757c47f942BEeA",
+        "tolerance": 0.02,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1782162858,
+      "ypm_price": null,
+      "ref_price": 1.176967049163432,
+      "ypm_error": "RemoteDisconnected: Remote end closed connection without response",
+      "ref_error": null,
+      "passed": false,
+      "ypm_seconds": 0.00290845800191164
+    },
+    {
+      "token": {
+        "name": "sDAI",
+        "address": "0x83F20F44975D03b1b09e64809B757c47f942BEeA",
+        "tolerance": 0.02,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1789937908,
+      "ypm_price": null,
+      "ref_price": 1.1808202243725423,
+      "ypm_error": "RemoteDisconnected: Remote end closed connection without response",
+      "ref_error": null,
+      "passed": false,
+      "ypm_seconds": 0.0033781249076128006
+    },
+    {
+      "token": {
+        "name": "weETH",
+        "address": "0xCd5fE23C85820F7B72D0926FC9b05b43E359b7ee",
+        "tolerance": 0.1,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1766609942,
+      "ypm_price": null,
+      "ref_price": 3192.4177573287006,
+      "ypm_error": "RemoteDisconnected: Remote end closed connection without response",
+      "ref_error": null,
+      "passed": false,
+      "ypm_seconds": 0.010116374935023487
+    },
+    {
+      "token": {
+        "name": "weETH",
+        "address": "0xCd5fE23C85820F7B72D0926FC9b05b43E359b7ee",
+        "tolerance": 0.1,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1774385940,
+      "ypm_price": null,
+      "ref_price": 2343.6691113208144,
+      "ypm_error": "RemoteDisconnected: Remote end closed connection without response",
+      "ref_error": null,
+      "passed": false,
+      "ypm_seconds": 0.002018333994783461
+    },
+    {
+      "token": {
+        "name": "weETH",
+        "address": "0xCd5fE23C85820F7B72D0926FC9b05b43E359b7ee",
+        "tolerance": 0.1,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1782161985,
+      "ypm_price": null,
+      "ref_price": 1899.063943258615,
+      "ypm_error": "RemoteDisconnected: Remote end closed connection without response",
+      "ref_error": null,
+      "passed": false,
+      "ypm_seconds": 0.008301416994072497
+    },
+    {
+      "token": {
+        "name": "weETH",
+        "address": "0xCd5fE23C85820F7B72D0926FC9b05b43E359b7ee",
+        "tolerance": 0.1,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1789937500,
+      "ypm_price": null,
+      "ref_price": 2910.08058537394,
+      "ypm_error": "RemoteDisconnected: Remote end closed connection without response",
+      "ref_error": null,
+      "passed": false,
+      "ypm_seconds": 0.0027806248981505632
+    },
+    {
+      "token": {
+        "name": "aDAI-v1",
+        "address": "0xfC1E690f61EFd961294b3e1Ce3313fBD8aa4f85d",
+        "tolerance": 0.02,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1766609707,
+      "ypm_price": null,
+      "ref_price": 0.9981563335642711,
+      "ypm_error": "RemoteDisconnected: Remote end closed connection without response",
+      "ref_error": null,
+      "passed": false,
+      "ypm_seconds": 0.002525457995943725
+    },
+    {
+      "token": {
+        "name": "aDAI-v1",
+        "address": "0xfC1E690f61EFd961294b3e1Ce3313fBD8aa4f85d",
+        "tolerance": 0.02,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1774385707,
+      "ypm_price": null,
+      "ref_price": 0.9982072871055437,
+      "ypm_error": "RemoteDisconnected: Remote end closed connection without response",
+      "ref_error": null,
+      "passed": false,
+      "ypm_seconds": 0.00177033303771168
+    },
+    {
+      "token": {
+        "name": "aDAI-v1",
+        "address": "0xfC1E690f61EFd961294b3e1Ce3313fBD8aa4f85d",
+        "tolerance": 0.02,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1782161712,
+      "ypm_price": null,
+      "ref_price": 0.9963324849881936,
+      "ypm_error": "RemoteDisconnected: Remote end closed connection without response",
+      "ref_error": null,
+      "passed": false,
+      "ypm_seconds": 0.0013381249736994505
+    },
+    {
+      "token": {
+        "name": "aDAI-v1",
+        "address": "0xfC1E690f61EFd961294b3e1Ce3313fBD8aa4f85d",
+        "tolerance": 0.02,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1789937380,
+      "ypm_price": null,
+      "ref_price": 0.9999372905097098,
+      "ypm_error": "RemoteDisconnected: Remote end closed connection without response",
+      "ref_error": null,
+      "passed": false,
+      "ypm_seconds": 0.001559666940011084
+    },
+    {
+      "token": {
+        "name": "pSLP-WBTC-ETH",
+        "address": "0xde74b6c547bd574c3527316a2eE30cd8F6041525",
+        "tolerance": 0.1,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1790965686,
+      "ypm_price": null,
+      "ref_price": null,
+      "ypm_error": "RemoteDisconnected: Remote end closed connection without response",
+      "ref_error": "no DefiLlama data",
+      "passed": false,
+      "ypm_seconds": 0.0014455410419031978
+    },
+    {
+      "token": {
+        "name": "ptUSDC-v4",
+        "address": "0xdd4d117723C257CEe402285D3aCF218E9A8236E1",
+        "tolerance": 0.02,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1766610229,
+      "ypm_price": null,
+      "ref_price": 0.9999017003588037,
+      "ypm_error": "RemoteDisconnected: Remote end closed connection without response",
+      "ref_error": null,
+      "passed": false,
+      "ypm_seconds": 0.0008962909923866391
+    },
+    {
+      "token": {
+        "name": "ptUSDC-v4",
+        "address": "0xdd4d117723C257CEe402285D3aCF218E9A8236E1",
+        "tolerance": 0.02,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1774386241,
+      "ypm_price": null,
+      "ref_price": 0.9998283200395653,
+      "ypm_error": "RemoteDisconnected: Remote end closed connection without response",
+      "ref_error": null,
+      "passed": false,
+      "ypm_seconds": 0.0013718749396502972
+    },
+    {
+      "token": {
+        "name": "ptUSDC-v4",
+        "address": "0xdd4d117723C257CEe402285D3aCF218E9A8236E1",
+        "tolerance": 0.02,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1782162237,
+      "ypm_price": null,
+      "ref_price": 0.9998078962911873,
+      "ypm_error": "RemoteDisconnected: Remote end closed connection without response",
+      "ref_error": null,
+      "passed": false,
+      "ypm_seconds": 0.0011784170055761933
+    },
+    {
+      "token": {
+        "name": "ptUSDC-v4",
+        "address": "0xdd4d117723C257CEe402285D3aCF218E9A8236E1",
+        "tolerance": 0.02,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1789938220,
+      "ypm_price": null,
+      "ref_price": 0.9997134057820749,
+      "ypm_error": "RemoteDisconnected: Remote end closed connection without response",
+      "ref_error": null,
+      "passed": false,
+      "ypm_seconds": 0.0008028340525925159
+    },
+    {
+      "token": {
+        "name": "xPREMIA",
+        "address": "0x16f9D564Df80376C61AC914205D3fDfF7057d610",
+        "tolerance": 0.1,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1790965686,
+      "ypm_price": null,
+      "ref_price": null,
+      "ypm_error": "RemoteDisconnected: Remote end closed connection without response",
+      "ref_error": "no DefiLlama data",
+      "passed": false,
+      "ypm_seconds": 0.0011436659842729568
+    },
+    {
+      "token": {
+        "name": "USDC",
+        "address": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+        "tolerance": 0.02,
+        "chain": "base",
+        "earliest_timestamp": 1692383789
+      },
+      "timestamp": 1766610229,
+      "ypm_price": 1.0,
+      "ref_price": 0.9999017003588037,
+      "ypm_error": null,
+      "ref_error": null,
+      "passed": true,
+      "ypm_seconds": 0.026086249970830977
+    },
+    {
+      "token": {
+        "name": "USDC",
+        "address": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+        "tolerance": 0.02,
+        "chain": "base",
+        "earliest_timestamp": 1692383789
+      },
+      "timestamp": 1774386241,
+      "ypm_price": 1.0,
+      "ref_price": 0.9998283200395653,
+      "ypm_error": null,
+      "ref_error": null,
+      "passed": true,
+      "ypm_seconds": 0.0058474160032346845
+    },
+    {
+      "token": {
+        "name": "USDC",
+        "address": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+        "tolerance": 0.02,
+        "chain": "base",
+        "earliest_timestamp": 1692383789
+      },
+      "timestamp": 1782162237,
+      "ypm_price": 1.0,
+      "ref_price": 0.9998078962911873,
+      "ypm_error": null,
+      "ref_error": null,
+      "passed": true,
+      "ypm_seconds": 0.004149292013607919
+    },
+    {
+      "token": {
+        "name": "USDC",
+        "address": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+        "tolerance": 0.02,
+        "chain": "base",
+        "earliest_timestamp": 1692383789
+      },
+      "timestamp": 1789938220,
+      "ypm_price": 1.0,
+      "ref_price": 0.9997134057820749,
+      "ypm_error": null,
+      "ref_error": null,
+      "passed": true,
+      "ypm_seconds": 0.006284084054641426
+    },
+    {
+      "token": {
+        "name": "WETH",
+        "address": "0x4200000000000000000000000000000000000006",
+        "tolerance": 0.1,
+        "chain": "base",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1766610334,
+      "ypm_price": 2941.56,
+      "ref_price": 2944.1043597179005,
+      "ypm_error": null,
+      "ref_error": null,
+      "passed": true,
+      "ypm_seconds": 0.004430707893334329
+    },
+    {
+      "token": {
+        "name": "WETH",
+        "address": "0x4200000000000000000000000000000000000006",
+        "tolerance": 0.1,
+        "chain": "base",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1774386235,
+      "ypm_price": 2148.85605275,
+      "ref_price": 2148.3795850378024,
+      "ypm_error": null,
+      "ref_error": null,
+      "passed": true,
+      "ypm_seconds": 0.0076775000197812915
+    },
+    {
+      "token": {
+        "name": "WETH",
+        "address": "0x4200000000000000000000000000000000000006",
+        "tolerance": 0.1,
+        "chain": "base",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1782161991,
+      "ypm_price": 1730.59,
+      "ref_price": 1730.7762447482023,
+      "ypm_error": null,
+      "ref_error": null,
+      "passed": true,
+      "ypm_seconds": 0.006090666982345283
+    },
+    {
+      "token": {
+        "name": "WETH",
+        "address": "0x4200000000000000000000000000000000000006",
+        "tolerance": 0.1,
+        "chain": "base",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1789938220,
+      "ypm_price": 2614.31,
+      "ref_price": 2623.4375589215288,
+      "ypm_error": null,
+      "ref_error": null,
+      "passed": true,
+      "ypm_seconds": 0.004697958007454872
+    },
+    {
+      "token": {
+        "name": "USDC",
+        "address": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+        "tolerance": 0.02,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1790965686,
+      "ypm_price": null,
+      "ref_price": 0.9999557446395543,
+      "ypm_error": "RemoteDisconnected: Remote end closed connection without response",
+      "ref_error": null,
+      "passed": false,
+      "ypm_seconds": 0.0035929171135649085
+    },
+    {
+      "token": {
+        "name": "USDT",
+        "address": "0xdAC17F958D2ee523a2206206994597C13D831ec7",
+        "tolerance": 0.02,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1790965686,
+      "ypm_price": null,
+      "ref_price": 0.9999157742164948,
+      "ypm_error": "RemoteDisconnected: Remote end closed connection without response",
+      "ref_error": null,
+      "passed": false,
+      "ypm_seconds": 0.0017830830765888095
+    },
+    {
+      "token": {
+        "name": "DAI",
+        "address": "0x6B175474E89094C44Da98b954EedeAC495271d0F",
+        "tolerance": 0.02,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1790965686,
+      "ypm_price": null,
+      "ref_price": 0.9998849112148127,
+      "ypm_error": "RemoteDisconnected: Remote end closed connection without response",
+      "ref_error": null,
+      "passed": false,
+      "ypm_seconds": 0.0012580000329762697
+    },
+    {
+      "token": {
+        "name": "WETH",
+        "address": "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
+        "tolerance": 0.1,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1790965686,
+      "ypm_price": null,
+      "ref_price": 2678.0741100797773,
+      "ypm_error": "RemoteDisconnected: Remote end closed connection without response",
+      "ref_error": null,
+      "passed": false,
+      "ypm_seconds": 0.0017390840221196413
+    },
+    {
+      "token": {
+        "name": "WBTC",
+        "address": "0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599",
+        "tolerance": 0.1,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1790965686,
+      "ypm_price": null,
+      "ref_price": 84557.39874352753,
+      "ypm_error": "RemoteDisconnected: Remote end closed connection without response",
+      "ref_error": null,
+      "passed": false,
+      "ypm_seconds": 0.006262167007662356
+    },
+    {
+      "token": {
+        "name": "UNI",
+        "address": "0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984",
+        "tolerance": 0.1,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1790965686,
+      "ypm_price": null,
+      "ref_price": 8.866850195087824,
+      "ypm_error": "RemoteDisconnected: Remote end closed connection without response",
+      "ref_error": null,
+      "passed": false,
+      "ypm_seconds": 0.0013383328914642334
+    },
+    {
+      "token": {
+        "name": "LINK",
+        "address": "0x514910771AF9Ca656af840dff83E8264EcF986CA",
+        "tolerance": 0.1,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1790965686,
+      "ypm_price": null,
+      "ref_price": 13.997328349837483,
+      "ypm_error": "RemoteDisconnected: Remote end closed connection without response",
+      "ref_error": null,
+      "passed": false,
+      "ypm_seconds": 0.0024762499378994107
+    },
+    {
+      "token": {
+        "name": "AAVE",
+        "address": "0x7Fc66500c84A76Ad7e9c93437bFc5Ac33E2DDaE9",
+        "tolerance": 0.1,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1790965686,
+      "ypm_price": null,
+      "ref_price": 182.29210567361523,
+      "ypm_error": "RemoteDisconnected: Remote end closed connection without response",
+      "ref_error": null,
+      "passed": false,
+      "ypm_seconds": 0.0015317919896915555
+    },
+    {
+      "token": {
+        "name": "CRV",
+        "address": "0xD533a949740bb3306d119CC777fa900bA034cd52",
+        "tolerance": 0.1,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1790965686,
+      "ypm_price": null,
+      "ref_price": 0.37413455974369714,
+      "ypm_error": "RemoteDisconnected: Remote end closed connection without response",
+      "ref_error": null,
+      "passed": false,
+      "ypm_seconds": 0.00315708399284631
+    },
+    {
+      "token": {
+        "name": "SDT",
+        "address": "0x73968b9a57c6E53d41345FD57a6E6ae27d6CDB2F",
+        "tolerance": 0.1,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1790965686,
+      "ypm_price": null,
+      "ref_price": 0.10299269446945183,
+      "ypm_error": "RemoteDisconnected: Remote end closed connection without response",
+      "ref_error": null,
+      "passed": false,
+      "ypm_seconds": 0.002473333035595715
+    },
+    {
+      "token": {
+        "name": "YB",
+        "address": "0x01791F726B4103694969820be083196cC7c045fF",
+        "tolerance": 0.1,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1790965686,
+      "ypm_price": null,
+      "ref_price": 0.08830825864447597,
+      "ypm_error": "RemoteDisconnected: Remote end closed connection without response",
+      "ref_error": null,
+      "passed": false,
+      "ypm_seconds": 0.0017512079793959856
+    },
+    {
+      "token": {
+        "name": "yYB",
+        "address": "0x22222222aea0076fca927a3f44dc0b4fdf9479d6",
+        "tolerance": 0.1,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1790965686,
+      "ypm_price": null,
+      "ref_price": 0.08185082063186645,
+      "ypm_error": "RemoteDisconnected: Remote end closed connection without response",
+      "ref_error": null,
+      "passed": false,
+      "ypm_seconds": 0.0018122498877346516
+    },
+    {
+      "token": {
+        "name": "stkAAVE",
+        "address": "0x4da27a545c0c5B758a6BA100e3a049001de870f5",
+        "tolerance": 0.1,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1790965686,
+      "ypm_price": null,
+      "ref_price": 181.18303197654947,
+      "ypm_error": "RemoteDisconnected: Remote end closed connection without response",
+      "ref_error": null,
+      "passed": false,
+      "ypm_seconds": 0.0016862080665305257
+    },
+    {
+      "token": {
+        "name": "plDAI",
+        "address": "0x49d716DFe60b37379010A75329ae09428f17118d",
+        "tolerance": 0.02,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1790965686,
+      "ypm_price": null,
+      "ref_price": null,
+      "ypm_error": "RemoteDisconnected: Remote end closed connection without response",
+      "ref_error": "no DefiLlama data",
+      "passed": false,
+      "ypm_seconds": 0.0012526250211521983
+    },
+    {
+      "token": {
+        "name": "plUSDC",
+        "address": "0xBD87447F48ad729C5c4b8bcb503e1395F62e8B98",
+        "tolerance": 0.02,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1790965686,
+      "ypm_price": null,
+      "ref_price": null,
+      "ypm_error": "RemoteDisconnected: Remote end closed connection without response",
+      "ref_error": "no DefiLlama data",
+      "passed": false,
+      "ypm_seconds": 0.0013828749069944024
+    },
+    {
+      "token": {
+        "name": "sDAI",
+        "address": "0x83F20F44975D03b1b09e64809B757c47f942BEeA",
+        "tolerance": 0.02,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1790965686,
+      "ypm_price": null,
+      "ref_price": 1.1812317518434114,
+      "ypm_error": "RemoteDisconnected: Remote end closed connection without response",
+      "ref_error": null,
+      "passed": false,
+      "ypm_seconds": 0.002129791071638465
+    },
+    {
+      "token": {
+        "name": "weETH",
+        "address": "0xCd5fE23C85820F7B72D0926FC9b05b43E359b7ee",
+        "tolerance": 0.1,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1790965686,
+      "ypm_price": null,
+      "ref_price": 2958.682962672398,
+      "ypm_error": "RemoteDisconnected: Remote end closed connection without response",
+      "ref_error": null,
+      "passed": false,
+      "ypm_seconds": 0.0030332920141518116
+    },
+    {
+      "token": {
+        "name": "aDAI-v1",
+        "address": "0xfC1E690f61EFd961294b3e1Ce3313fBD8aa4f85d",
+        "tolerance": 0.02,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1790965686,
+      "ypm_price": null,
+      "ref_price": 0.998909754641042,
+      "ypm_error": "RemoteDisconnected: Remote end closed connection without response",
+      "ref_error": null,
+      "passed": false,
+      "ypm_seconds": 0.0012670410796999931
+    },
+    {
+      "token": {
+        "name": "pSLP-WBTC-ETH",
+        "address": "0xde74b6c547bd574c3527316a2eE30cd8F6041525",
+        "tolerance": 0.1,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1790965686,
+      "ypm_price": null,
+      "ref_price": null,
+      "ypm_error": "RemoteDisconnected: Remote end closed connection without response",
+      "ref_error": "no DefiLlama data",
+      "passed": false,
+      "ypm_seconds": 0.0010984169784933329
+    },
+    {
+      "token": {
+        "name": "ptUSDC-v4",
+        "address": "0xdd4d117723C257CEe402285D3aCF218E9A8236E1",
+        "tolerance": 0.02,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1790965686,
+      "ypm_price": null,
+      "ref_price": 0.9999557446395543,
+      "ypm_error": "RemoteDisconnected: Remote end closed connection without response",
+      "ref_error": null,
+      "passed": false,
+      "ypm_seconds": 0.0019752089865505695
+    },
+    {
+      "token": {
+        "name": "xPREMIA",
+        "address": "0x16f9D564Df80376C61AC914205D3fDfF7057d610",
+        "tolerance": 0.1,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1790965686,
+      "ypm_price": null,
+      "ref_price": null,
+      "ypm_error": "RemoteDisconnected: Remote end closed connection without response",
+      "ref_error": "no DefiLlama data",
+      "passed": false,
+      "ypm_seconds": 0.002973875030875206
+    },
+    {
+      "token": {
+        "name": "USDC",
+        "address": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+        "tolerance": 0.02,
+        "chain": "base",
+        "earliest_timestamp": 1692383789
+      },
+      "timestamp": 1790965686,
+      "ypm_price": 1.0,
+      "ref_price": 0.9999557446395543,
+      "ypm_error": null,
+      "ref_error": null,
+      "passed": true,
+      "ypm_seconds": 0.20310366596095264
+    },
+    {
+      "token": {
+        "name": "WETH",
+        "address": "0x4200000000000000000000000000000000000006",
+        "tolerance": 0.1,
+        "chain": "base",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1790965687,
+      "ypm_price": 2679.72,
+      "ref_price": 2678.0741100797773,
+      "ypm_error": null,
+      "ref_error": null,
+      "passed": true,
+      "ypm_seconds": 0.6772760419407859
+    },
+    {
+      "token": {
+        "name": "xPREMIA-no-code",
+        "address": "0x16f9D564Df80376C61AC914205D3fDfB8a32f98b",
+        "tolerance": 0,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1790965687,
+      "ypm_price": null,
+      "ref_price": null,
+      "ypm_error": "RemoteDisconnected: Remote end closed connection without response",
+      "ref_error": null,
+      "passed": false,
+      "ypm_seconds": 0.015426917001605034
+    }
+  ]
+}
