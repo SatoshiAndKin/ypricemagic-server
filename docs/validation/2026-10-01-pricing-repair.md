@@ -65,8 +65,8 @@ allow 315 seconds to receive the server's 300-second timeout response.
   The latest runtime-source full suite passed 2,291 tests with 17 skips and one
   obsolete Chainlink fixture failure: its mock returned an address for the new
   optional integer phase read. The corrected fixture retains the static-feed
-  fallback assertion and verifies both native queries. A fresh full run remains
-  the merge gate, with 8 GiB/no swap. The preceding run passed 2,225 tests and failed 44 controlled quote
+  fallback assertion and verifies both native queries. The corrected full required-command run then passed 2,292 tests with 17 skips
+  and no OOM under 8 GiB/no swap. The preceding run passed 2,225 tests and failed 44 controlled quote
   fixtures that still mocked the previous SDK transport. All 128 tests in those
   two historical/address modules now pass at the native RPC boundary, preserving
   their exact fallback, packed-path, amount, and error-propagation assertions. The initial run failed on a full validation disk; the next passed 2,240
@@ -254,6 +254,17 @@ Base candidate was restarting; it failed the required-chain health gate before
 pricing. The subsequent complete run above started after both candidates were
 healthy. This startup failure is preserved separately from pricing results.
 
+A [warm candidate repeat with strict amount assertions](pricing-repair/candidate-benchmark-exact-warm.json)
+passed all 24 requests. Historical goldens require exact equality, and both
+mixed-batch amount entries equal their corresponding individual requests. This
+repeat reuses warmed process memory; the first-request timing tables above
+remain the cold-process measurements.
+
+The [complete native Python 3.12 run](pricing-repair/native-complete-312.json)
+passed 2,292 tests, skipped 17, and imported all ten expected compiled modules.
+Peak cgroup memory was 2.07 GiB with no swap or OOM. All 203 pricing/test source
+files match the validated feature commit; strict typing covered 241 files.
+
 ## Before measurements
 
 The earlier production verification measured historical USDC quotes at
@@ -285,10 +296,16 @@ node during the outage. No provider switch or task deployment was performed.
 
 ## Remaining delivery gates
 
-Fork repair [PR #47](https://github.com/SatoshiAndKin/ypricemagic/pull/47) is a
-draft, linked to server [PR #158](https://github.com/SatoshiAndKin/ypricemagic-server/pull/158).
-The production frontend Dockerfile built successfully. Remaining gates: final fork validation, production image builds, fork
-merge then server lock refresh against `master`, pipeline deployment with image
+Fork repair [PR #47](https://github.com/SatoshiAndKin/ypricemagic/pull/47) merged
+to `master` as `073c7ac801ca36128eb27efc64031851ab6f2101` after all 13 CI checks
+and the complete native validation passed. The companion server
+[PR #158](https://github.com/SatoshiAndKin/ypricemagic-server/pull/158) now locks
+that exact `master` revision. The production frontend Dockerfile built
+successfully. The [refreshed production backend image](pricing-repair/merged-fork-production-image.json)
+built, imported its compiled dependencies, and contains all ten expected compiled
+pricing files at the merged fork revision. All 333 server tests and static checks
+passed with that lock. Remaining gates: server CI validation,
+server merge, pipeline deployment with image
 and installed dependency revision checks, corrected historical/current matrix,
 public redirect and browser smoke, and a 60-minute production soak with cache
 turnover, memory, restart, Docker OOM, and kernel OOM checks.
