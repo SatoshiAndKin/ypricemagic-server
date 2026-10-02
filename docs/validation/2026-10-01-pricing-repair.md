@@ -48,7 +48,9 @@ allow 315 seconds to receive the server's 300-second timeout response.
 
 ## Validation completed so far
 
-- Server: 331 tests passed; 89% coverage. Ruff, format, strict mypy, deptry passed.
+- Server: 333 tests passed; 89% coverage. Ruff, format, strict mypy, deptry passed.
+  Exact historical benchmark comparisons reject a one-ULP mismatch on either
+  chain; mixed batches compare both amount entries to their individual quotes.
 - Real process SIGTERM during warmup and after readiness passed; cancelled startup
   did not log readiness, and both processes stopped within five seconds.
 - Saturation test fills exactly two active slots and 32 queued requests; additional
@@ -60,8 +62,11 @@ allow 315 seconds to receive the server's 300-second timeout response.
   deployment-boundary checks also passed. Black/isort checks cover the full trees.
 - A full native run passed 2,259 tests with 17 skips and no OOM. Its source
   predates the final native-call transport and shared broad factory repairs.
-  The latest runtime-source full suite is running with 8 GiB/no swap and remains a merge
-  gate. The preceding run passed 2,225 tests and failed 44 controlled quote
+  The latest runtime-source full suite passed 2,291 tests with 17 skips and one
+  obsolete Chainlink fixture failure: its mock returned an address for the new
+  optional integer phase read. The corrected fixture retains the static-feed
+  fallback assertion and verifies both native queries. A fresh full run remains
+  the merge gate, with 8 GiB/no swap. The preceding run passed 2,225 tests and failed 44 controlled quote
   fixtures that still mocked the previous SDK transport. All 128 tests in those
   two historical/address modules now pass at the native RPC boundary, preserving
   their exact fallback, packed-path, amount, and error-propagation assertions. The initial run failed on a full validation disk; the next passed 2,240
@@ -182,9 +187,13 @@ grace, the formerly failing USDT quote in 2.21 seconds with no cache hit, then
 a clean SIGTERM shutdown in 0.94 seconds with no OOM. This check ran concurrently
 with the copied-cache amount benchmark on the same production proxy.
 
-The pre-deployment public browser smoke passed USDC, USDT, and WETH using isolated
-Playwright Chromium after the browser connector reported no connected browser.
-Post-deployment browser proof remains pending.
+The [pre-deployment public browser smoke](pricing-repair/browser-both-before-deployment.json)
+passed Ethereum USDC/USDT/WETH and Base USDC/WETH using isolated Playwright Chromium
+after the browser connector reported no connected browser. Permanent browser
+coverage now verifies the matching chain/token HTTP response and its displayed
+price, records JSON timings, and rejects API errors. [Controlled checks](pricing-repair/browser-validation-negative-checks.json)
+rejected HTTP 502, wrong-chain, and wrong-token responses even after an earlier
+successful quote. Post-deployment browser proof remains pending.
 
 ## Final-source amount benchmark
 

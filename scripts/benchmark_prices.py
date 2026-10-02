@@ -65,7 +65,7 @@ class Benchmark:
             row["seconds"] = time.monotonic() - started
             self.rows.append(row)
             self.report.parent.mkdir(parents=True, exist_ok=True)
-            self.report.write_text(json.dumps(self.rows, indent=2))
+            self.report.write_text(json.dumps(self.rows, indent=2) + "\n")
             print(
                 f"{chain} {phase}: {row['seconds']:.3f}s {'PASS' if row.get('passed') else 'FAIL'}",
                 flush=True,
@@ -75,10 +75,12 @@ class Benchmark:
         token, unseen, historical, expected = CHAINS[chain]
         params: dict[str, Any] = {"token": token, "block": historical, "amount": "1000.000001"}
         first = self.request("historical-first", chain, "price", params)
-        assert math.isclose(first["price"], expected, rel_tol=1e-9), first
+        assert first["price"] == expected, first
         repeat = self.request("historical-repeat", chain, "price", params)
         assert repeat["price"] == first["price"] and repeat["cached"] is False
-        self.request("changed-amount", chain, "price", {**params, "amount": "1001.000001"})
+        changed = self.request(
+            "changed-amount", chain, "price", {**params, "amount": "1001.000001"}
+        )
         mixed = self.request(
             "mixed-order",
             chain,
@@ -90,7 +92,8 @@ class Benchmark:
             },
         )
         assert [item["token"].lower() for item in mixed] == [token.lower()] * 3
-        assert math.isclose(mixed[0]["price"], first["price"], rel_tol=1e-9)
+        assert mixed[0]["price"] == first["price"]
+        assert mixed[2]["price"] == changed["price"]
         self.request(
             "unseen-token-first",
             chain,
@@ -127,7 +130,7 @@ def main() -> None:
                     "error": f"{type(error).__name__}: {error}",
                 }
             )
-            args.report.write_text(json.dumps(benchmark.rows, indent=2))
+            args.report.write_text(json.dumps(benchmark.rows, indent=2) + "\n")
     raise SystemExit(1 if failed else 0)
 
 
