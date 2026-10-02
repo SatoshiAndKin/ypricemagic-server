@@ -1,8 +1,10 @@
 # Pricing, startup, and validation repair
 
-Updated October 2, 2026. The repair is in progress. Production acceptance has not been claimed. Production
-continues to run server `2cf834e5e63303a0d75431a22e000c14f45024e6` and pricing fork
-`69dda57e63039a359420a4177ca688c378e9be9a` until both linked repairs are validated.
+Updated October 2, 2026. The repair is in progress. Production acceptance has not
+been claimed. The first repair pair deployed server
+`be640a5bc2f0e1db3ced13b29b0f77fb7a5b4de7` with pricing fork
+`073c7ac801ca36128eb27efc64031851ab6f2101`. Its failed acceptance runs and remaining
+gates are recorded below.
 
 ## Reproduced failures and provenance
 
@@ -292,20 +294,55 @@ ski-lambo-1 was unreachable over both LAN and Tailscale from 06:20 UTC on
 October 2. It became reachable again with a new uptime around 15:56 UTC; the
 system Docker web3-proxy was healthy when checked, and both public backend
 health checks recovered. Candidate validation continued against an independent
-node during the outage. No provider switch or task deployment was performed.
+node during the outage. Production providers were preserved.
+
+## First repair deployment and uncovered failures
+
+Fork [PR #47](https://github.com/SatoshiAndKin/ypricemagic/pull/47) merged to
+`master` as `073c7ac801ca36128eb27efc64031851ab6f2101`, followed by server
+[PR #158](https://github.com/SatoshiAndKin/ypricemagic-server/pull/158), merged as
+`be640a5bc2f0e1db3ced13b29b0f77fb7a5b4de7`. All 13 fork checks and six server
+checks passed. [Deployment run 37064574100](https://github.com/SatoshiAndKin/ypricemagic-server/actions/runs/37064574100)
+succeeded; the deployment worker independently recorded success for request
+`9049ee4d6bca44ee94342bf1ce421a13`.
+
+[Deployment assertions](pricing-repair/production-first-deployment-assertions.json)
+passed for all three images. Both backends installed the merged fork revision,
+loaded compiled code, retained their original provider and cache volumes, and
+have an 8 GiB limit with swap disabled. Container-to-ready times were 17.56 seconds
+for Ethereum and 21.46 seconds for Base. Neither backend had an OOM or restart.
+
+Production acceptance **failed**. The [public timing run](pricing-repair/production-first-deployment-benchmark.json)
+passed 16 requests before Base WETH at block 24,000,000, amount `0.1`, returned
+HTTP 504 after 300.07 seconds. The server enforced one deadline promptly, but the
+underlying cold discovery remains a release failure. Historical USDC goldens and
+mixed-batch ordering still matched exactly. Ethereum's first historical quote
+was 8.53 seconds, first historical WETH 52.51 seconds, and three previously unseen
+recent-block quotes 9.45, 7.34, and 7.18 seconds. These timings do not establish a
+complete matrix or soak.
+
+The separate [candidate turnover run](pricing-repair/candidate-turnover-failure.json)
+also failed: Ethereum USDC at block 26,107,234, amount `1000.000001`, returned
+HTTP 504 after 35.88 seconds. Both chains completed 2,200 distinct amounts and
+retained exact post-eviction historical results; there were no OOMs or restarts.
+Peak cgroup use was approximately 1.00 GiB for Ethereum and 4.58 GiB for Base.
+This isolated run lasted 54.81 minutes and is not a production soak. Its failure
+remains recorded independently of any later recovery.
+
+A fresh copy of the untouched Base production SQLite backup reproduced the
+WETH failure at 300.01 seconds. Profiling found expensive historical backfill
+and many immutable Solidly stable-flag reads. Follow-up work carries the stable
+flag from the factory event and retries one transient transport timeout at the
+same canonical hash, inside the existing deadline. The initial repaired copied-cache
+run returned the unchanged WETH price `1969.89808` in 291.30 seconds. This is
+candidate evidence only; further repair and production proof remain pending.
 
 ## Remaining delivery gates
 
-Fork repair [PR #47](https://github.com/SatoshiAndKin/ypricemagic/pull/47) merged
-to `master` as `073c7ac801ca36128eb27efc64031851ab6f2101` after all 13 CI checks
-and the complete native validation passed. The companion server
-[PR #158](https://github.com/SatoshiAndKin/ypricemagic-server/pull/158) now locks
-that exact `master` revision. The production frontend Dockerfile built
-successfully. The [refreshed production backend image](pricing-repair/merged-fork-production-image.json)
-built, imported its compiled dependencies, and contains all ten expected compiled
-pricing files at the merged fork revision. All 333 server tests and static checks
-passed with that lock. Remaining gates: server CI validation,
-server merge, pipeline deployment with image
-and installed dependency revision checks, corrected historical/current matrix,
-public redirect and browser smoke, and a 60-minute production soak with cache
-turnover, memory, restart, Docker OOM, and kernel OOM checks.
+Validate and merge follow-up fork repairs, refresh the server lock against
+`master`, validate and deploy through the existing pipeline, then run the complete
+corrected historical/current matrix, public redirect and direct Tailscale/browser
+smoke, timing comparisons, and at least 60 minutes of production soak with cache
+turnover, memory, restart, Docker OOM, and kernel OOM checks. Acceptance requires
+no unexpected pricing failures. The failed runs above cannot be erased by a
+successful recovery or restart.
