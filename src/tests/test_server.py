@@ -1,6 +1,9 @@
 """Tests for server._fetch_price behavior."""
 
 import asyncio
+from collections.abc import AsyncIterator
+from decimal import Decimal
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
 
 import pytest
@@ -8,6 +11,90 @@ import pytest
 DAI = "0x6B175474E89094C44Da98b954EedeAC495271d0F"
 USDC = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"
 WETH = "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"
+
+
+class TestForkAmountContract:
+    def test_single_amount_keeps_exact_decimal(self, mock_y_module: None) -> None:
+        from fastapi.testclient import TestClient
+
+        from src.server import app
+
+        amount = "9007199254740993.000000000000000001"
+
+        async def get_price(token: str, block: int, **kwargs: object) -> float:
+            assert kwargs["amount"] == Decimal(amount)
+            assert isinstance(kwargs["amount"], Decimal)
+            return 1.25
+
+        with (
+            patch("y.get_price", get_price),
+            patch("y.get_block_timestamp_async", AsyncMock(return_value=1700000000)),
+        ):
+            response = TestClient(app).get(
+                "/price", params={"token": DAI, "block": "18000000", "amount": amount}
+            )
+
+        assert response.status_code == 200
+        assert response.json()["price"] == 1.25
+
+    def test_mixed_batch_preserves_order_duplicates_and_spot_cache(
+        self, mock_y_module: None
+    ) -> None:
+        from fastapi.testclient import TestClient
+
+        from src.server import app
+
+        calls: list[tuple[tuple[str, ...], object]] = []
+
+        async def get_prices(tokens: tuple[str, ...], block: int, **kwargs: object) -> list[float]:
+            amounts = kwargs.get("amounts")
+            calls.append((tokens, amounts))
+            if amounts is None:
+                return [2.0 for _ in tokens]
+            assert isinstance(amounts, tuple)
+            assert all(isinstance(amount, Decimal) for amount in amounts)
+            return [float(amount) for amount in amounts]
+
+        with (
+            patch("y.get_prices", get_prices),
+            patch("y.get_block_timestamp_async", AsyncMock(return_value=1700000000)),
+            patch("src.server.get_cached_price", return_value=None),
+            patch("src.server.set_cached_price") as set_price,
+        ):
+            response = TestClient(app).get(
+                "/prices",
+                params={
+                    "tokens": f"{DAI},{USDC},{DAI}",
+                    "block": "18000000",
+                    "amounts": "1.000000000000000001,,3",
+                },
+            )
+            assert response.status_code == 200
+            assert [(item["token"], item["price"]) for item in response.json()] == [
+                (DAI, 1.0),
+                (USDC, 2.0),
+                (DAI, 3.0),
+            ]
+            set_price.assert_called_once_with(USDC, 18000000, 2.0, block_timestamp=1700000000)
+
+        assert sorted(calls, key=lambda call: len(call[0])) == [
+            ((USDC,), None),
+            ((DAI, DAI), (Decimal("1.000000000000000001"), Decimal("3"))),
+        ]
+
+    @pytest.mark.parametrize("amount", ["NaN", "sNaN", "Infinity", "-Infinity"])
+    @pytest.mark.parametrize("endpoint", ["/price", "/prices"])
+    def test_nonfinite_amount_is_bad_request(self, amount: str, endpoint: str) -> None:
+        from fastapi.testclient import TestClient
+
+        from src.server import app
+
+        params = (
+            {"token": DAI, "amount": amount}
+            if endpoint == "/price"
+            else {"tokens": DAI, "amounts": amount}
+        )
+        assert TestClient(app).get(endpoint, params=params).status_code == 400
 
 
 class TestTimestampResolution:
@@ -265,10 +352,10 @@ class TestFetchPriceNoneReturn:
 
         mock_get_price = AsyncMock(return_value=None)
         with patch("y.get_price", mock_get_price):
-            result = await _fetch_price(DAI, 18000000, amount=1000.0)
+            result = await _fetch_price(DAI, 18000000, amount=Decimal("1000"))
             assert result is None
             mock_get_price.assert_called_once_with(
-                DAI, 18000000, amount=1000.0, fail_to_None=True, sync=False
+                DAI, 18000000, amount=Decimal("1000"), fail_to_None=True, sync=False
             )
 
 
@@ -427,10 +514,10 @@ class TestFetchPriceSuccess:
 
         mock_get_price = AsyncMock(return_value=0.99)
         with patch("y.get_price", mock_get_price):
-            result = await _fetch_price(DAI, 18000000, amount=1000.0)
+            result = await _fetch_price(DAI, 18000000, amount=Decimal("1000"))
             assert result == (0.99, None)
             mock_get_price.assert_called_once_with(
-                DAI, 18000000, amount=1000.0, fail_to_None=True, sync=False
+                DAI, 18000000, amount=Decimal("1000"), fail_to_None=True, sync=False
             )
 
     @pytest.mark.asyncio
@@ -472,14 +559,14 @@ class TestFetchPriceNewParams:
             result = await _fetch_price(
                 DAI,
                 18000000,
-                amount=1000.0,
+                amount=Decimal("1000"),
                 ignore_pools=ignore_pools,
             )
             assert result == (1.0, None)
             mock_get_price.assert_called_once_with(
                 DAI,
                 18000000,
-                amount=1000.0,
+                amount=Decimal("1000"),
                 fail_to_None=True,
                 sync=False,
                 ignore_pools=ignore_pools,
@@ -1141,13 +1228,13 @@ class TestBatchPricesMixedAmounts:
     """
 
     @pytest.mark.asyncio
-    async def test_mixed_amounts_passed_to_get_prices(self, mock_y_module: None) -> None:
-        """Mixed amounts list with None values is passed to get_prices correctly."""
+    async def test_mixed_amounts_split_by_quote_mode(self, mock_y_module: None) -> None:
+        """Spot prices and amount quotes use separate fork batches."""
         from fastapi.testclient import TestClient
 
         from src.server import app
 
-        mock_get_prices = AsyncMock(return_value=[1.0, 2.0, 3.0])
+        mock_get_prices = AsyncMock(side_effect=[[2.0], [1.0, 3.0]])
         mock_get_block_timestamp = AsyncMock(return_value=1700000000)
         mock_chain = type("MockChain", (), {"height": 19000000})()
 
@@ -1172,9 +1259,15 @@ class TestBatchPricesMixedAmounts:
             data = response.json()
             assert len(data) == 3
 
-            # Verify amounts were passed correctly to get_prices
-            call_kwargs = mock_get_prices.call_args[1]
-            assert call_kwargs.get("amounts") == (1000.0, None, 500.0)
+            mock_get_prices.assert_any_await((USDC,), 18000000, fail_to_None=True, sync=False)
+            mock_get_prices.assert_any_await(
+                (DAI, WETH),
+                18000000,
+                amounts=(Decimal("1000"), Decimal("500")),
+                fail_to_None=True,
+                sync=False,
+            )
+            assert [item["price"] for item in data] == [1.0, 2.0, 3.0]
 
     @pytest.mark.asyncio
     async def test_mixed_amounts_caching_semantics(self, mock_y_module: None) -> None:
@@ -1183,7 +1276,7 @@ class TestBatchPricesMixedAmounts:
 
         from src.server import app
 
-        mock_get_prices = AsyncMock(return_value=[1.0, 2.0, 3.0])
+        mock_get_prices = AsyncMock(side_effect=[[2.0], [1.0, 3.0]])
         mock_get_block_timestamp = AsyncMock(return_value=1700000000)
         mock_chain = type("MockChain", (), {"height": 19000000})()
 
@@ -2803,377 +2896,215 @@ class TestForceCacheBypass:
         mock_get_price.assert_called_once()
 
 
-class TestUniswapV2Prewarm:
-    """Tests for Uniswap V2 pre-warming during server lifespan (VAL-WARM-001)."""
+class TestUniswapPrewarm:
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("version", ["v2", "v3", "v3_fork"])
+    async def test_anchor_indexes_complete_before_readiness(
+        self, mock_y_module: None, version: str
+    ) -> None:
+        import sys
+
+        from src import server
+
+        constants = sys.modules["y.constants"]
+        tokens = (constants.usdc,)
+        started = asyncio.Event()
+        finish = asyncio.Event()
+        consumed: list[tuple[str, int]] = []
+
+        async def pools(token: str, block: int) -> AsyncIterator[object]:
+            assert token in tokens and block == 19000000
+            started.set()
+            await finish.wait()
+            consumed.append((token, block))
+            yield "pool"
+
+        class Router:
+            pools_for_token = staticmethod(pools)
+
+            @property
+            def __pools__(self) -> None:
+                raise AssertionError("warmup started a full inventory")
+
+            @property
+            def __pools_by_token__(self) -> None:
+                raise AssertionError("warmup started a full inventory index")
+
+        router = Router()
+        multiplexer = sys.modules["y.prices.dex.uniswap"].uniswap_multiplexer
+        multiplexer.v2_routers = {"test": router} if version == "v2" else {}
+        multiplexer.v3 = router if version == "v3" else None
+        multiplexer.v3_forks = [router] if version == "v3_fork" else []
+        task = asyncio.create_task(server._prewarm_uniswap())
+        try:
+            await asyncio.wait_for(started.wait(), 1)
+            assert not task.done()
+            finish.set()
+            await asyncio.wait_for(task, 1)
+            assert sorted(consumed) == sorted((token, 19000000) for token in tokens)
+        finally:
+            task.cancel()
+            await asyncio.gather(task, return_exceptions=True)
 
     @pytest.mark.asyncio
-    async def test_v2_pools_awaited_for_each_router(self, mock_y_module: None) -> None:
-        """__pools__ is awaited on each V2 router in uniswap_multiplexer.v2_routers."""
+    @pytest.mark.parametrize("version", ["v2", "v3", "v3_fork"])
+    async def test_failure_is_logged_and_other_routers_complete(
+        self, mock_y_module: None, version: str
+    ) -> None:
         import sys
-        from unittest.mock import MagicMock
 
-        from src.server import lifespan
+        from src import server
 
-        mock_app = MagicMock()
+        completed: list[str] = []
 
-        # Create mock V2 routers with awaitable __pools__
-        mock_router_a = MagicMock()
-        pools_a: asyncio.Future[list[str]] = asyncio.Future()
-        pools_a.set_result(["pool1", "pool2"])
-        mock_router_a.__pools__ = pools_a
+        async def bad(token: str, block: int) -> AsyncIterator[object]:
+            raise RuntimeError("indexed scan failed")
+            yield  # pragma: no cover
 
-        mock_router_b = MagicMock()
-        pools_b: asyncio.Future[list[str]] = asyncio.Future()
-        pools_b.set_result(["pool3"])
-        mock_router_b.__pools__ = pools_b
+        async def good(token: str, block: int) -> AsyncIterator[object]:
+            completed.append(token)
+            yield "pool"
 
-        # Patch the multiplexer in sys.modules
-        mock_multiplexer = sys.modules["y.prices.dex.uniswap"].uniswap_multiplexer
-        mock_multiplexer.v2_routers = {
-            "uniswap_v2": mock_router_a,
-            "sushiswap": mock_router_b,
+        multiplexer = sys.modules["y.prices.dex.uniswap"].uniswap_multiplexer
+        failed = SimpleNamespace(pools_for_token=bad)
+        multiplexer.v2_routers = {"good": SimpleNamespace(pools_for_token=good)}
+        multiplexer.v3 = failed if version == "v3" else None
+        multiplexer.v3_forks = [failed] if version == "v3_fork" else []
+        if version == "v2":
+            multiplexer.v2_routers["bad"] = failed
+        with patch("src.server.logger") as logger:
+            await server._prewarm_uniswap()
+        assert set(completed) == {sys.modules["y.constants"].usdc}
+        logger.warning.assert_called_once()
+        assert logger.warning.call_args.args == ("uniswap_prewarm_failed",)
+        assert logger.warning.call_args.kwargs["error"] == "indexed scan failed"
+        assert any(call.args[0].endswith("loading_done") for call in logger.info.call_args_list)
+
+    @pytest.mark.asyncio
+    async def test_base_prewarms_native_usdc(self, mock_y_module: None) -> None:
+        import sys
+
+        from src import server
+
+        native = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913"
+        legacy = "0xd9aAEc86B65D86f6A7B5B1b0c42FFA531710b6CA"
+        vars(sys.modules["y.constants"])["STABLECOINS"] = {native: "usdc", legacy: "usdbc"}
+        requested: list[str] = []
+
+        async def pools(token: str, block: int) -> AsyncIterator[object]:
+            requested.append(token)
+            yield "pool"
+
+        multiplexer = sys.modules["y.prices.dex.uniswap"].uniswap_multiplexer
+        multiplexer.v2_routers = {"test": SimpleNamespace(pools_for_token=pools)}
+        await server._prewarm_uniswap()
+        assert requested == [native]
+
+    @pytest.mark.asyncio
+    async def test_cancellation_propagates(self, mock_y_module: None) -> None:
+        import sys
+
+        from src import server
+
+        async def cancelled(token: str, block: int) -> AsyncIterator[object]:
+            raise asyncio.CancelledError()
+            yield  # pragma: no cover
+
+        multiplexer = sys.modules["y.prices.dex.uniswap"].uniswap_multiplexer
+        multiplexer.v2_routers = {"test": SimpleNamespace(pools_for_token=cancelled)}
+        with pytest.raises(asyncio.CancelledError):
+            await server._prewarm_uniswap()
+
+
+class TestContractURLPolicy:
+    @pytest.mark.asyncio
+    async def test_lifespan_disables_automatic_offchain_http(
+        self, mock_y_module: None, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        import sys
+
+        from web3 import AsyncHTTPProvider, AsyncWeb3, Web3
+        from web3.exceptions import OffchainLookup
+
+        from src import server
+
+        sync_w3 = Web3()
+        async_w3 = AsyncWeb3(AsyncHTTPProvider("https://example.invalid"))
+        sys.modules["brownie"].network.web3 = sync_w3
+        for name in ("uniswap", "compound", "chainlink", "aave", "balancer", "gearbox"):
+            monkeypatch.setattr(server, f"_prewarm_{name}", AsyncMock())
+        payload = {
+            "sender": DAI,
+            "urls": ["http://127.0.0.1/private"],
+            "callData": b"",
+            "callbackFunction": b"",
+            "extraData": b"",
         }
-        mock_multiplexer.v3 = None
-        mock_multiplexer.v3_forks = []
-
-        with (
-            patch("brownie.network") as mock_network,
-            patch("brownie.chain", MagicMock(id=1, height=19000000)),
-            patch("y.get_price", MagicMock()),
-            patch("y.prices.stable_swap.curve.curve", None),
+        with patch(
+            "dank_mids.helpers._helpers.setup_dank_w3_from_sync",
+            return_value=SimpleNamespace(eth=SimpleNamespace(w3=async_w3)),
         ):
-            mock_network.is_connected.return_value = True
-
-            async with lifespan(mock_app):
-                pass
-
-        # Both routers' __pools__ should have been awaited (futures are consumed)
-        assert pools_a.done()
-        assert pools_b.done()
-
-    @pytest.mark.asyncio
-    async def test_v2_prewarm_logging(self, mock_y_module: None) -> None:
-        """Structured log messages emitted for each V2 router pre-warming."""
-        import sys
-        from unittest.mock import MagicMock
-
-        from src.server import lifespan
-
-        mock_app = MagicMock()
-
-        mock_router = MagicMock()
-        pools_fut: asyncio.Future[list[str]] = asyncio.Future()
-        pools_fut.set_result([])
-        mock_router.__pools__ = pools_fut
-
-        mock_multiplexer = sys.modules["y.prices.dex.uniswap"].uniswap_multiplexer
-        mock_multiplexer.v2_routers = {"sushiswap": mock_router}
-        mock_multiplexer.v3 = None
-        mock_multiplexer.v3_forks = []
-
-        with (
-            patch("brownie.network") as mock_network,
-            patch("brownie.chain", MagicMock(id=1, height=19000000)),
-            patch("y.get_price", MagicMock()),
-            patch("y.prices.stable_swap.curve.curve", None),
-            patch("src.server.logger") as mock_logger,
-        ):
-            mock_network.is_connected.return_value = True
-
-            async with lifespan(mock_app):
-                pass
-
-        # Check that started/done log calls were made with the router name
-        info_calls = list(mock_logger.info.call_args_list)
-        started_calls = [
-            c for c in info_calls if c.args and c.args[0] == "uniswap_v2_pools_loading_started"
-        ]
-        done_calls = [
-            c for c in info_calls if c.args and c.args[0] == "uniswap_v2_pools_loading_done"
-        ]
-        assert len(started_calls) == 1
-        assert started_calls[0].kwargs.get("router") == "sushiswap"
-        assert len(done_calls) == 1
-        assert done_calls[0].kwargs.get("router") == "sushiswap"
-
-    @pytest.mark.asyncio
-    async def test_v2_prewarm_exception_caught(self, mock_y_module: None) -> None:
-        """V2 pre-warming exception is caught and logged, not raised."""
-        import sys
-        from unittest.mock import MagicMock
-
-        from src.server import lifespan
-
-        mock_app = MagicMock()
-
-        # Create a router whose __pools__ raises
-        mock_router_bad = MagicMock()
-        pools_bad: asyncio.Future[list[str]] = asyncio.Future()
-        pools_bad.set_exception(RuntimeError("V2 factory scan failed"))
-        mock_router_bad.__pools__ = pools_bad
-
-        # Create a good router to verify it still runs after the failure
-        mock_router_good = MagicMock()
-        pools_good: asyncio.Future[list[str]] = asyncio.Future()
-        pools_good.set_result(["pool1"])
-        mock_router_good.__pools__ = pools_good
-
-        mock_multiplexer = sys.modules["y.prices.dex.uniswap"].uniswap_multiplexer
-        mock_multiplexer.v2_routers = {
-            "bad_router": mock_router_bad,
-            "good_router": mock_router_good,
-        }
-        mock_multiplexer.v3 = None
-        mock_multiplexer.v3_forks = []
-
-        with (
-            patch("brownie.network") as mock_network,
-            patch("brownie.chain", MagicMock(id=1, height=19000000)),
-            patch("y.get_price", MagicMock()),
-            patch("y.prices.stable_swap.curve.curve", None),
-            patch("src.server.logger") as mock_logger,
-        ):
-            mock_network.is_connected.return_value = True
-
-            # Should NOT raise despite the bad router
-            async with lifespan(mock_app):
-                pass
-
-        # Warning should have been logged for the failure
-        warning_calls = list(mock_logger.warning.call_args_list)
-        prewarm_fail_calls = [
-            c for c in warning_calls if c.args and c.args[0] == "uniswap_prewarm_failed"
-        ]
-        assert len(prewarm_fail_calls) >= 1
-        assert any(c.kwargs.get("router") == "bad_router" for c in prewarm_fail_calls)
-
-        # Good router should still have been awaited
-        assert pools_good.done()
-
-
-class TestUniswapV3Prewarm:
-    """Tests for Uniswap V3 pre-warming during server lifespan (VAL-WARM-002)."""
-
-    @pytest.mark.asyncio
-    async def test_v3_pools_awaited(self, mock_y_module: None) -> None:
-        """__pools__ is awaited on uniswap_multiplexer.v3 during startup."""
-        import sys
-        from unittest.mock import MagicMock
-
-        from src.server import lifespan
-
-        mock_app = MagicMock()
-
-        mock_v3 = MagicMock()
-        v3_pools: asyncio.Future[list[str]] = asyncio.Future()
-        v3_pools.set_result(["v3pool1", "v3pool2"])
-        mock_v3.__pools__ = v3_pools
-
-        mock_multiplexer = sys.modules["y.prices.dex.uniswap"].uniswap_multiplexer
-        mock_multiplexer.v2_routers = {}
-        mock_multiplexer.v3 = mock_v3
-        mock_multiplexer.v3_forks = []
-
-        with (
-            patch("brownie.network") as mock_network,
-            patch("brownie.chain", MagicMock(id=1, height=19000000)),
-            patch("y.get_price", MagicMock()),
-            patch("y.prices.stable_swap.curve.curve", None),
-        ):
-            mock_network.is_connected.return_value = True
-
-            async with lifespan(mock_app):
-                pass
-
-        assert v3_pools.done()
-
-    @pytest.mark.asyncio
-    async def test_v3_forks_awaited(self, mock_y_module: None) -> None:
-        """__pools__ is awaited on each V3 fork during startup."""
-        import sys
-        from unittest.mock import MagicMock
-
-        from src.server import lifespan
-
-        mock_app = MagicMock()
-
-        mock_fork = MagicMock()
-        fork_pools: asyncio.Future[list[str]] = asyncio.Future()
-        fork_pools.set_result(["forkpool1"])
-        mock_fork.__pools__ = fork_pools
-
-        mock_multiplexer = sys.modules["y.prices.dex.uniswap"].uniswap_multiplexer
-        mock_multiplexer.v2_routers = {}
-        mock_multiplexer.v3 = None
-        mock_multiplexer.v3_forks = [mock_fork]
-
-        with (
-            patch("brownie.network") as mock_network,
-            patch("brownie.chain", MagicMock(id=1, height=19000000)),
-            patch("y.get_price", MagicMock()),
-            patch("y.prices.stable_swap.curve.curve", None),
-        ):
-            mock_network.is_connected.return_value = True
-
-            async with lifespan(mock_app):
-                pass
-
-        assert fork_pools.done()
-
-    @pytest.mark.asyncio
-    async def test_v3_prewarm_logging(self, mock_y_module: None) -> None:
-        """Structured log messages emitted for V3 pre-warming."""
-        import sys
-        from unittest.mock import MagicMock
-
-        from src.server import lifespan
-
-        mock_app = MagicMock()
-
-        mock_v3 = MagicMock()
-        v3_pools: asyncio.Future[list[str]] = asyncio.Future()
-        v3_pools.set_result([])
-        mock_v3.__pools__ = v3_pools
-
-        mock_multiplexer = sys.modules["y.prices.dex.uniswap"].uniswap_multiplexer
-        mock_multiplexer.v2_routers = {}
-        mock_multiplexer.v3 = mock_v3
-        mock_multiplexer.v3_forks = []
-
-        with (
-            patch("brownie.network") as mock_network,
-            patch("brownie.chain", MagicMock(id=1, height=19000000)),
-            patch("y.get_price", MagicMock()),
-            patch("y.prices.stable_swap.curve.curve", None),
-            patch("src.server.logger") as mock_logger,
-        ):
-            mock_network.is_connected.return_value = True
-
-            async with lifespan(mock_app):
-                pass
-
-        info_calls = list(mock_logger.info.call_args_list)
-        started = [
-            c for c in info_calls if c.args and c.args[0] == "uniswap_v3_pools_loading_started"
-        ]
-        done = [c for c in info_calls if c.args and c.args[0] == "uniswap_v3_pools_loading_done"]
-        assert len(started) == 1
-        assert len(done) == 1
-
-    @pytest.mark.asyncio
-    async def test_v3_prewarm_exception_caught(self, mock_y_module: None) -> None:
-        """V3 pre-warming exception is caught and logged, not raised."""
-        import sys
-        from unittest.mock import MagicMock
-
-        from src.server import lifespan
-
-        mock_app = MagicMock()
-
-        mock_v3 = MagicMock()
-        v3_pools: asyncio.Future[list[str]] = asyncio.Future()
-        v3_pools.set_exception(RuntimeError("V3 pool scan failed"))
-        mock_v3.__pools__ = v3_pools
-
-        mock_multiplexer = sys.modules["y.prices.dex.uniswap"].uniswap_multiplexer
-        mock_multiplexer.v2_routers = {}
-        mock_multiplexer.v3 = mock_v3
-        mock_multiplexer.v3_forks = []
-
-        with (
-            patch("brownie.network") as mock_network,
-            patch("brownie.chain", MagicMock(id=1, height=19000000)),
-            patch("y.get_price", MagicMock()),
-            patch("y.prices.stable_swap.curve.curve", None),
-            patch("src.server.logger") as mock_logger,
-        ):
-            mock_network.is_connected.return_value = True
-
-            # Should NOT raise
-            async with lifespan(mock_app):
-                pass
-
-        warning_calls = list(mock_logger.warning.call_args_list)
-        prewarm_fail_calls = [
-            c for c in warning_calls if c.args and c.args[0] == "uniswap_prewarm_failed"
-        ]
-        assert len(prewarm_fail_calls) >= 1
-        assert any(c.kwargs.get("version") == "v3" for c in prewarm_fail_calls)
-
-    @pytest.mark.asyncio
-    async def test_v3_fork_exception_caught(self, mock_y_module: None) -> None:
-        """V3 fork pre-warming exception is caught and logged, not raised."""
-        import sys
-        from unittest.mock import MagicMock
-
-        from src.server import lifespan
-
-        mock_app = MagicMock()
-
-        mock_fork = MagicMock()
-        fork_pools: asyncio.Future[list[str]] = asyncio.Future()
-        fork_pools.set_exception(RuntimeError("V3 fork scan failed"))
-        mock_fork.__pools__ = fork_pools
-
-        mock_multiplexer = sys.modules["y.prices.dex.uniswap"].uniswap_multiplexer
-        mock_multiplexer.v2_routers = {}
-        mock_multiplexer.v3 = None
-        mock_multiplexer.v3_forks = [mock_fork]
-
-        with (
-            patch("brownie.network") as mock_network,
-            patch("brownie.chain", MagicMock(id=1, height=19000000)),
-            patch("y.get_price", MagicMock()),
-            patch("y.prices.stable_swap.curve.curve", None),
-            patch("src.server.logger") as mock_logger,
-        ):
-            mock_network.is_connected.return_value = True
-
-            # Should NOT raise
-            async with lifespan(mock_app):
-                pass
-
-        warning_calls = list(mock_logger.warning.call_args_list)
-        prewarm_fail_calls = [
-            c for c in warning_calls if c.args and c.args[0] == "uniswap_prewarm_failed"
-        ]
-        assert len(prewarm_fail_calls) >= 1
-        assert any(c.kwargs.get("version") == "v3_fork" for c in prewarm_fail_calls)
-
-    @pytest.mark.asyncio
-    async def test_v3_skipped_when_none(self, mock_y_module: None) -> None:
-        """V3 pre-warming is skipped when uniswap_multiplexer.v3 is None."""
-        import sys
-        from unittest.mock import MagicMock
-
-        from src.server import lifespan
-
-        mock_app = MagicMock()
-
-        mock_multiplexer = sys.modules["y.prices.dex.uniswap"].uniswap_multiplexer
-        mock_multiplexer.v2_routers = {}
-        mock_multiplexer.v3 = None
-        mock_multiplexer.v3_forks = []
-
-        with (
-            patch("brownie.network") as mock_network,
-            patch("brownie.chain", MagicMock(id=1, height=19000000)),
-            patch("y.get_price", MagicMock()),
-            patch("y.prices.stable_swap.curve.curve", None),
-            patch("src.server.logger") as mock_logger,
-        ):
-            mock_network.is_connected.return_value = True
-
-            async with lifespan(mock_app):
-                pass
-
-        # No V3 loading log messages should have been emitted
-        info_calls = list(mock_logger.info.call_args_list)
-        v3_calls = [c for c in info_calls if c.args and "v3" in c.args[0]]
-        assert len(v3_calls) == 0
+            async with server.lifespan(server.app):
+                with (
+                    patch("web3.eth.eth.Eth._call", side_effect=OffchainLookup(payload)),
+                    patch(
+                        "web3.eth.eth.handle_offchain_lookup",
+                        side_effect=AssertionError("contract URL followed"),
+                    ) as sync_http,
+                    pytest.raises(OffchainLookup),
+                ):
+                    sync_w3.eth.call({"to": DAI})
+                sync_http.assert_not_called()
+                with (
+                    patch(
+                        "web3.eth.async_eth.AsyncEth._call",
+                        new=AsyncMock(side_effect=OffchainLookup(payload)),
+                    ),
+                    patch(
+                        "web3.eth.async_eth.async_handle_offchain_lookup",
+                        side_effect=AssertionError("contract URL followed"),
+                    ) as async_http,
+                    pytest.raises(OffchainLookup),
+                ):
+                    await async_w3.eth.call({"to": DAI})
+                async_http.assert_not_called()
 
 
 class TestPrewarmReadiness:
+    @pytest.mark.asyncio
+    async def test_balancer_warmup_consumes_vault_inventory(
+        self, mock_y_module: None, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        import sys
+        from types import SimpleNamespace
+
+        from src import server
+
+        consumed: list[int] = []
+
+        async def pools(*, block: int) -> AsyncIterator[object]:
+            consumed.append(block)
+            yield "pool"
+
+        async def v2() -> object:
+            return SimpleNamespace(vaults=[SimpleNamespace(pools=pools)])
+
+        async def versions() -> list[object]:
+            return []
+
+        multiplexer = SimpleNamespace(__versions__=versions(), __v2__=v2())
+        monkeypatch.setitem(
+            sys.modules,
+            "y.prices.dex.balancer.balancer",
+            SimpleNamespace(balancer_multiplexer=multiplexer),
+        )
+        try:
+            await server._prewarm_balancer()
+            assert consumed == [19000000]
+        finally:
+            if not consumed:
+                multiplexer.__v2__.close()
+
     @pytest.mark.asyncio
     async def test_curve_failure_fails_startup_and_cancels_other_loaders(
         self, mock_y_module: None, monkeypatch: pytest.MonkeyPatch

@@ -199,3 +199,34 @@ class TestGetCachedErrors:
         assert token == "0xtoken"
         assert block == 77
         assert entry["error"] == "test error message"
+
+
+class TestJSONOnlyCache:
+    def test_tampered_value_cannot_invoke_pickle(self) -> None:
+        from src.cache import get_cache
+
+        set_cached_price("0xtoken", 1, 1.23)
+        cache = get_cache()
+        cache._sql("UPDATE Cache SET mode = 4, value = ?", (b"invalid pickle",))
+        with patch("diskcache.core.pickle.load") as unpickle:
+            assert get_cached_price("0xtoken", 1) is None
+            unpickle.assert_not_called()
+
+    def test_tampered_key_cannot_invoke_pickle(self) -> None:
+        from src.cache import get_cache
+
+        set_cached_error("0xtoken", 1, "unavailable")
+        cache = get_cache()
+        cache._sql("UPDATE Cache SET raw = 0, key = ?", (b"invalid pickle",))
+        with patch("diskcache.core.pickle.load") as unpickle:
+            assert list(get_cached_errors()) == []
+            unpickle.assert_not_called()
+
+    def test_large_json_error_still_round_trips(self) -> None:
+        import random
+
+        message = random.Random(0).randbytes(40_000).hex()
+        set_cached_error("0xtoken", 1, message)
+        result = get_cached_error("0xtoken", 1)
+        assert result is not None
+        assert result["error"] == message

@@ -2,10 +2,11 @@ import os
 import threading
 from collections.abc import Iterator
 from datetime import UTC, datetime
-from typing import cast
+from typing import Any, cast
 
 import diskcache
 from diskcache import JSONDisk
+from diskcache.core import MODE_BINARY, MODE_RAW
 
 from src.logger import get_logger
 
@@ -17,6 +18,21 @@ CACHE_DIR = os.environ.get("CACHE_DIR", "/data/cache")
 # the next request will re-attempt the real price lookup.
 ERROR_CACHE_TTL = int(os.environ.get("ERROR_CACHE_TTL", "3600"))
 
+
+class _JSONOnlyDisk(JSONDisk):  # type: ignore[misc]
+    """Reject pickle metadata before diskcache decodes an on-disk entry."""
+
+    def get(self, key: Any, raw: bool) -> Any:
+        if not raw:
+            raise ValueError("Non-JSON cache key rejected")
+        return super().get(key, raw)
+
+    def fetch(self, mode: int, filename: str | None, value: Any, read: bool) -> Any:
+        if mode not in (MODE_RAW, MODE_BINARY):
+            raise ValueError("Non-JSON cache value rejected")
+        return super().fetch(mode, filename, value, read)
+
+
 _cache: diskcache.Cache | None = None
 _lock = threading.Lock()
 
@@ -27,7 +43,7 @@ def get_cache() -> diskcache.Cache:
         with _lock:
             if _cache is None:
                 os.makedirs(CACHE_DIR, exist_ok=True)
-                _cache = diskcache.Cache(CACHE_DIR, disk=JSONDisk)
+                _cache = diskcache.Cache(CACHE_DIR, disk=_JSONOnlyDisk)
     return _cache
 
 

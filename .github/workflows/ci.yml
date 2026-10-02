@@ -19,6 +19,34 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  backend-image:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6
+      - name: Build production backend image on native amd64
+        run: docker build --tag ypm-server:ci .
+      - name: Import compiled dependencies in the runtime image
+        run: docker run --rm --entrypoint python ypm-server:ci -c 'import brownie, dank_mids, cachebox'
+
+  frontend:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - run: npm run check
+      - run: npm test -- --run
+      - run: npm run build
+
   lockfile:
     # Only check on PRs; push-to-main skips this because git deps (ypricemagic@master)
     # can resolve to a newer commit between lockfile generation and the check.

@@ -104,6 +104,12 @@ def mock_y_module(monkeypatch: pytest.MonkeyPatch) -> None:
     mock_y.classes = mock_y_classes
     mock_y.prices = mock_y_prices
 
+    mock_y_constants: Any = MagicMock()
+    mock_y_constants.usdc = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"
+    mock_y_constants.weth = "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"
+    mock_y_constants.STABLECOINS = {mock_y_constants.usdc: "usdc"}
+    monkeypatch.setitem(sys.modules, "y.constants", mock_y_constants)
+
     # Install mocks
     monkeypatch.setitem(sys.modules, "y", mock_y)
     monkeypatch.setitem(sys.modules, "y.time", mock_y_time)

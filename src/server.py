@@ -5,7 +5,9 @@ import os
 import signal
 import time
 import uuid
+from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
+from decimal import Decimal
 from importlib.metadata import PackageNotFoundError
 from importlib.metadata import version as _pkg_version
 from typing import TYPE_CHECKING, Any
@@ -121,52 +123,47 @@ async def _get_token_lock(token: str) -> asyncio.Lock:
         return _bucket_locks[token]
 
 
+async def _consume_pool_inventory(pools: AsyncIterator[Any]) -> int:
+    count = 0
+    async for _ in pools:
+        count += 1
+    return count
+
+
 async def _prewarm_uniswap() -> None:
-    """Pre-load Uniswap V2/V3 pool indexes concurrently.
+    """Load indexed USDC pools through the startup head.
 
-    Each sub-step is wrapped in try/except so partial failures don't prevent startup.
-    All routers (V2, V3, V3 forks) load in parallel for faster startup.
+    Other tokens are discovered on demand. Each router completes the anchor
+    index before readiness; independent router failures remain non-fatal.
     """
-    from y.prices.dex.uniswap import uniswap_multiplexer  # type: ignore[attr-defined]
+    from brownie import chain
+    from y.constants import STABLECOINS
+    from y.prices.dex.uniswap import uniswap_multiplexer
 
-    async def _load_v2(name: str, router: Any) -> None:
-        try:
-            logger.info("uniswap_v2_pools_loading_started", router=name)
-            await router.__pools__
-            logger.info("uniswap_v2_pools_loading_done", router=name)
-        except Exception as v2_err:
-            logger.warning("uniswap_prewarm_failed", router=name, version="v2", error=str(v2_err))
+    block = chain.height
+    tokens = tuple(str(token) for token, label in STABLECOINS.items() if label == "usdc")
 
-    async def _load_v3() -> None:
+    async def _load(router: Any, version: str, name: str) -> None:
         try:
-            logger.info("uniswap_v3_pools_loading_started")
-            await uniswap_multiplexer.v3.__pools__  # type: ignore[union-attr]
-            logger.info("uniswap_v3_pools_loading_done")
-        except Exception as v3_err:
-            logger.warning("uniswap_prewarm_failed", version="v3", error=str(v3_err))
-
-    async def _load_v3_fork(fork: Any) -> None:
-        try:
-            logger.info("uniswap_v3_pools_loading_started", fork=str(fork))
-            await fork.__pools__
-            logger.info("uniswap_v3_pools_loading_done", fork=str(fork))
-        except Exception as v3_fork_err:
-            logger.warning(
-                "uniswap_prewarm_failed",
-                version="v3_fork",
-                fork=str(fork),
-                error=str(v3_fork_err),
+            logger.info(f"uniswap_{version}_pools_loading_started", router=name, tokens=tokens)
+            counts = await asyncio.gather(
+                *(_consume_pool_inventory(router.pools_for_token(token, block)) for token in tokens)
             )
+            logger.info(
+                f"uniswap_{version}_pools_loading_done",
+                router=name,
+                tokens=tokens,
+                pools=sum(counts),
+                block=block,
+            )
+        except Exception as error:
+            logger.warning("uniswap_prewarm_failed", router=name, version=version, error=str(error))
 
-    tasks: list[Any] = [
-        _load_v2(name, router) for name, router in uniswap_multiplexer.v2_routers.items()
-    ]
+    tasks = [_load(router, "v2", name) for name, router in uniswap_multiplexer.v2_routers.items()]
     if uniswap_multiplexer.v3:
-        tasks.append(_load_v3())
-    for fork in uniswap_multiplexer.v3_forks:
-        tasks.append(_load_v3_fork(fork))
-
-    await asyncio.gather(*tasks, return_exceptions=True)
+        tasks.append(_load(uniswap_multiplexer.v3, "v3", str(uniswap_multiplexer.v3)))
+    tasks.extend(_load(fork, "v3", str(fork)) for fork in uniswap_multiplexer.v3_forks)
+    await asyncio.gather(*tasks)
 
 
 async def _prewarm_compound() -> None:
@@ -179,7 +176,7 @@ async def _prewarm_compound() -> None:
         logger.info("compound_markets_loading_started", comptrollers=len(compound.trollers))
         # Load all comptroller market lists in parallel using a_sync's map API
         trollers = compound.trollers.values()
-        async for troller, markets in Comptroller.markets.map(trollers):  # type: ignore[arg-type,var-annotated]
+        async for troller, markets in Comptroller.markets.map(trollers):
             logger.debug("compound_troller_loaded", troller=str(troller), markets=len(markets))
         logger.info("compound_markets_loading_done")
     except Exception as e:
@@ -199,7 +196,7 @@ async def _prewarm_chainlink() -> None:
 
         logger.info("chainlink_feeds_loading_started")
         # Trigger the event scan by iterating feeds up to current block
-        async for _ in chainlink._feeds_thru_block(await dank_mids.eth.block_number):  # type: ignore[attr-defined]
+        async for _ in chainlink._feeds_thru_block(await dank_mids.eth.block_number):  # type: ignore[attr-defined,union-attr]
             pass
         logger.info("chainlink_feeds_loading_done")
     except Exception as e:
@@ -219,13 +216,23 @@ async def _prewarm_aave() -> None:
 
 
 async def _prewarm_balancer() -> None:
-    """Pre-load Balancer V1/V2 version objects."""
+    """Pre-load Balancer versions and consume V2 vault pool events through the head."""
     try:
+        from brownie import chain
         from y.prices.dex.balancer.balancer import balancer_multiplexer
 
         logger.info("balancer_loading_started")
         await balancer_multiplexer.__versions__
-        logger.info("balancer_loading_done")
+        v2 = await balancer_multiplexer.__v2__
+        block = chain.height
+        counts = (
+            await asyncio.gather(
+                *(_consume_pool_inventory(vault.pools(block=block)) for vault in v2.vaults)
+            )
+            if v2
+            else []
+        )
+        logger.info("balancer_loading_done", pools=sum(counts), block=block)
     except Exception as e:
         logger.warning("balancer_prewarm_failed", error=str(e))
 
@@ -314,7 +321,10 @@ async def lifespan(app: FastAPI) -> Any:
 
         from dank_mids.helpers._helpers import setup_dank_w3_from_sync
 
-        setup_dank_w3_from_sync(network.web3)
+        # Pricing contracts must not trigger HTTP requests to contract-supplied URLs.
+        network.web3.provider.global_ccip_read_enabled = False
+        dank_w3 = setup_dank_w3_from_sync(network.web3)
+        dank_w3.eth.w3.provider.global_ccip_read_enabled = False
         logger.info("dank_mids_patched")
 
         from brownie import chain
@@ -501,7 +511,7 @@ def _serialize_trade_path(result: Any) -> list[dict[str, Any]] | None:
 async def _fetch_price(
     token: str,
     block: int,
-    amount: float | None = None,
+    amount: Decimal | None = None,
     ignore_pools: tuple[str, ...] = (),
 ) -> tuple[float, list[dict[str, Any]] | None] | None:
     """Fetch a single token price. Returns (price, trade_path) or None."""
@@ -533,7 +543,7 @@ async def _fetch_price(
 async def _fetch_price_and_cache(
     token: str,
     block: int,
-    amount: float | None = None,
+    amount: Decimal | None = None,
     ignore_pools: tuple[str, ...] = (),
 ) -> tuple[float, list[dict[str, Any]] | None, int | None] | None:
     """Fetch price, timestamp, and write cache in one shieldable coroutine."""
@@ -547,27 +557,53 @@ async def _fetch_price_and_cache(
     return price_float, trade_path, block_timestamp
 
 
+async def _lookup_batch_prices(
+    tokens: tuple[str, ...],
+    block: int,
+    amounts: tuple[Decimal | None, ...] | None,
+) -> list[Any]:
+    """Adapt optional per-token amounts to the fork's all-amounts batch API."""
+    from y import get_prices
+
+    kwargs: dict[str, Any] = {"fail_to_None": True, "sync": False}
+    if amounts is None or all(amount is None for amount in amounts):
+        return list(await get_prices(tokens, block, **kwargs))
+    if all(amount is not None for amount in amounts):
+        kwargs["amounts"] = amounts
+        return list(await get_prices(tokens, block, **kwargs))
+
+    spot_indices = [i for i, amount in enumerate(amounts) if amount is None]
+    quote_indices = [i for i, amount in enumerate(amounts) if amount is not None]
+    quote_kwargs = {**kwargs, "amounts": tuple(amounts[i] for i in quote_indices)}
+    spot_results, quote_results = await asyncio.gather(
+        get_prices(tuple(tokens[i] for i in spot_indices), block, **kwargs),
+        get_prices(
+            tuple(tokens[i] for i in quote_indices),
+            block,
+            **quote_kwargs,
+        ),
+    )
+    results: list[Any] = [None] * len(tokens)
+    for indices, values in ((spot_indices, spot_results), (quote_indices, quote_results)):
+        for index, value in zip(indices, values, strict=True):
+            results[index] = value
+    return results
+
+
 async def _fetch_batch_prices(
     tokens: tuple[str, ...],
     block: int,
-    amounts: tuple[float | None, ...] | None = None,
+    amounts: tuple[Decimal | None, ...] | None = None,
 ) -> list[tuple[float, list[dict[str, Any]] | None] | None]:
     """Fetch prices for multiple tokens in parallel.
 
     Returns a list of (price, trade_path) tuples or None for tokens that couldn't be priced.
     Does not raise exceptions - errors are logged and None is returned for that token.
     """
-    from y import get_prices
-
-    kwargs: dict[str, Any] = {
-        "fail_to_None": True,
-        "sync": False,
-    }
-    if amounts is not None:
-        kwargs["amounts"] = amounts
-
     try:
-        results = await asyncio.wait_for(get_prices(tokens, block, **kwargs), timeout=PRICE_TIMEOUT)
+        results = await asyncio.wait_for(
+            _lookup_batch_prices(tokens, block, amounts), timeout=PRICE_TIMEOUT
+        )
         prices: list[tuple[float, list[dict[str, Any]] | None] | None] = []
         for i, p in enumerate(results):
             if p is None:
@@ -972,7 +1008,7 @@ async def prices(
     # Fetch prices for tokens not in cache
     if tokens_to_fetch:
         # Prepare amounts for the tokens we need to fetch (preserve positional correspondence)
-        fetch_amounts: tuple[float | None, ...] | None = None
+        fetch_amounts: tuple[Decimal | None, ...] | None = None
         if params.amounts is not None:
             fetch_amounts = tuple(params.amounts[i] for i in indices_to_fetch)
 
@@ -1057,9 +1093,9 @@ async def check_bucket(
 
                 erc20 = ERC20(token, asynchronous=True)
                 symbol, name, decimals = await asyncio.gather(
-                    erc20.symbol,  # type: ignore[call-overload]
-                    erc20.name,  # type: ignore[call-overload]
-                    erc20.decimals,  # type: ignore[call-overload]
+                    erc20.symbol,
+                    erc20.name,
+                    erc20.decimals,
                 )
                 metadata = {"symbol": symbol, "name": name, "decimals": decimals}
             except Exception as meta_err:

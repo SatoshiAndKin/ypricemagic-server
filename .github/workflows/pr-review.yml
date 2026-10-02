@@ -25,13 +25,29 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
+      - name: Inventory all dependency vulnerabilities
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          scan-type: fs
+          scan-ref: .
+          format: json
+          output: trivy-unfiltered.json
+
+      - name: Retain unfiltered vulnerability inventory
+        uses: actions/upload-artifact@v6
+        with:
+          name: dependency-vulnerabilities
+          path: trivy-unfiltered.json
+          retention-days: 30
+
       - name: Run Trivy vulnerability scanner
-        uses: aquasecurity/trivy-action@0.35.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           scan-type: fs
           scan-ref: .
           format: sarif
           output: trivy-results.sarif
+          trivyignores: .trivyignore.yaml
 
       - name: Upload Trivy results to GitHub Security
         uses: github/codeql-action/upload-sarif@v4

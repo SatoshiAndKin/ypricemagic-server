@@ -45,6 +45,12 @@ docker compose up --build
 
 For local usage, open `http://localhost:<PORT>` from `traefik-proxy/.env`.
 
+Startup consumes indexed USDC pool events for each V2/V3 router, plus Balancer vault events, before reporting readiness. Other tokens are discovered on demand through their indexed creation events. Keep the pricing cache volumes across restarts to reuse event history. Sparse token scans use larger log ranges with bounded splitting when the RPC rejects them. Explicit range settings and known providers with smaller limits are respected. Full-inventory log ranges remain unchanged.
+
+The Ethereum Compose services use eight concurrent log reads and 200,000-block ranges, matching the configured web3-proxy's range limit. Override `YPRICEMAGIC_GETLOGS_DOP_ETHEREUM` and `YPRICEMAGIC_GETLOGS_BATCH_SIZE_ETHEREUM` for a different provider. These service settings apply to its registry scans as well as token indexes; the fork's global defaults remain unchanged. Curve coin metadata loads in bounded concurrent groups so its RPC reads can batch.
+
+CCIP reads are disabled on both pricing providers, so contract reverts cannot automatically trigger HTTP requests to contract-supplied URLs. The API cache rejects pickle metadata even if its SQLite records are tampered with. CI retains the full vulnerability inventory; `.trivyignore.yaml` documents three application-specific findings, their mitigations or build-context limits, and a November 1, 2026 review deadline. These exceptions do not mean the dependency packages are universally patched.
+
 For a deployed host-based setup, set `VIRTUAL_HOST` in `.env` (for example `VIRTUAL_HOST=ski-nuc-3.shorthair-fir.ts.net`) and access:
 
 - `https://<VIRTUAL_HOST>/` — frontend UI
@@ -229,7 +235,7 @@ The gear icon (⚙) opens a tokenlist manager where you can toggle lists on/off,
 ## Tech Stack
 
 - **Python 3.12**, managed by [uv](https://github.com/astral-sh/uv)
-- **ypricemagic** (latest master) — price resolution
+- **ypricemagic** (fork revision pinned in `pyproject.toml` and `uv.lock`) — price resolution
 - **brownie** — EVM network/web3 management
 - **dank_mids** — batched async RPC calls
 - **FastAPI** + **uvicorn** — HTTP server
@@ -237,6 +243,17 @@ The gear icon (⚙) opens a tokenlist manager where you can toggle lists on/off,
 - **Traefik** — shared reverse proxy / host + chain routing
 - **Docker** (`linux/amd64`) + Docker Compose
 - **Uniswap tokenlist** — bundled token metadata for autocomplete
+
+The pricing fork and its native dependency forks use immutable commit pins. Refresh
+the ypricemagic revision in `pyproject.toml`, then run `uv lock --upgrade` and
+`uv sync --locked --extra dev`. Brownie retains its Web3 6 API; the UV overrides
+allow patched runtime dependencies despite Brownie's frozen requirements. Setuptools
+must remain below 81 because Web3 6 imports `pkg_resources`.
+
+The backend Docker build compiles the fork's C and Rust extensions in a separate
+build stage. The frontend uses Node 24, Vite 8, and TypeScript 6 (the newest major
+supported by `svelte-check`). For local frontend development, use Node 24.15 or newer
+within the Node 24 release line.
 
 ## Deployment
 
