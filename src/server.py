@@ -23,7 +23,7 @@ from prometheus_client import Counter, Histogram, make_asgi_app
 from tenacity import (
     RetryError,
     retry,
-    retry_if_exception_type,
+    retry_if_exception,
     stop_after_attempt,
     wait_exponential,
 )
@@ -42,6 +42,7 @@ from src.params import (
     parse_batch_params,
     parse_price_params,
 )
+from src.runtime import DeadlineMiddleware, LookupSupervisor, OverloadedError
 
 if TYPE_CHECKING:
     from src.params import BatchParams
@@ -53,9 +54,16 @@ _shutdown_event = asyncio.Event()
 
 
 def _signal_shutdown_handler() -> None:
-    """Called by the event loop when SIGTERM/SIGINT is received during prewarm."""
+    """Mark the backend unavailable when SIGTERM/SIGINT is received."""
     logger.info("shutdown_signal_received")
     _shutdown_event.set()
+    app.state.ready = False
+    supervisor = getattr(app.state, "lookups", None)
+    if supervisor is not None:
+        supervisor.cancel()
+    warmup = getattr(app.state, "warmup", None)
+    if warmup is not None:
+        warmup.cancel()
 
 
 class _HealthAccessFilter(logging.Filter):
@@ -130,17 +138,22 @@ async def _consume_pool_inventory(pools: AsyncIterator[Any]) -> int:
     return count
 
 
+async def _head_block() -> int:
+    from dank_mids.brownie_patch import dank_eth
+
+    return int(await dank_eth.block_number)
+
+
 async def _prewarm_uniswap() -> None:
     """Load indexed USDC pools through the startup head.
 
-    Other tokens are discovered on demand. Each router completes the anchor
-    index before readiness; independent router failures remain non-fatal.
+    Other tokens are discovered on demand. Routers populate the anchor indexes
+    in the owned background warmup; independent failures remain non-fatal.
     """
-    from brownie import chain
     from y.constants import STABLECOINS
     from y.prices.dex.uniswap import uniswap_multiplexer
 
-    block = chain.height
+    block = await _head_block()
     tokens = tuple(str(token) for token, label in STABLECOINS.items() if label == "usdc")
 
     async def _load(router: Any, version: str, name: str) -> None:
@@ -172,6 +185,8 @@ async def _prewarm_compound() -> None:
         from y.prices.lending.compound import Comptroller, compound
 
         if not compound or not hasattr(compound, "trollers"):
+            return
+        if not compound.trollers:
             return
         logger.info("compound_markets_loading_started", comptrollers=len(compound.trollers))
         # Load all comptroller market lists in parallel using a_sync's map API
@@ -218,13 +233,12 @@ async def _prewarm_aave() -> None:
 async def _prewarm_balancer() -> None:
     """Pre-load Balancer versions and consume V2 vault pool events through the head."""
     try:
-        from brownie import chain
         from y.prices.dex.balancer.balancer import balancer_multiplexer
 
         logger.info("balancer_loading_started")
         await balancer_multiplexer.__versions__
         v2 = await balancer_multiplexer.__v2__
-        block = chain.height
+        block = await _head_block()
         counts = (
             await asyncio.gather(
                 *(_consume_pool_inventory(vault.pools(block=block)) for vault in v2.vaults)
@@ -252,7 +266,7 @@ async def _prewarm_gearbox() -> None:
 
 
 async def _prewarm_with_shutdown(curve_registry: Any) -> None:
-    """Run all prewarm tasks in parallel, cancelling immediately on shutdown signal."""
+    """Finish required initialization before starting background pool backfills."""
 
     async def _prewarm_curve() -> None:
         if curve_registry and hasattr(curve_registry, "_done"):
@@ -263,12 +277,6 @@ async def _prewarm_with_shutdown(curve_registry: Any) -> None:
 
     prewarm_tasks: list[asyncio.Task[None]] = [
         asyncio.create_task(_prewarm_curve()),
-        asyncio.create_task(_prewarm_uniswap()),
-        asyncio.create_task(_prewarm_compound()),
-        asyncio.create_task(_prewarm_chainlink()),
-        asyncio.create_task(_prewarm_aave()),
-        asyncio.create_task(_prewarm_balancer()),
-        asyncio.create_task(_prewarm_gearbox()),
     ]
 
     async def _wait_for_shutdown() -> None:
@@ -287,6 +295,7 @@ async def _prewarm_with_shutdown(curve_registry: Any) -> None:
         )
         if shutdown_waiter in done:
             logger.info("shutdown_during_prewarm", chain=CHAIN_NAME)
+            raise RuntimeError("shutdown during required warmup")
         else:
             # Surface required registry failures through the lifespan startup error.
             await prewarm_task
@@ -297,17 +306,75 @@ async def _prewarm_with_shutdown(curve_registry: Any) -> None:
         await asyncio.gather(prewarm_task, shutdown_waiter, *prewarm_tasks, return_exceptions=True)
 
 
+async def _background_prewarm() -> None:
+    try:
+        async with asyncio.TaskGroup() as group:
+            for prewarm in (
+                _prewarm_uniswap,
+                _prewarm_compound,
+                _prewarm_chainlink,
+                _prewarm_aave,
+                _prewarm_balancer,
+                _prewarm_gearbox,
+            ):
+                group.create_task(prewarm())
+        logger.info("background_warmup_done", chain=CHAIN_NAME)
+    except Exception as error:
+        logger.warning("background_warmup_failed", error=str(error))
+
+
+async def _close_warmup() -> None:
+    warmup = getattr(app.state, "warmup", None)
+    if warmup is not None:
+        warmup.cancel()
+        await asyncio.wait([warmup], timeout=5)
+
+
+def _install_shutdown_handlers() -> dict[signal.Signals, Any]:
+    original_handlers = {sig: signal.getsignal(sig) for sig in (signal.SIGTERM, signal.SIGINT)}
+
+    def shutdown_handler(sig: int, frame: Any) -> None:
+        _signal_shutdown_handler()
+        original = original_handlers[signal.Signals(sig)]
+        if callable(original):
+            original(sig, frame)
+
+    for sig in original_handlers:
+        signal.signal(sig, shutdown_handler)
+
+    return original_handlers
+
+
+def _init_sentry() -> None:
+    # Init sentry AFTER dank_mids loads -- its Cython modules are incompatible
+    # with sentry's threading auto-instrumentation at import time.
+    _sentry_dsn = os.environ.get("SENTRY_DSN", "")
+    if _sentry_dsn:
+        from sentry_sdk.integrations.threading import ThreadingIntegration
+
+        sentry_sdk.init(
+            dsn=_sentry_dsn,
+            environment=os.environ.get("SENTRY_ENVIRONMENT", "production"),
+            release=_VERSION,
+            traces_sample_rate=float(os.environ.get("SENTRY_TRACES_SAMPLE_RATE", "0.1")),
+            send_default_pii=False,
+            disabled_integrations=[ThreadingIntegration()],
+        )
+        logger.info("sentry_initialized")
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> Any:
     # Install after uvicorn has configured its loggers (CLI resets them at startup).
     logging.getLogger("uvicorn.access").addFilter(_HealthAccessFilter())
 
-    # Temporarily override signal handlers so we can cancel prewarm on shutdown.
-    # loop.add_signal_handler() replaces uvicorn's signal.signal() handler;
-    # loop.remove_signal_handler() restores it (documented Python behaviour).
-    loop = asyncio.get_running_loop()
-    for sig in (signal.SIGTERM, signal.SIGINT):
-        loop.add_signal_handler(sig, _signal_shutdown_handler)
+    app.state.ready = False
+    app.state.lookups = LookupSupervisor()
+    app.state.warmup = None
+    _shutdown_event.clear()
+    # Chain the handlers installed by Uvicorn's capture_signals context. Removing
+    # an asyncio handler installs SIG_DFL; it does not restore Uvicorn.
+    original_handlers = _install_shutdown_handlers()
 
     _startup_start = time.monotonic()
     logger.info("startup", chain=CHAIN_NAME)
@@ -330,50 +397,47 @@ async def lifespan(app: FastAPI) -> Any:
         from brownie import chain
         from y import get_price  # noqa: F401
 
-        logger.info("chain_connected", chain=CHAIN_NAME, chain_id=chain.id, block=chain.height)
+        logger.info(
+            "chain_connected", chain=CHAIN_NAME, chain_id=chain.id, block=await _head_block()
+        )
 
         # Pre-load the Curve registry at startup so the first pricing request
         # doesn't block on expensive factory event scans.
-        # If a shutdown signal arrives, cancel prewarm and proceed so uvicorn
-        # can shut down immediately instead of blocking for minutes.
+        # A shutdown signal cancels required initialization and aborts startup.
         from y.prices.stable_swap.curve import curve as _curve_registry
 
         await _prewarm_with_shutdown(_curve_registry)
-    except Exception as e:
-        logger.error("startup_failed", error=str(e))
+        _init_sentry()
+        if _shutdown_event.is_set():
+            raise RuntimeError("shutdown during required initialization")
+        app.state.warmup = asyncio.create_task(_background_prewarm())
+    except BaseException as error:
+        logger.error("startup_failed", error=str(error))
+        for sig, handler in original_handlers.items():
+            signal.signal(sig, handler)
+        await app.state.lookups.close()
+        await _close_warmup()
+        close_cache()
         raise
-    finally:
-        # Restore uvicorn's original signal handlers so graceful shutdown works.
-        for sig in (signal.SIGTERM, signal.SIGINT):
-            loop.remove_signal_handler(sig)
 
     _startup_elapsed = time.monotonic() - _startup_start
+    app.state.ready = True
     logger.info(
         "server_ready",
         chain=CHAIN_NAME,
         startup_seconds=round(_startup_elapsed, 2),
     )
 
-    # Init sentry AFTER dank_mids loads -- its Cython modules are incompatible
-    # with sentry's threading auto-instrumentation at import time.
-    _sentry_dsn = os.environ.get("SENTRY_DSN", "")
-    if _sentry_dsn:
-        from sentry_sdk.integrations.threading import ThreadingIntegration
-
-        sentry_sdk.init(
-            dsn=_sentry_dsn,
-            environment=os.environ.get("SENTRY_ENVIRONMENT", "production"),
-            release=_VERSION,
-            traces_sample_rate=float(os.environ.get("SENTRY_TRACES_SAMPLE_RATE", "0.1")),
-            send_default_pii=False,
-            disabled_integrations=[ThreadingIntegration()],
-        )
-        logger.info("sentry_initialized")
-
-    yield
-
-    close_cache()
-    logger.info("shutdown", chain=CHAIN_NAME)
+    try:
+        yield
+    finally:
+        app.state.ready = False
+        await app.state.lookups.close()
+        await _close_warmup()
+        for sig, handler in original_handlers.items():
+            signal.signal(sig, handler)
+        close_cache()
+        logger.info("shutdown", chain=CHAIN_NAME)
 
 
 _CHAINS = ["ethereum", "base"]
@@ -427,6 +491,8 @@ metrics_app = make_asgi_app()
 app.mount("/metrics", metrics_app)
 
 _cors_origins_raw = os.environ.get("CORS_ORIGINS", "")
+app.state.ready = False
+
 _cors_origins: list[str] = (
     [o.strip() for o in _cors_origins_raw.split(",") if o.strip()]
     if _cors_origins_raw.strip()
@@ -444,6 +510,7 @@ app.add_middleware(
 @app.middleware("http")
 async def request_id_middleware(request: Request, call_next: Any) -> Any:
     request_id = request.headers.get("X-Request-ID", str(uuid.uuid4()))
+    request.state.request_id = request_id
     structlog.contextvars.clear_contextvars()
     structlog.contextvars.bind_contextvars(request_id=request_id)
     response = await call_next(request)
@@ -451,15 +518,20 @@ async def request_id_middleware(request: Request, call_next: Any) -> Any:
     return response
 
 
+app.add_middleware(DeadlineMiddleware, timeout=lambda: PRICE_TIMEOUT)
+
+
 @app.get(
     "/health",
     description="Check API and RPC node status. Returns chain name, latest block height, and node sync state.",
 )
 async def health() -> dict[str, Any]:
-    try:
-        from brownie import chain
+    from pathlib import Path
 
-        height = chain.height
+    if not app.state.ready or _shutdown_event.is_set() or Path("/tmp/drain").exists():
+        return JSONResponse(status_code=503, content={"status": "unavailable", "chain": CHAIN_NAME})  # type: ignore[return-value]
+    try:
+        height = await asyncio.wait_for(_head_block(), timeout=5.0)
     except Exception as e:
         logger.error("health_check_failed", error=str(e))
         return JSONResponse(  # type: ignore[return-value]
@@ -506,7 +578,11 @@ def _serialize_trade_path(result: Any) -> list[dict[str, Any]] | None:
 @retry(
     stop=stop_after_attempt(2),
     wait=wait_exponential(multiplier=1, min=1, max=4),
-    retry=retry_if_exception_type((ConnectionError, OSError)),
+    retry=retry_if_exception(
+        lambda error: (
+            isinstance(error, (ConnectionError, OSError)) and not isinstance(error, TimeoutError)
+        )
+    ),
 )
 async def _fetch_price(
     token: str,
@@ -527,7 +603,7 @@ async def _fetch_price(
         kwargs["ignore_pools"] = ignore_pools
 
     logger.debug("fetch_price_start", token=token, block=block, kwargs=list(kwargs.keys()))
-    p = await asyncio.wait_for(get_price(token, block, **kwargs), timeout=PRICE_TIMEOUT)
+    p = await get_price(token, block, **kwargs)
     logger.debug("fetch_price_done", token=token, block=block, result_type=type(p).__name__)
     if p is None:
         return None
@@ -552,7 +628,7 @@ async def _fetch_price_and_cache(
         return None
     price_float, trade_path = result
     block_timestamp = await _fetch_block_timestamp(block)
-    if amount is None:
+    if amount is None and not ignore_pools:
         set_cached_price(token, block, price_float, block_timestamp=block_timestamp)
     return price_float, trade_path, block_timestamp
 
@@ -601,9 +677,7 @@ async def _fetch_batch_prices(
     Does not raise exceptions - errors are logged and None is returned for that token.
     """
     try:
-        results = await asyncio.wait_for(
-            _lookup_batch_prices(tokens, block, amounts), timeout=PRICE_TIMEOUT
-        )
+        results = await _lookup_batch_prices(tokens, block, amounts)
         prices: list[tuple[float, list[dict[str, Any]] | None] | None] = []
         for i, p in enumerate(results):
             if p is None:
@@ -627,7 +701,7 @@ async def _fetch_batch_prices(
         raise
     except Exception as e:
         logger.error("batch_fetch_failed", block=block, error=str(e))
-        return [None] * len(tokens)
+        raise
 
 
 async def _fetch_block_timestamp(block: int) -> int | None:
@@ -667,6 +741,21 @@ def _make_error_response(status: int, message: str) -> JSONResponse:
     return JSONResponse(status_code=status, content={"error": sanitize_error_message(message)})
 
 
+def _make_overload_response() -> JSONResponse:
+    return JSONResponse(
+        status_code=503,
+        headers={"Retry-After": "5"},
+        content={"error": "Price lookup queue is full or draining"},
+    )
+
+
+async def _run_lookup(work: Any) -> Any:
+    supervisor = getattr(app.state, "lookups", None)
+    if supervisor is None or supervisor.loop is not asyncio.get_running_loop():
+        supervisor = app.state.lookups = LookupSupervisor()
+    return await supervisor.run(work)
+
+
 def _make_timeout_response() -> JSONResponse:
     return _make_error_response(504, f"Price lookup timed out after {PRICE_TIMEOUT:.0f} seconds")
 
@@ -687,8 +776,12 @@ def _handle_price_error(e: Exception, token: str, block: int, duration_ms: int) 
             502,
             f"Price source returned invalid value for {token} at block {block}",
         )
+    if isinstance(inner, OverloadedError):
+        return _make_overload_response()
     if isinstance(inner, TimeoutError):
         return _make_timeout_response()
+    if isinstance(inner, (ConnectionError, OSError)):
+        return _make_error_response(502, f"RPC connection failed: {msg}")
     return _make_error_response(
         500,
         f"Price lookup failed for {token} at block {block}: {msg}",
@@ -696,10 +789,13 @@ def _handle_price_error(e: Exception, token: str, block: int, duration_ms: int) 
 
 
 async def _resolve_price_block(params: Any) -> int | JSONResponse:
-    from brownie import chain as brownie_chain
-
     if params.timestamp is None:
-        block = params.block if params.block is not None else brownie_chain.height
+        try:
+            block = params.block if params.block is not None else await _head_block()
+        except TimeoutError:
+            return _make_error_response(504, "RPC block lookup timed out")
+        except (ConnectionError, OSError) as error:
+            return _make_error_response(502, f"RPC connection failed: {error}")
         logger.debug("resolve_block", source="param_or_latest", block=block)
         return block
 
@@ -713,13 +809,13 @@ async def _resolve_price_block(params: Any) -> int | JSONResponse:
             error=str(e),
         )
         return _make_error_response(
-            502,
+            504 if isinstance(e, TimeoutError) else 502,
             f"Failed to resolve timestamp {params.timestamp} to block: {e}",
         )
 
 
 async def _handle_price_request(params: Any, actual_block: int, force: bool = False) -> Any:
-    if params.amount is None:
+    if params.amount is None and not params.ignore_pools:
         cached = get_cached_price(params.token, actual_block)
         if cached is not None:
             logger.info(
@@ -769,8 +865,8 @@ async def _handle_price_request(params: Any, actual_block: int, force: bool = Fa
 
     start = time.monotonic()
     try:
-        fetch_result = await asyncio.shield(
-            _fetch_price_and_cache(
+        fetch_result = await _run_lookup(
+            lambda: _fetch_price_and_cache(
                 params.token,
                 actual_block,
                 amount=params.amount,
@@ -779,17 +875,13 @@ async def _handle_price_request(params: Any, actual_block: int, force: bool = Fa
         )
     except Exception as e:
         duration_ms = int((time.monotonic() - start) * 1000)
-        # Cache the error so immediate retries are fast (TTL-limited)
-        if params.amount is None:
-            inner = e.last_attempt.exception() if isinstance(e, RetryError) else e
-            set_cached_error(params.token, actual_block, str(inner))
         return _handle_price_error(e, params.token, actual_block, duration_ms)
 
     if fetch_result is None:
         price_requests_total.labels(chain=CHAIN_NAME, status="not_found").inc()
         logger.warning("price_not_found", token=params.token, block=actual_block)
         # Cache the "not found" outcome so repeated requests don't re-trigger lookups
-        if params.amount is None:
+        if params.amount is None and not params.ignore_pools:
             set_cached_error(
                 params.token,
                 actual_block,
@@ -833,8 +925,6 @@ async def _resolve_batch_block(
     Returns the block number on success.
     Returns a tuple of (0, error_response) on failure.
     """
-    from brownie import chain as brownie_chain
-
     if params.timestamp is not None:
         try:
             return await _resolve_block_from_timestamp(params.timestamp)
@@ -847,11 +937,16 @@ async def _resolve_batch_block(
             return (
                 0,
                 _make_error_response(
-                    502,
+                    504 if isinstance(e, TimeoutError) else 502,
                     f"Failed to resolve timestamp {params.timestamp} to block: {e}",
                 ),
             )
-    return params.block if params.block is not None else brownie_chain.height
+    try:
+        return params.block if params.block is not None else await _head_block()
+    except TimeoutError:
+        return 0, _make_error_response(504, "RPC block lookup timed out")
+    except (ConnectionError, OSError) as error:
+        return 0, _make_error_response(502, f"RPC connection failed: {error}")
 
 
 def _prepare_batch_cache_check(
@@ -1013,16 +1108,23 @@ async def prices(
             fetch_amounts = tuple(params.amounts[i] for i in indices_to_fetch)
 
         try:
-            prices = await asyncio.shield(
-                _fetch_batch_prices(
+            prices = await _run_lookup(
+                lambda: _fetch_batch_prices(
                     tuple(tokens_to_fetch),
                     actual_block,
                     amounts=fetch_amounts,
                 )
             )
-        except TimeoutError:
-            batch_requests_total.labels(chain=CHAIN_NAME, status="timeout").inc()
-            return _make_timeout_response()
+        except OverloadedError:
+            return _make_overload_response()
+        except (ConnectionError, OSError) as error:
+            return (
+                _make_timeout_response()
+                if isinstance(error, TimeoutError)
+                else _make_error_response(502, "RPC connection failed")
+            )
+        except Exception as error:
+            return _make_error_response(500, f"Batch lookup failed: {error}")
 
         # Fetch block timestamp once for all
         block_timestamp = await _fetch_block_timestamp(actual_block)
@@ -1072,6 +1174,13 @@ async def check_bucket(
         check_bucket_requests_total.labels(chain=CHAIN_NAME, status="bad_request").inc()
         return _make_error_response(400, f"Invalid token address: {token}")
 
+    try:
+        return await _run_lookup(lambda: _classify_token(token))
+    except OverloadedError:
+        return _make_overload_response()
+
+
+async def _classify_token(token: str) -> Any:
     start = time.monotonic()
     token_lock = await _get_token_lock(token)
     async with token_lock:

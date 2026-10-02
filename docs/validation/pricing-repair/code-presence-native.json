@@ -1,0 +1,50 @@
+[
+  {
+    "block": 5000,
+    "hash": "0xc4c051874b8b427e01510feb9fc207e9595383b6abcfdbd63d5d2bee0d985ecc",
+    "count": 3,
+    "seconds": 0.08376219897763804,
+    "expected": [
+      false,
+      false,
+      true
+    ],
+    "matched": true
+  },
+  {
+    "block": 5000,
+    "hash": "0xc4c051874b8b427e01510feb9fc207e9595383b6abcfdbd63d5d2bee0d985ecc",
+    "count": 1024,
+    "seconds": 0.17774426500545815,
+    "expected": [
+      false,
+      false,
+      true
+    ],
+    "matched": true
+  },
+  {
+    "block": 24000000,
+    "hash": "0x27a07f8787f7e1b6a3ee2e66da1dbb025264a853ed3bcc8064639894483a4fcf",
+    "count": 3,
+    "seconds": 0.08790541300550103,
+    "expected": [
+      false,
+      true,
+      true
+    ],
+    "matched": true
+  },
+  {
+    "block": 24000000,
+    "hash": "0x27a07f8787f7e1b6a3ee2e66da1dbb025264a853ed3bcc8064639894483a4fcf",
+    "count": 1024,
+    "seconds": 0.1684998670243658,
+    "expected": [
+      false,
+      true,
+      true
+    ],
+    "matched": true
+  }
+]

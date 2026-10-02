@@ -13,8 +13,10 @@ comparison fails so it can be used as a gate in CI or manual QA runs.
 It does **not** pre-populate the cache — any cached prices are a side-effect
 of the normal API calls it makes, not a goal.
 
-Multi-chain support: the script auto-detects which chain backends are running
-by probing ``/{chain}/health`` and only validates tokens on live chains.
+Multi-chain support: Ethereum and Base are required by default. The script
+probes ``/{chain}/health`` and fails when any required backend is unavailable.
+Current checks run independently of historical outcomes, and JSON reports
+retain every failure and request duration.
 
 USAGE
 -----
@@ -31,11 +33,13 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import os
 import sys
+import time
 import urllib.error
 import urllib.request
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -66,6 +70,7 @@ class Token:
     address: str
     tolerance: float
     chain: str = "ethereum"
+    earliest_timestamp: int = 0
 
 
 TOKENS: list[Token] = [
@@ -97,7 +102,17 @@ TOKENS: list[Token] = [
     # dependent tokens above have a chance to succeed within the OOM budget.
     Token("pSLP-WBTC-ETH", "0xde74b6c547bd574c3527316a2eE30cd8F6041525", VOLATILE_TOLERANCE),
     Token("ptUSDC-v4", "0xdd4d117723C257CEe402285D3aCF218E9A8236E1", STABLECOIN_TOLERANCE),
-    Token("xPREMIA", "0x16f9D564Df80376C61AC914205D3fDfB8a32f98b", VOLATILE_TOLERANCE),
+    Token("xPREMIA", "0x16f9D564Df80376C61AC914205D3fDfF7057d610", VOLATILE_TOLERANCE),
+    # Native Base USDC first has code at block 2,797,221 (prior block: empty).
+    # DefiLlama aliases its historical USD series to Ethereum's earlier token.
+    Token(
+        "USDC",
+        "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+        STABLECOIN_TOLERANCE,
+        "base",
+        1692383789,
+    ),
+    Token("WETH", "0x4200000000000000000000000000000000000006", VOLATILE_TOLERANCE, "base"),
     # --- Fantom: exotic tokens ---
     Token("xTAROT", "0x74D1D2A851e339B8cB953716445Be7E8aBdf92F4", VOLATILE_TOLERANCE, "fantom"),
 ]
@@ -118,14 +133,15 @@ class ComparisonResult:
     ref_price: float | None
     ypm_error: str | None
     ref_error: str | None
-    passed: bool | str | None  # None = skipped, "ypm_only" = no reference data
+    passed: bool | str | None  # None = no comparison, "ypm_only" = no reference data
+    ypm_seconds: float = 0.0
 
 
 # ---------------------------------------------------------------------------
 # HTTP helpers (stdlib only)
 # ---------------------------------------------------------------------------
 
-_TIMEOUT = 300
+_TIMEOUT = 315
 
 _CACHE_DIR = Path(os.environ.get("CACHE_DIR", Path(__file__).resolve().parent.parent / "cache"))
 _llama_cache = diskcache.Cache(_CACHE_DIR / "defillama-prices", disk=diskcache.JSONDisk)
@@ -203,7 +219,10 @@ def fetch_ypm_price(
         if price is None:
             error_msg = data.get("error", "no price in response")
             return None, f"server error: {error_msg} body={data!r}"
-        return float(price), None
+        value = float(price)
+        if not math.isfinite(value) or value < 0:
+            return None, f"invalid price: {price!r}"
+        return value, None
     except urllib.error.HTTPError as exc:
         print(" error", flush=True)
         body = exc.read().decode(errors="replace") if exc.fp else ""
@@ -347,6 +366,7 @@ def _fmt_price(price: float) -> str:
 def _ypm_only(base_url: str, token: Token) -> ComparisonResult:
     """Fetch a latest price from YPM for a token with no DefiLlama reference data."""
     label = f"[{token.chain}] {token.name} ({_short_addr(token.address)}) @ latest [ypm_only]"
+    started = time.monotonic()
     ypm_price, ypm_err = fetch_ypm_price(base_url, token, timestamp=None)
     now_ts = int(datetime.now(tz=UTC).timestamp())
 
@@ -363,6 +383,7 @@ def _ypm_only(base_url: str, token: Token) -> ComparisonResult:
         ypm_price=ypm_price,
         ref_price=None,
         ypm_error=ypm_err,
+        ypm_seconds=time.monotonic() - started,
         ref_error="no DefiLlama data",
         passed=passed,
     )
@@ -382,6 +403,7 @@ def _compare_latest(base_url: str, token: Token, ref_price_val: float) -> Compar
     """Compare a latest (no-timestamp) YPM price against DefiLlama current price."""
     label = f"[{token.chain}] {token.name} ({_short_addr(token.address)}) @ latest"
 
+    started = time.monotonic()
     ypm_price, ypm_err = fetch_ypm_price(base_url, token, timestamp=None)
     ref_price: float | None = ref_price_val
     ref_err: str | None = None
@@ -393,6 +415,7 @@ def _compare_latest(base_url: str, token: Token, ref_price_val: float) -> Compar
         ypm_price=ypm_price,
         ref_price=ref_price,
         ypm_error=ypm_err,
+        ypm_seconds=time.monotonic() - started,
         ref_error=ref_err,
         passed=None,
     )
@@ -401,7 +424,8 @@ def _compare_latest(base_url: str, token: Token, ref_price_val: float) -> Compar
     ref_str = f"ERROR ({ref_err})" if ref_err is not None else _fmt_price(ref_price)  # type: ignore[arg-type]
 
     if ypm_err is not None or ref_err is not None:
-        verdict = "-- SKIP"
+        result.passed = False if ypm_err is not None else None
+        verdict = "FAIL (YPM error)" if ypm_err is not None else "-- SKIP (reference unavailable)"
     else:
         assert ypm_price is not None
         assert ref_price is not None
@@ -430,6 +454,7 @@ def _compare_one(base_url: str, token: Token, ts: int, ref_price_val: float) -> 
     """Compare a single YPM price against a reference price and print the result."""
     label = f"[{token.chain}] {token.name} ({_short_addr(token.address)}) @ {_ts_label(ts)}"
 
+    started = time.monotonic()
     ypm_price, ypm_err = fetch_ypm_price(base_url, token, ts)
     ref_price: float | None = ref_price_val
     ref_err: str | None = None
@@ -440,6 +465,7 @@ def _compare_one(base_url: str, token: Token, ts: int, ref_price_val: float) -> 
         ypm_price=ypm_price,
         ref_price=ref_price,
         ypm_error=ypm_err,
+        ypm_seconds=time.monotonic() - started,
         ref_error=ref_err,
         passed=None,
     )
@@ -448,7 +474,8 @@ def _compare_one(base_url: str, token: Token, ts: int, ref_price_val: float) -> 
     ref_str = f"ERROR ({ref_err})" if ref_err is not None else _fmt_price(ref_price)  # type: ignore[arg-type]
 
     if ypm_err is not None or ref_err is not None:
-        verdict = "-- SKIP"
+        result.passed = False if ypm_err is not None else None
+        verdict = "FAIL (YPM error)" if ypm_err is not None else "-- SKIP (reference unavailable)"
     else:
         assert ypm_price is not None
         assert ref_price is not None
@@ -473,6 +500,25 @@ def _compare_one(base_url: str, token: Token, ts: int, ref_price_val: float) -> 
     return result
 
 
+def _check_unavailable(base_url: str) -> ComparisonResult:
+    token = Token("xPREMIA-no-code", "0x16f9D564Df80376C61AC914205D3fDfB8a32f98b", 0)
+    started = time.monotonic()
+    price, error = fetch_ypm_price(base_url, token)
+    return ComparisonResult(
+        token,
+        int(time.time()),
+        price,
+        None,
+        error,
+        None,
+        price is None
+        and error is not None
+        and error.startswith("HTTP 404:")
+        and "No price" in error,
+        time.monotonic() - started,
+    )
+
+
 def _filter_tokens_by_chains(live_chains: list[str]) -> list[Token]:
     """Filter TOKENS to those on live chains and print skip info."""
     tokens = [t for t in TOKENS if t.chain in live_chains]
@@ -491,7 +537,7 @@ def _compare_historical(base_url: str, tokens: list[Token]) -> tuple[list[Compar
     """Fetch DefiLlama charts and compare historical prices. Returns (results, ok)."""
     print("Fetching start timestamps...", flush=True)
     first_ts = fetch_defillama_first_timestamps(tokens)
-    global_start = max(first_ts.get(t.address, 0) for t in tokens)
+    global_start = max(max(first_ts.get(t.address, 0), t.earliest_timestamp) for t in tokens)
     if global_start == 0:
         global_start = 1609459200  # 2021-01-01 fallback
     print(
@@ -508,8 +554,7 @@ def _compare_historical(base_url: str, tokens: list[Token]) -> tuple[list[Compar
     print()
 
     if total_points == 0:
-        print("ERROR: no chart data returned from DefiLlama")
-        return [], False
+        print("No chart reference data; API availability checks still run.")
 
     results: list[ComparisonResult] = []
     for token in tokens:
@@ -523,38 +568,13 @@ def _compare_historical(base_url: str, tokens: list[Token]) -> tuple[list[Compar
     return results, True
 
 
-def _wait_for_server(base_url: str, live_chains: list[str]) -> None:
-    """Wait up to ~2 minutes for the server to recover after an OOM restart."""
-    import time
-
-    print("Waiting for server to recover after heavy lookups...", flush=True)
-    for _ in range(12):
-        time.sleep(10)
-        try:
-            for chain in live_chains:
-                data = _http_get_json(f"{base_url}/{chain}/health", timeout=5)
-                if isinstance(data, dict) and data.get("status") == "ok":
-                    print()
-                    return
-        except Exception:
-            continue
-    print()
-
-
 def _compare_latest_prices(
     base_url: str,
     tokens: list[Token],
     live_chains: list[str],
     historical_results: list[ComparisonResult],
 ) -> list[ComparisonResult]:
-    """Compare latest (uncached) prices, skipping tokens that already failed."""
-    historical_failed_addrs = {
-        r.token.address for r in historical_results if r.ypm_error is not None
-    }
-
-    if historical_failed_addrs:
-        _wait_for_server(base_url, live_chains)
-
+    """Run independent current checks even after historical failures."""
     print("------------------")
     print("Latest prices (cache miss)")
     print("------------------")
@@ -563,23 +583,6 @@ def _compare_latest_prices(
     results: list[ComparisonResult] = []
     current_prices = fetch_defillama_current_prices(tokens)
     for token in tokens:
-        if token.address in historical_failed_addrs:
-            print(f"[{token.chain}] {token.name} ({_short_addr(token.address)}) @ latest")
-            print("  -- SKIP (YPM failed in historical section)")
-            print()
-            now_ts = int(datetime.now(tz=UTC).timestamp())
-            results.append(
-                ComparisonResult(
-                    token=token,
-                    timestamp=now_ts,
-                    ypm_price=None,
-                    ref_price=None,
-                    ypm_error="skipped (failed in historical section)",
-                    ref_error=None,
-                    passed=None,
-                )
-            )
-            continue
         ref = current_prices.get(token.address)
         if ref is None:
             results.append(_ypm_only(base_url, token))
@@ -588,7 +591,11 @@ def _compare_latest_prices(
     return results
 
 
-def run(base_url: str) -> int:
+def run(
+    base_url: str,
+    required_chains: tuple[str, ...] = ("ethereum", "base"),
+    report: Path | None = None,
+) -> int:
     """Run all comparisons and print results. Returns exit code."""
     print("YPM Price Validator")
     print("==================")
@@ -598,8 +605,14 @@ def run(base_url: str) -> int:
 
     print("Discovering live chains...", flush=True)
     live_chains = discover_live_chains(base_url)
-    if not live_chains:
-        print("ERROR: no chain backends are responding")
+    missing = sorted(set(required_chains) - set(live_chains))
+    if missing:
+        print(f"ERROR: required chain backends unavailable: {', '.join(missing)}")
+        if report:
+            report.parent.mkdir(parents=True, exist_ok=True)
+            report.write_text(
+                json.dumps({"passed": False, "missing_chains": missing, "results": []}, indent=2)
+            )
         return 1
     print(f"Live chains: {', '.join(live_chains)}")
     print()
@@ -615,6 +628,23 @@ def run(base_url: str) -> int:
 
     results: list[ComparisonResult] = list(historical_results)
     results.extend(_compare_latest_prices(base_url, tokens, live_chains, historical_results))
+
+    if "ethereum" in live_chains:
+        results.append(_check_unavailable(base_url))
+
+    if report:
+        report.parent.mkdir(parents=True, exist_ok=True)
+        report.write_text(
+            json.dumps(
+                {
+                    "required_chains": required_chains,
+                    "live_chains": live_chains,
+                    "passed": all(r.passed is not False for r in results),
+                    "results": [asdict(r) for r in results],
+                },
+                indent=2,
+            )
+        )
 
     total = len(results)
     passed = sum(1 for r in results if r.passed is True)
@@ -641,8 +671,12 @@ def main() -> None:
         default="http://localhost:8000",
         help="ypricemagic-server base URL without chain path (default: %(default)s)",
     )
+    parser.add_argument(
+        "--required-chains", nargs="+", default=["ethereum", "base"], choices=ALL_CHAINS
+    )
+    parser.add_argument("--report", type=Path, default=Path("validation-prices.json"))
     args = parser.parse_args()
-    sys.exit(run(args.url))
+    sys.exit(run(args.url, tuple(args.required_chains), args.report))
 
 
 if __name__ == "__main__":

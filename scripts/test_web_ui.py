@@ -24,7 +24,7 @@ TOKENS: list[tuple[str, str]] = [
 ]
 
 # ypricemagic can be slow on first lookup; 5 minutes per token.
-PRICE_TIMEOUT_MS = 300_000
+PRICE_TIMEOUT_MS = 315_000
 
 
 def fetch_price_via_ui(page: Page, token_name: str, token_address: str) -> None:

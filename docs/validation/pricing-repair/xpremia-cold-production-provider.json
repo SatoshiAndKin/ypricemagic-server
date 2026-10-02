@@ -1,0 +1,86 @@
+[
+  {
+    "phase": "first_current_from_production_cache_copy",
+    "seconds": 247.67507137497887,
+    "status": 200,
+    "response": {
+      "token": "0x16f9D564Df80376C61AC914205D3fDfF7057d610",
+      "price": 0.011082357625206556,
+      "block": 26105743,
+      "chain": "ethereum",
+      "block_timestamp": 1790957423,
+      "cached": false,
+      "trade_path": [
+        {
+          "token": "0x16f9D564Df80376C61AC914205D3fDfF7057d610",
+          "price": 0.011082357625206556,
+          "source": "xPREMIA 0x16f9D564Df80376C61AC914205D3fDfF7057d610 via PREMIA backing per share"
+        },
+        {
+          "token": "0x6399C842dD2bE3dE30BF99Bc7D1bBF6Fa3650E70",
+          "price": 0.010271529182056437,
+          "source": "Liquidity-based price estimation"
+        },
+        {
+          "token": "0x6399c842dd2be3de30bf99bc7d1bbf6fa3650e70",
+          "price": 0.010271529182056437,
+          "source": "Liquidity-based price estimate"
+        },
+        {
+          "token": "0x6399c842dd2be3de30bf99bc7d1bbf6fa3650e70",
+          "price": 0.010271529182056437,
+          "source": "Uniswap V2 0x93e2f3a8277e0360081547d711446e4a1f83546d via getAmountsOut(uint256,address[])"
+        },
+        {
+          "token": "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
+          "price": 2693.08889303,
+          "source": "Chainlink historical USD for 0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2"
+        }
+      ]
+    },
+    "provider": "production Ethereum web3-proxy",
+    "cache": "isolated read-only production backup copy"
+  },
+  {
+    "phase": "repeat_current",
+    "seconds": 10.694131250027567,
+    "status": 200,
+    "response": {
+      "token": "0x16f9D564Df80376C61AC914205D3fDfF7057d610",
+      "price": 0.011082357625206556,
+      "block": 26105763,
+      "chain": "ethereum",
+      "block_timestamp": 1790957663,
+      "cached": false,
+      "trade_path": [
+        {
+          "token": "0x16f9D564Df80376C61AC914205D3fDfF7057d610",
+          "price": 0.011082357625206556,
+          "source": "xPREMIA 0x16f9D564Df80376C61AC914205D3fDfF7057d610 via PREMIA backing per share"
+        },
+        {
+          "token": "0x6399C842dD2bE3dE30BF99Bc7D1bBF6Fa3650E70",
+          "price": 0.010271529182056437,
+          "source": "Liquidity-based price estimation"
+        },
+        {
+          "token": "0x6399c842dd2be3de30bf99bc7d1bbf6fa3650e70",
+          "price": 0.010271529182056437,
+          "source": "Liquidity-based price estimate"
+        },
+        {
+          "token": "0x6399c842dd2be3de30bf99bc7d1bbf6fa3650e70",
+          "price": 0.010271529182056437,
+          "source": "Uniswap V2 0x93e2f3a8277e0360081547d711446e4a1f83546d via getAmountsOut(uint256,address[])"
+        },
+        {
+          "token": "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
+          "price": 2693.08889303,
+          "source": "Chainlink historical USD for 0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2"
+        }
+      ]
+    },
+    "provider": "production Ethereum web3-proxy",
+    "cache": "isolated read-only production backup copy"
+  }
+]

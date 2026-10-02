@@ -6,6 +6,8 @@ networks:
 x-ypm-service: &ypm-service
   image: ghcr.io/satoshiandkin/ypricemagic-server:latest
   init: true
+  mem_limit: 8g
+  memswap_limit: 8g
   ulimits:
     nofile:
       soft: 65536
@@ -29,7 +31,7 @@ services:
       CHAIN_ID: 1
       RPC_URL: ${RPC_URL_ETHEREUM}
       YPRICEMAGIC_GETLOGS_DOP: ${YPRICEMAGIC_GETLOGS_DOP_ETHEREUM:-8}
-      YPRICEMAGIC_GETLOGS_BATCH_SIZE: ${YPRICEMAGIC_GETLOGS_BATCH_SIZE_ETHEREUM:-200000}
+      YPRICEMAGIC_GETLOGS_BATCH_SIZE: ${YPRICEMAGIC_GETLOGS_BATCH_SIZE_ETHEREUM:-10000}
       ETHERSCAN_TOKEN: ${ETHERSCAN_TOKEN}
       SENTRY_DSN: ${SENTRY_DSN:-}
     volumes:
@@ -56,6 +58,8 @@ services:
     environment:
       CHAIN_NAME: base
       CHAIN_ID: 8453
+      YPRICEMAGIC_GETLOGS_DOP: 8
+      YPRICEMAGIC_GETLOGS_BATCH_SIZE: 10000
       RPC_URL: ${RPC_URL_BASE}
       ETHERSCAN_TOKEN: ${ETHERSCAN_TOKEN}
       SENTRY_DSN: ${SENTRY_DSN:-}

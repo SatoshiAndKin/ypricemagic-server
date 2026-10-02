@@ -2,6 +2,7 @@
 
 import json
 import sys
+from collections.abc import Generator
 from pathlib import Path
 from typing import Any
 from unittest.mock import MagicMock
@@ -144,3 +145,23 @@ def mock_y_module(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setitem(sys.modules, "dank_mids", mock_dank_mids)
     monkeypatch.setitem(sys.modules, "dank_mids.helpers", mock_dank_mids_helpers)
     monkeypatch.setitem(sys.modules, "dank_mids.helpers._helpers", mock_dank_mids_helpers_helpers)
+
+    class BlockNumber:
+        def __await__(self) -> Generator[None, None, int]:
+            yield
+            return int(mock_brownie.chain.height)
+
+    mock_brownie_patch: Any = MagicMock()
+    mock_brownie_patch.dank_eth.block_number = BlockNumber()
+    monkeypatch.setitem(sys.modules, "dank_mids.brownie_patch", mock_brownie_patch)
+
+
+@pytest.fixture(autouse=True)
+def ready_test_backend(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Endpoint tests mock an initialized backend; lifecycle tests set it explicitly."""
+    import asyncio
+
+    from src import server
+
+    monkeypatch.setattr(server.app.state, "ready", True)
+    monkeypatch.setattr(server, "_shutdown_event", asyncio.Event())

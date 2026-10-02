@@ -431,20 +431,13 @@ class TestFetchPriceRetry:
             assert mock_get_price.call_count == 2
 
     @pytest.mark.asyncio
-    async def test_timeout_error_retries(self, mock_y_module: None) -> None:
-        """TimeoutError triggers retry."""
+    async def test_timeout_is_not_retried(self, mock_y_module: None) -> None:
         from src.server import _fetch_price
 
-        mock_get_price = AsyncMock(
-            side_effect=[
-                TimeoutError("Request timed out"),
-                2.0,  # Success on retry
-            ]
-        )
-        with patch("y.get_price", mock_get_price):
-            result = await _fetch_price(DAI, 18000000)
-            assert result == (2.0, None)
-            assert mock_get_price.call_count == 2
+        lookup = AsyncMock(side_effect=TimeoutError("Request timed out"))
+        with patch("y.get_price", lookup), pytest.raises(TimeoutError):
+            await _fetch_price(DAI, 18000000)
+        assert lookup.await_count == 1
 
     @pytest.mark.asyncio
     async def test_os_error_retries(self, mock_y_module: None) -> None:
@@ -2643,7 +2636,7 @@ class TestErrorCaching:
         mock_get_price.assert_not_called()
 
     @pytest.mark.asyncio
-    async def test_exception_is_cached_as_error(self, mock_y_module: None) -> None:
+    async def test_transient_exception_is_not_cached(self, mock_y_module: None) -> None:
         """When price fetch raises an exception, the error is written to cache."""
         from fastapi.testclient import TestClient
 
@@ -2666,8 +2659,8 @@ class TestErrorCaching:
             client = TestClient(app)
             response = client.get("/price", params={"token": DAI, "block": "18000000"})
 
-        assert response.status_code in (500, 503)
-        assert len(error_writes) == 1
+        assert response.status_code == 502
+        assert error_writes == []
 
     @pytest.mark.asyncio
     async def test_error_not_cached_when_amount_specified(self, mock_y_module: None) -> None:
@@ -2726,7 +2719,7 @@ class TestErrorMessageSanitization:
             client = TestClient(app)
             response = client.get("/price", params={"token": DAI, "block": "18000000"})
 
-        assert response.status_code == 500
+        assert response.status_code == 502
         body = response.json()
         assert "secret-api-key-123" not in body["error"]
         assert rpc_url not in body["error"]
@@ -2755,7 +2748,7 @@ class TestErrorMessageSanitization:
             client = TestClient(app)
             response = client.get("/price", params={"token": DAI, "block": "18000000"})
 
-        assert response.status_code == 500
+        assert response.status_code == 502
         body = response.json()
         assert etherscan_token not in body["error"]
         assert "[REDACTED]" in body["error"]
@@ -3106,36 +3099,24 @@ class TestPrewarmReadiness:
                 multiplexer.__v2__.close()
 
     @pytest.mark.asyncio
-    async def test_curve_failure_fails_startup_and_cancels_other_loaders(
+    async def test_curve_failure_fails_startup_before_background_loaders(
         self, mock_y_module: None, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        import asyncio
-        from types import SimpleNamespace
-
         from src import server
 
-        started = asyncio.Event()
-        stopped = asyncio.Event()
-
-        async def slow_loader() -> None:
-            started.set()
-            try:
-                await asyncio.Event().wait()
-            finally:
-                stopped.set()
-
         async def failed_curve() -> None:
-            await started.wait()
             raise RuntimeError("required curve registry failed")
 
-        monkeypatch.setattr(server, "_shutdown_event", asyncio.Event())
-        monkeypatch.setattr(server, "_prewarm_uniswap", slow_loader)
-        for name in ("compound", "chainlink", "aave", "balancer", "gearbox"):
-            monkeypatch.setattr(server, f"_prewarm_{name}", AsyncMock())
+        loaders = []
+        for name in ("uniswap", "compound", "chainlink", "aave", "balancer", "gearbox"):
+            loader = AsyncMock()
+            loaders.append(loader)
+            monkeypatch.setattr(server, f"_prewarm_{name}", loader)
         curve = SimpleNamespace(_done=object(), __coin_to_pools__=failed_curve())
         with pytest.raises(RuntimeError, match="required curve registry failed"):
-            await asyncio.wait_for(server._prewarm_with_shutdown(curve), 1)
-        assert stopped.is_set()
+            await server._prewarm_with_shutdown(curve)
+        for loader in loaders:
+            loader.assert_not_called()
 
     @pytest.mark.asyncio
     async def test_shutdown_cancels_and_joins_pending_loaders(
@@ -3164,5 +3145,6 @@ class TestPrewarmReadiness:
         task = asyncio.create_task(server._prewarm_with_shutdown(curve))
         await started.wait()
         shutdown.set()
-        await asyncio.wait_for(task, 1)
+        with pytest.raises(RuntimeError, match="shutdown"):
+            await asyncio.wait_for(task, 1)
         assert stopped.is_set()
