@@ -1,0 +1,30 @@
+[
+  {
+    "block": 19000000,
+    "hash": "0xcf384012b91b081230cdf17a3f7dd370d8e67056058af6b272b3d54aa2714fac",
+    "xPREMIA": "0x16f9D564Df80376C61AC914205D3fDfF7057d610",
+    "PREMIA": "0x6399c842dd2be3de30bf99bc7d1bbf6fa3650e70",
+    "backing_base_units": "339678448942865716800964",
+    "total_supply_base_units": "314846674187253583230347",
+    "premia_decimals": 18,
+    "share_decimals": 18,
+    "premia_usd": 0.4542596113034648,
+    "expected_xpremia_usd": "0.4900868036267694040781864401",
+    "api_xpremia_usd": 0.49008680362676943,
+    "matched": true
+  },
+  {
+    "block": 26105667,
+    "hash": "0xf3c005f081ecb4d174d73a96f0c74bbd57e7dedde1d709c0ca6fb74f1fbe80c0",
+    "xPREMIA": "0x16f9D564Df80376C61AC914205D3fDfF7057d610",
+    "PREMIA": "0x6399c842dd2be3de30bf99bc7d1bbf6fa3650e70",
+    "backing_base_units": "332221268364089214432539",
+    "total_supply_base_units": "307914666563374289637600",
+    "premia_decimals": 18,
+    "share_decimals": 18,
+    "premia_usd": 0.01031337987533883,
+    "expected_xpremia_usd": "0.01112751198748287049052373137",
+    "api_xpremia_usd": 0.011127511987482871,
+    "matched": true
+  }
+]

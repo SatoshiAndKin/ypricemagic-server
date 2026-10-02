@@ -1,0 +1,25 @@
+{
+  "passed": true,
+  "installed_fork": {
+    "vcs": "git",
+    "commit_id": "073c7ac801ca36128eb27efc64031851ab6f2101",
+    "requested_revision": "master"
+  },
+  "compiled_files": [
+    "y/ENVIRONMENT_VARIABLES.cpython-312-aarch64-linux-gnu.so",
+    "y/_db/brownie.cpython-312-aarch64-linux-gnu.so",
+    "y/_db/config.cpython-312-aarch64-linux-gnu.so",
+    "y/_db/decorators.cpython-312-aarch64-linux-gnu.so",
+    "y/_db/utils/stringify.cpython-312-aarch64-linux-gnu.so",
+    "y/convert.cpython-312-aarch64-linux-gnu.so",
+    "y/exceptions.cpython-312-aarch64-linux-gnu.so",
+    "y/networks.cpython-312-aarch64-linux-gnu.so",
+    "y/prices/utils/sense_check.cpython-312-aarch64-linux-gnu.so",
+    "y/utils/gather.cpython-312-aarch64-linux-gnu.so"
+  ],
+  "dependency_imports": [
+    "brownie",
+    "dank_mids",
+    "cachebox"
+  ]
+}

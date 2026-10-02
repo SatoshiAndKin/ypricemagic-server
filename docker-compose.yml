@@ -6,6 +6,8 @@ networks:
 x-ypm-service: &ypm-service
   build: .
   init: true
+  mem_limit: 8g
+  memswap_limit: 8g
   healthcheck:
     test: ["CMD-SHELL", "test ! -f /tmp/drain && curl -sf http://localhost:8001/health || exit 1"]
     interval: 10s
@@ -25,7 +27,7 @@ services:
       CHAIN_ID: 1
       RPC_URL: ${RPC_URL_ETHEREUM}
       YPRICEMAGIC_GETLOGS_DOP: ${YPRICEMAGIC_GETLOGS_DOP_ETHEREUM:-8}
-      YPRICEMAGIC_GETLOGS_BATCH_SIZE: ${YPRICEMAGIC_GETLOGS_BATCH_SIZE_ETHEREUM:-200000}
+      YPRICEMAGIC_GETLOGS_BATCH_SIZE: ${YPRICEMAGIC_GETLOGS_BATCH_SIZE_ETHEREUM:-10000}
       ETHERSCAN_TOKEN: ${ETHERSCAN_TOKEN}
       SENTRY_DSN: ${SENTRY_DSN:-}
       LOG_LEVEL: ${LOG_LEVEL:-DEBUG}

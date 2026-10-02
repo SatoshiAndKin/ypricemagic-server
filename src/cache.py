@@ -90,7 +90,12 @@ def get_cached_error(token: str, block: int) -> dict[str, object] | None:
         cache = get_cache()
         key = make_key(token, block)
         entry = cache.get(key)
-        if entry is not None and isinstance(entry, dict) and "error" in entry:
+        if (
+            entry is not None
+            and isinstance(entry, dict)
+            and entry.get("outcome") == "no_price"
+            and "error" in entry
+        ):
             return cast(dict[str, object], entry)
         return None
     except Exception as e:
@@ -115,24 +120,16 @@ def set_cached_price(
 
 
 def set_cached_error(token: str, block: int, error: str) -> None:
-    """Cache a failed price-lookup result with a TTL so it can be retried later.
+    """Cache only a definitive unavailable-price result with a retry TTL.
 
-    The entry schema is::
-
-        {
-            "error": "<human-readable error string>",
-            "cached_at": "<ISO-8601 UTC timestamp>",
-            "block_timestamp": None,
-        }
-
-    The entry expires after :data:`ERROR_CACHE_TTL` seconds.  On expiry,
-    :func:`get_cached_error` returns ``None`` and the next request will
-    attempt a real lookup again.
+    Transient errors must never call this function. Legacy entries lacking the
+    explicit outcome marker are ignored by get_cached_error.
     """
     try:
         cache = get_cache()
         key = make_key(token, block)
         entry: dict[str, object] = {
+            "outcome": "no_price",
             "error": error,
             "cached_at": datetime.now(UTC).isoformat(),
             "block_timestamp": None,

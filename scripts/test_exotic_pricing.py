@@ -95,8 +95,7 @@ CVX3CRV = "0x30D9410ED1D5DA1F6C8391af5338C93ab8d4035C"
 # Skip: Pickle pSLP - NonStandardERC20 (symbol() reverts)
 # PSLP_ETH_USDC = "0x55282dA27a3a02eFe599f9bD85E2e0C78f9cD2b2"
 
-# Skip: xPREMIA - NonStandardERC20 (symbol() reverts)
-# XPREMIA = "0x16f9D564Df80376C61AC914205D3fDfB8a32f98b"
+XPREMIA = "0x16f9D564Df80376C61AC914205D3fDfF7057d610"
 
 # Skip: xTAROT - Fantom chain only
 # XTAROT = "0x74D1D2A851e339B8cB953716445Be7E8aBdf92F4"
@@ -603,32 +602,6 @@ def test_pool_together_v4(base_url: str, timeout: int) -> TestResult:
             time.monotonic() - start,
             response=data,
         )
-    except TimeoutError as exc:
-        # Cold-start timeout: PT V4 introspection can exceed 300s on first call.
-        # Mark as skipped (not failed) since this is an infrastructure limitation,
-        # not a code correctness issue.
-        return TestResult(
-            "PoolTogether V4 PT USDC Ticket: price ~$1",
-            passed=True,
-            message=f"SKIPPED (cold-start timeout): {exc}. PT V4 requires >300s on first call.",
-            duration_s=time.monotonic() - start,
-            skipped=True,
-        )
-    except urllib.error.URLError as exc:
-        if "timed out" in str(exc).lower() or isinstance(exc.reason, TimeoutError):
-            return TestResult(
-                "PoolTogether V4 PT USDC Ticket: price ~$1",
-                passed=True,
-                message=f"SKIPPED (cold-start timeout): {exc}. PT V4 requires >300s on first call.",
-                duration_s=time.monotonic() - start,
-                skipped=True,
-            )
-        return TestResult(
-            "PoolTogether V4 PT USDC Ticket: price ~$1",
-            False,
-            f"Request failed: {exc}",
-            time.monotonic() - start,
-        )
     except Exception as exc:
         return TestResult(
             "PoolTogether V4 PT USDC Ticket: price ~$1",
@@ -638,16 +611,30 @@ def test_pool_together_v4(base_url: str, timeout: int) -> TestResult:
         )
 
 
-# == Test 10: xPREMIA - SKIP ==================================================
+# == Test 10: xPREMIA backing ==================================================
 
 
-def test_xpremia_skip(base_url: str, timeout: int) -> TestResult:
-    """xPREMIA: SKIP - NonStandardERC20 prevents symbol() lookup."""
-    return skip(
-        "xPREMIA: price > 0",
-        "NonStandardERC20: symbol() reverts on 0x16f9D564Df80376C61AC914205D3fDfB8a32f98b. "
-        "Detection logic in exotic_tokens.py is correct but test address is non-standard ERC20.",
-    )
+def test_xpremia_backing(base_url: str, timeout: int) -> TestResult:
+    """Price the real xPREMIA deployment; positive backing must yield a price."""
+    started = time.monotonic()
+    try:
+        data = fetch_price(base_url, XPREMIA, timeout)
+        price = data.get("price")
+        passed = isinstance(price, (int, float)) and price > 0
+        return TestResult(
+            "xPREMIA: backing price > 0",
+            passed,
+            f"price={price}",
+            time.monotonic() - started,
+            response=data,
+        )
+    except Exception as exc:
+        return TestResult(
+            "xPREMIA: backing price > 0",
+            False,
+            f"{type(exc).__name__}: {exc}",
+            time.monotonic() - started,
+        )
 
 
 # == Test 11: xTAROT / Tarot SupplyVault - SKIP ===============================
@@ -845,7 +832,7 @@ TESTS = [
     test_e2e_exotic_token,  # 15: sDAI end-to-end
     # Skipped tests (documented gaps with explanations)
     test_pickle_pslp_skip,  # 7: NonStandardERC20
-    test_xpremia_skip,  # 10: NonStandardERC20
+    test_xpremia_backing,  # 10: NonStandardERC20
     test_xtarot_skip,  # 11: Fantom chain
     test_geist_skip,  # 14: Fantom chain
     # Slow tests (up to 300s cold-start, run last to not block fast tests)
@@ -924,7 +911,7 @@ def main() -> None:
     parser.add_argument(
         "--timeout",
         type=int,
-        default=300,
+        default=315,
         help="Per-request timeout in seconds (default: %(default)s)",
     )
     args = parser.parse_args()

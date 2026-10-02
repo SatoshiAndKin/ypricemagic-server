@@ -1,0 +1,8 @@
+{
+  "chain": "ethereum",
+  "empty_cache": true,
+  "provider": "production web3-proxy",
+  "passed": false,
+  "startup_seconds": 602.1521947080037,
+  "healthy_within_600": false
+}

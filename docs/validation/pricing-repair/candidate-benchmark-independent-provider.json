@@ -1,0 +1,989 @@
+[
+  {
+    "phase": "historical-first",
+    "chain": "ethereum",
+    "params": {
+      "token": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+      "block": 19000000,
+      "amount": "1000.000001"
+    },
+    "status": 200,
+    "body": {
+      "token": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+      "price": 0.9989039883929369,
+      "block": 19000000,
+      "chain": "ethereum",
+      "block_timestamp": 1705173443,
+      "cached": false,
+      "trade_path": [
+        {
+          "token": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+          "price": 0.9989039883929369,
+          "source": "Liquidity-based sale estimate"
+        },
+        {
+          "token": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+          "price": 0.9989039883929369,
+          "source": "Uniswap V3 0x88e6a0c2ddd26feeb64f039a2c41296fcb3f5640 via quoteExactInput(bytes,uint256)"
+        },
+        {
+          "token": "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
+          "price": 2562.92441874,
+          "source": "Chainlink historical USD for 0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2"
+        }
+      ]
+    },
+    "final_url": "http://127.0.0.1:18031/price?token=0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48&block=19000000&amount=1000.000001",
+    "passed": true,
+    "seconds": 35.89754058304243
+  },
+  {
+    "phase": "historical-repeat",
+    "chain": "ethereum",
+    "params": {
+      "token": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+      "block": 19000000,
+      "amount": "1000.000001"
+    },
+    "status": 200,
+    "body": {
+      "token": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+      "price": 0.9989039883929369,
+      "block": 19000000,
+      "chain": "ethereum",
+      "block_timestamp": 1705173443,
+      "cached": false,
+      "trade_path": [
+        {
+          "token": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+          "price": 0.9989039883929369,
+          "source": "Liquidity-based sale estimate"
+        },
+        {
+          "token": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+          "price": 0.9989039883929369,
+          "source": "Uniswap V3 0x88e6a0c2ddd26feeb64f039a2c41296fcb3f5640 via quoteExactInput(bytes,uint256)"
+        },
+        {
+          "token": "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
+          "price": 2562.92441874,
+          "source": "Chainlink historical USD for 0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2"
+        }
+      ]
+    },
+    "final_url": "http://127.0.0.1:18031/price?token=0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48&block=19000000&amount=1000.000001",
+    "passed": true,
+    "seconds": 0.03787487500812858
+  },
+  {
+    "phase": "changed-amount",
+    "chain": "ethereum",
+    "params": {
+      "token": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+      "block": 19000000,
+      "amount": "1001.000001"
+    },
+    "status": 200,
+    "body": {
+      "token": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+      "price": 0.9989039866008153,
+      "block": 19000000,
+      "chain": "ethereum",
+      "block_timestamp": 1705173443,
+      "cached": false,
+      "trade_path": [
+        {
+          "token": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+          "price": 0.9989039866008153,
+          "source": "Liquidity-based sale estimate"
+        },
+        {
+          "token": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+          "price": 0.9989039866008153,
+          "source": "Uniswap V3 0x88e6a0c2ddd26feeb64f039a2c41296fcb3f5640 via quoteExactInput(bytes,uint256)"
+        },
+        {
+          "token": "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
+          "price": 2562.92441874,
+          "source": "Chainlink historical USD for 0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2"
+        }
+      ]
+    },
+    "final_url": "http://127.0.0.1:18031/price?token=0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48&block=19000000&amount=1001.000001",
+    "passed": true,
+    "seconds": 0.29440808400977403
+  },
+  {
+    "phase": "mixed-order",
+    "chain": "ethereum",
+    "params": {
+      "tokens": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48,0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48,0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+      "block": 19000000,
+      "amounts": "1000.000001,,1001.000001"
+    },
+    "status": 200,
+    "body": [
+      {
+        "token": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+        "block": 19000000,
+        "price": 0.9989039883929369,
+        "block_timestamp": 1705173443,
+        "cached": false,
+        "trade_path": [
+          {
+            "token": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+            "price": 0.9989039883929369,
+            "source": "Liquidity-based sale estimate"
+          },
+          {
+            "token": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+            "price": 0.9989039883929369,
+            "source": "Uniswap V3 0x88e6a0c2ddd26feeb64f039a2c41296fcb3f5640 via quoteExactInput(bytes,uint256)"
+          },
+          {
+            "token": "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
+            "price": 2562.92441874,
+            "source": "Chainlink historical USD for 0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2"
+          }
+        ]
+      },
+      {
+        "token": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+        "block": 19000000,
+        "price": 1.0,
+        "block_timestamp": 1705173443,
+        "cached": false,
+        "trade_path": [
+          {
+            "token": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+            "price": 1.0,
+            "source": "Fixed USDC valuation policy: 1 USDC = $1"
+          }
+        ]
+      },
+      {
+        "token": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+        "block": 19000000,
+        "price": 0.9989039866008153,
+        "block_timestamp": 1705173443,
+        "cached": false,
+        "trade_path": [
+          {
+            "token": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+            "price": 0.9989039866008153,
+            "source": "Liquidity-based sale estimate"
+          },
+          {
+            "token": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+            "price": 0.9989039866008153,
+            "source": "Uniswap V3 0x88e6a0c2ddd26feeb64f039a2c41296fcb3f5640 via quoteExactInput(bytes,uint256)"
+          },
+          {
+            "token": "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
+            "price": 2562.92441874,
+            "source": "Chainlink historical USD for 0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2"
+          }
+        ]
+      }
+    ],
+    "final_url": "http://127.0.0.1:18031/prices?tokens=0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48%2C0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48%2C0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48&block=19000000&amounts=1000.000001%2C%2C1001.000001",
+    "passed": true,
+    "seconds": 0.06614862510468811
+  },
+  {
+    "phase": "unseen-token-first",
+    "chain": "ethereum",
+    "params": {
+      "token": "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
+      "block": 19000000,
+      "amount": "0.1"
+    },
+    "status": 200,
+    "body": {
+      "token": "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
+      "price": 2562.92441874,
+      "block": 19000000,
+      "chain": "ethereum",
+      "block_timestamp": 1705173443,
+      "cached": false,
+      "trade_path": [
+        {
+          "token": "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
+          "price": 2562.92441874,
+          "source": "Liquidity-based sale estimate"
+        },
+        {
+          "token": "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
+          "price": 2562.92441874,
+          "source": "Wrapped native asset 0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2 via withdraw(uint256)"
+        },
+        {
+          "token": "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+          "price": 2562.92441874,
+          "source": "Chainlink historical USD for 0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+        }
+      ]
+    },
+    "final_url": "http://127.0.0.1:18031/price?token=0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2&block=19000000&amount=0.1",
+    "passed": true,
+    "seconds": 98.15095416700933
+  },
+  {
+    "phase": "current-health",
+    "chain": "ethereum",
+    "params": null,
+    "status": 200,
+    "body": {
+      "status": "ok",
+      "chain": "ethereum",
+      "block": 26105537,
+      "synced": true
+    },
+    "final_url": "http://127.0.0.1:18031/health",
+    "passed": true,
+    "seconds": 0.017425958067178726
+  },
+  {
+    "phase": "distinct-block-2",
+    "chain": "ethereum",
+    "params": {
+      "token": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+      "block": 26105535,
+      "amount": "1000.000001"
+    },
+    "status": 200,
+    "body": {
+      "token": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+      "price": 0.9996869300423595,
+      "block": 26105535,
+      "chain": "ethereum",
+      "block_timestamp": 1790954903,
+      "cached": false,
+      "trade_path": [
+        {
+          "token": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+          "price": 0.9996869300423595,
+          "source": "Liquidity-based sale estimate"
+        },
+        {
+          "token": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+          "price": 0.9996869300423595,
+          "source": "Uniswap V3 0x88e6a0c2ddd26feeb64f039a2c41296fcb3f5640 via quoteExactInput(bytes,uint256)"
+        },
+        {
+          "token": "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
+          "price": 2704.06171268,
+          "source": "Chainlink historical USD for 0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2"
+        }
+      ]
+    },
+    "final_url": "http://127.0.0.1:18031/price?token=0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48&block=26105535&amount=1000.000001",
+    "passed": true,
+    "seconds": 26.92543350008782
+  },
+  {
+    "phase": "distinct-block-2-repeat",
+    "chain": "ethereum",
+    "params": {
+      "token": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+      "block": 26105535,
+      "amount": "1000.000001"
+    },
+    "status": 200,
+    "body": {
+      "token": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+      "price": 0.9996869300423595,
+      "block": 26105535,
+      "chain": "ethereum",
+      "block_timestamp": 1790954903,
+      "cached": false,
+      "trade_path": [
+        {
+          "token": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+          "price": 0.9996869300423595,
+          "source": "Liquidity-based sale estimate"
+        },
+        {
+          "token": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+          "price": 0.9996869300423595,
+          "source": "Uniswap V3 0x88e6a0c2ddd26feeb64f039a2c41296fcb3f5640 via quoteExactInput(bytes,uint256)"
+        },
+        {
+          "token": "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
+          "price": 2704.06171268,
+          "source": "Chainlink historical USD for 0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2"
+        }
+      ]
+    },
+    "final_url": "http://127.0.0.1:18031/price?token=0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48&block=26105535&amount=1000.000001",
+    "passed": true,
+    "seconds": 0.03463770798407495
+  },
+  {
+    "phase": "distinct-block-3",
+    "chain": "ethereum",
+    "params": {
+      "token": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+      "block": 26105534,
+      "amount": "1000.000001"
+    },
+    "status": 200,
+    "body": {
+      "token": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+      "price": 0.9996869300423595,
+      "block": 26105534,
+      "chain": "ethereum",
+      "block_timestamp": 1790954891,
+      "cached": false,
+      "trade_path": [
+        {
+          "token": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+          "price": 0.9996869300423595,
+          "source": "Liquidity-based sale estimate"
+        },
+        {
+          "token": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+          "price": 0.9996869300423595,
+          "source": "Uniswap V3 0x88e6a0c2ddd26feeb64f039a2c41296fcb3f5640 via quoteExactInput(bytes,uint256)"
+        },
+        {
+          "token": "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
+          "price": 2704.06171268,
+          "source": "Chainlink historical USD for 0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2"
+        }
+      ]
+    },
+    "final_url": "http://127.0.0.1:18031/price?token=0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48&block=26105534&amount=1000.000001",
+    "passed": true,
+    "seconds": 24.6285797910532
+  },
+  {
+    "phase": "distinct-block-3-repeat",
+    "chain": "ethereum",
+    "params": {
+      "token": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+      "block": 26105534,
+      "amount": "1000.000001"
+    },
+    "status": 200,
+    "body": {
+      "token": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+      "price": 0.9996869300423595,
+      "block": 26105534,
+      "chain": "ethereum",
+      "block_timestamp": 1790954891,
+      "cached": false,
+      "trade_path": [
+        {
+          "token": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+          "price": 0.9996869300423595,
+          "source": "Liquidity-based sale estimate"
+        },
+        {
+          "token": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+          "price": 0.9996869300423595,
+          "source": "Uniswap V3 0x88e6a0c2ddd26feeb64f039a2c41296fcb3f5640 via quoteExactInput(bytes,uint256)"
+        },
+        {
+          "token": "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
+          "price": 2704.06171268,
+          "source": "Chainlink historical USD for 0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2"
+        }
+      ]
+    },
+    "final_url": "http://127.0.0.1:18031/price?token=0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48&block=26105534&amount=1000.000001",
+    "passed": true,
+    "seconds": 0.047253541997633874
+  },
+  {
+    "phase": "distinct-block-4",
+    "chain": "ethereum",
+    "params": {
+      "token": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+      "block": 26105533,
+      "amount": "1000.000001"
+    },
+    "status": 200,
+    "body": {
+      "token": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+      "price": 0.9996920268138875,
+      "block": 26105533,
+      "chain": "ethereum",
+      "block_timestamp": 1790954879,
+      "cached": false,
+      "trade_path": [
+        {
+          "token": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+          "price": 0.9996920268138875,
+          "source": "Liquidity-based sale estimate"
+        },
+        {
+          "token": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+          "price": 0.9996920268138875,
+          "source": "Uniswap V3 0x88e6a0c2ddd26feeb64f039a2c41296fcb3f5640 via quoteExactInput(bytes,uint256)"
+        },
+        {
+          "token": "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
+          "price": 2704.06171268,
+          "source": "Chainlink historical USD for 0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2"
+        }
+      ]
+    },
+    "final_url": "http://127.0.0.1:18031/price?token=0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48&block=26105533&amount=1000.000001",
+    "passed": true,
+    "seconds": 35.411425375030376
+  },
+  {
+    "phase": "distinct-block-4-repeat",
+    "chain": "ethereum",
+    "params": {
+      "token": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+      "block": 26105533,
+      "amount": "1000.000001"
+    },
+    "status": 200,
+    "body": {
+      "token": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+      "price": 0.9996920268138875,
+      "block": 26105533,
+      "chain": "ethereum",
+      "block_timestamp": 1790954879,
+      "cached": false,
+      "trade_path": [
+        {
+          "token": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+          "price": 0.9996920268138875,
+          "source": "Liquidity-based sale estimate"
+        },
+        {
+          "token": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+          "price": 0.9996920268138875,
+          "source": "Uniswap V3 0x88e6a0c2ddd26feeb64f039a2c41296fcb3f5640 via quoteExactInput(bytes,uint256)"
+        },
+        {
+          "token": "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
+          "price": 2704.06171268,
+          "source": "Chainlink historical USD for 0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2"
+        }
+      ]
+    },
+    "final_url": "http://127.0.0.1:18031/price?token=0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48&block=26105533&amount=1000.000001",
+    "passed": true,
+    "seconds": 0.039307166007347405
+  },
+  {
+    "phase": "historical-first",
+    "chain": "base",
+    "params": {
+      "token": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+      "block": 24000000,
+      "amount": "1000.000001"
+    },
+    "status": 200,
+    "body": {
+      "token": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+      "price": 0.990993596876513,
+      "block": 24000000,
+      "chain": "base",
+      "block_timestamp": 1734789347,
+      "cached": false,
+      "trade_path": [
+        {
+          "token": "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913",
+          "price": 0.990993596876513,
+          "source": "Liquidity-based sale estimate"
+        },
+        {
+          "token": "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913",
+          "price": 0.990993596876513,
+          "source": "Velodrome V2 0x6cdcb1c4a4d1c3c6d054b27ac5b77e89eafb971d via getAmountsOut(uint256,(address,address,bool,address)[])"
+        },
+        {
+          "token": "0x940181a94a35a4569e4529a3cdfb74e38fd98631",
+          "price": 1.6059661934262666,
+          "source": "Velodrome V2 0x7f670f78b17dec44d5ef68a48740b6f8849cc2e6 via getAmountsOut(uint256,(address,address,bool,address)[])"
+        },
+        {
+          "token": "0x4200000000000000000000000000000000000006",
+          "price": 3381.75140527,
+          "source": "Chainlink historical USD for 0x4200000000000000000000000000000000000006"
+        }
+      ]
+    },
+    "final_url": "http://127.0.0.1:18022/price?token=0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913&block=24000000&amount=1000.000001",
+    "passed": true,
+    "seconds": 0.15748725004959852
+  },
+  {
+    "phase": "historical-repeat",
+    "chain": "base",
+    "params": {
+      "token": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+      "block": 24000000,
+      "amount": "1000.000001"
+    },
+    "status": 200,
+    "body": {
+      "token": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+      "price": 0.990993596876513,
+      "block": 24000000,
+      "chain": "base",
+      "block_timestamp": 1734789347,
+      "cached": false,
+      "trade_path": [
+        {
+          "token": "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913",
+          "price": 0.990993596876513,
+          "source": "Liquidity-based sale estimate"
+        },
+        {
+          "token": "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913",
+          "price": 0.990993596876513,
+          "source": "Velodrome V2 0x6cdcb1c4a4d1c3c6d054b27ac5b77e89eafb971d via getAmountsOut(uint256,(address,address,bool,address)[])"
+        },
+        {
+          "token": "0x940181a94a35a4569e4529a3cdfb74e38fd98631",
+          "price": 1.6059661934262666,
+          "source": "Velodrome V2 0x7f670f78b17dec44d5ef68a48740b6f8849cc2e6 via getAmountsOut(uint256,(address,address,bool,address)[])"
+        },
+        {
+          "token": "0x4200000000000000000000000000000000000006",
+          "price": 3381.75140527,
+          "source": "Chainlink historical USD for 0x4200000000000000000000000000000000000006"
+        }
+      ]
+    },
+    "final_url": "http://127.0.0.1:18022/price?token=0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913&block=24000000&amount=1000.000001",
+    "passed": true,
+    "seconds": 0.07957075000740588
+  },
+  {
+    "phase": "changed-amount",
+    "chain": "base",
+    "params": {
+      "token": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+      "block": 24000000,
+      "amount": "1001.000001"
+    },
+    "status": 200,
+    "body": {
+      "token": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+      "price": 0.9909933876175671,
+      "block": 24000000,
+      "chain": "base",
+      "block_timestamp": 1734789347,
+      "cached": false,
+      "trade_path": [
+        {
+          "token": "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913",
+          "price": 0.9909933876175671,
+          "source": "Liquidity-based sale estimate"
+        },
+        {
+          "token": "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913",
+          "price": 0.9909933876175671,
+          "source": "Velodrome V2 0x6cdcb1c4a4d1c3c6d054b27ac5b77e89eafb971d via getAmountsOut(uint256,(address,address,bool,address)[])"
+        },
+        {
+          "token": "0x940181a94a35a4569e4529a3cdfb74e38fd98631",
+          "price": 1.6059658820293075,
+          "source": "Velodrome V2 0x7f670f78b17dec44d5ef68a48740b6f8849cc2e6 via getAmountsOut(uint256,(address,address,bool,address)[])"
+        },
+        {
+          "token": "0x4200000000000000000000000000000000000006",
+          "price": 3381.75140527,
+          "source": "Chainlink historical USD for 0x4200000000000000000000000000000000000006"
+        }
+      ]
+    },
+    "final_url": "http://127.0.0.1:18022/price?token=0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913&block=24000000&amount=1001.000001",
+    "passed": true,
+    "seconds": 0.06111245905049145
+  },
+  {
+    "phase": "mixed-order",
+    "chain": "base",
+    "params": {
+      "tokens": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913,0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913,0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+      "block": 24000000,
+      "amounts": "1000.000001,,1001.000001"
+    },
+    "status": 200,
+    "body": [
+      {
+        "token": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+        "block": 24000000,
+        "price": 0.990993596876513,
+        "block_timestamp": 1734789347,
+        "cached": false,
+        "trade_path": [
+          {
+            "token": "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913",
+            "price": 0.990993596876513,
+            "source": "Liquidity-based sale estimate"
+          },
+          {
+            "token": "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913",
+            "price": 0.990993596876513,
+            "source": "Velodrome V2 0x6cdcb1c4a4d1c3c6d054b27ac5b77e89eafb971d via getAmountsOut(uint256,(address,address,bool,address)[])"
+          },
+          {
+            "token": "0x940181a94a35a4569e4529a3cdfb74e38fd98631",
+            "price": 1.6059661934262666,
+            "source": "Velodrome V2 0x7f670f78b17dec44d5ef68a48740b6f8849cc2e6 via getAmountsOut(uint256,(address,address,bool,address)[])"
+          },
+          {
+            "token": "0x4200000000000000000000000000000000000006",
+            "price": 3381.75140527,
+            "source": "Chainlink historical USD for 0x4200000000000000000000000000000000000006"
+          }
+        ]
+      },
+      {
+        "token": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+        "block": 24000000,
+        "price": 1.0,
+        "block_timestamp": 1734789347,
+        "cached": true
+      },
+      {
+        "token": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+        "block": 24000000,
+        "price": 0.9909933876175671,
+        "block_timestamp": 1734789347,
+        "cached": false,
+        "trade_path": [
+          {
+            "token": "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913",
+            "price": 0.9909933876175671,
+            "source": "Liquidity-based sale estimate"
+          },
+          {
+            "token": "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913",
+            "price": 0.9909933876175671,
+            "source": "Velodrome V2 0x6cdcb1c4a4d1c3c6d054b27ac5b77e89eafb971d via getAmountsOut(uint256,(address,address,bool,address)[])"
+          },
+          {
+            "token": "0x940181a94a35a4569e4529a3cdfb74e38fd98631",
+            "price": 1.6059658820293075,
+            "source": "Velodrome V2 0x7f670f78b17dec44d5ef68a48740b6f8849cc2e6 via getAmountsOut(uint256,(address,address,bool,address)[])"
+          },
+          {
+            "token": "0x4200000000000000000000000000000000000006",
+            "price": 3381.75140527,
+            "source": "Chainlink historical USD for 0x4200000000000000000000000000000000000006"
+          }
+        ]
+      }
+    ],
+    "final_url": "http://127.0.0.1:18022/prices?tokens=0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913%2C0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913%2C0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913&block=24000000&amounts=1000.000001%2C%2C1001.000001",
+    "passed": true,
+    "seconds": 0.1333883749321103
+  },
+  {
+    "phase": "unseen-token-first",
+    "chain": "base",
+    "params": {
+      "token": "0x4200000000000000000000000000000000000006",
+      "block": 24000000,
+      "amount": "0.1"
+    },
+    "status": 200,
+    "body": {
+      "token": "0x4200000000000000000000000000000000000006",
+      "price": 1969.89808,
+      "block": 24000000,
+      "chain": "base",
+      "block_timestamp": 1734789347,
+      "cached": false,
+      "trade_path": [
+        {
+          "token": "0x4200000000000000000000000000000000000006",
+          "price": 1969.89808,
+          "source": "Liquidity-based sale estimate"
+        },
+        {
+          "token": "0x4200000000000000000000000000000000000006",
+          "price": 1969.89808,
+          "source": "Slipstream 0x6446021f4e396da3df4235c62537431372195d38 via quoteExactInput(bytes,uint256)"
+        },
+        {
+          "token": "0xdbfefd2e8460a6ee4955a68582f85708baea60a3",
+          "price": 1970.7082183451046,
+          "source": "Slipstream 0x4d9199269d4f89a367965e90d07d6f4af7750ed0 via quoteExactInput(bytes,uint256)"
+        },
+        {
+          "token": "0xcbb7c0000ab88b473b1f5afd9ef808440eed33bf",
+          "price": 56690.48787998262,
+          "source": "Velodrome V2 0xb909f567c5c2bb1a4271349708cc4637d7318b4a via getAmountsOut(uint256,(address,address,bool,address)[])"
+        },
+        {
+          "token": "0x0b3e328455c4059eeb9e3f84b5543f74e24e7e1b",
+          "price": 1.5438195484968167,
+          "source": "Uniswap V2 0xd418dfe7670c21f682e041f34250c114db5d7789 via getAmountsOut(uint256,address[])"
+        },
+        {
+          "token": "0x1c4cca7c5db003824208adda61bd749e55f463a3",
+          "price": 0.0816206522617162,
+          "source": "Uniswap V3 0x63ce80e5df9fd7b1e0af2f995395f143ecc7749f via quoteExactInput(bytes,uint256)"
+        },
+        {
+          "token": "0x4f9fd6be4a90f2620860d680c0d4d5fb53d1a825",
+          "price": 0.3605741312402384,
+          "source": "Uniswap V3 0xf1fdc83c3a336bdbdc9fb06e318b08eaddc82ff4 via quoteExactInput(bytes,uint256)"
+        },
+        {
+          "token": "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913",
+          "price": 1.0,
+          "source": "Fixed USDC valuation policy: 1 USDC = $1"
+        }
+      ]
+    },
+    "final_url": "http://127.0.0.1:18022/price?token=0x4200000000000000000000000000000000000006&block=24000000&amount=0.1",
+    "passed": true,
+    "seconds": 0.05728233291301876
+  },
+  {
+    "phase": "current-health",
+    "chain": "base",
+    "params": null,
+    "status": 200,
+    "body": {
+      "status": "ok",
+      "chain": "base",
+      "block": 52082839,
+      "synced": true
+    },
+    "final_url": "http://127.0.0.1:18022/health",
+    "passed": true,
+    "seconds": 0.025771250016987324
+  },
+  {
+    "phase": "distinct-block-2",
+    "chain": "base",
+    "params": {
+      "token": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+      "block": 52082837,
+      "amount": "1000.000001"
+    },
+    "status": 200,
+    "body": {
+      "token": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+      "price": 0.9957135439023708,
+      "block": 52082837,
+      "chain": "base",
+      "block_timestamp": 1790955021,
+      "cached": false,
+      "trade_path": [
+        {
+          "token": "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913",
+          "price": 0.9957135439023708,
+          "source": "Liquidity-based sale estimate"
+        },
+        {
+          "token": "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913",
+          "price": 0.9957135439023708,
+          "source": "Uniswap V3 0x6c561b446416e1a00e8e93e221854d6ea4171372 via quoteExactInput(bytes,uint256)"
+        },
+        {
+          "token": "0x4200000000000000000000000000000000000006",
+          "price": 2699.94,
+          "source": "Chainlink historical USD for 0x4200000000000000000000000000000000000006"
+        }
+      ]
+    },
+    "final_url": "http://127.0.0.1:18022/price?token=0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913&block=52082837&amount=1000.000001",
+    "passed": true,
+    "seconds": 15.609699708991684
+  },
+  {
+    "phase": "distinct-block-2-repeat",
+    "chain": "base",
+    "params": {
+      "token": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+      "block": 52082837,
+      "amount": "1000.000001"
+    },
+    "status": 200,
+    "body": {
+      "token": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+      "price": 0.9957135439023708,
+      "block": 52082837,
+      "chain": "base",
+      "block_timestamp": 1790955021,
+      "cached": false,
+      "trade_path": [
+        {
+          "token": "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913",
+          "price": 0.9957135439023708,
+          "source": "Liquidity-based sale estimate"
+        },
+        {
+          "token": "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913",
+          "price": 0.9957135439023708,
+          "source": "Uniswap V3 0x6c561b446416e1a00e8e93e221854d6ea4171372 via quoteExactInput(bytes,uint256)"
+        },
+        {
+          "token": "0x4200000000000000000000000000000000000006",
+          "price": 2699.94,
+          "source": "Chainlink historical USD for 0x4200000000000000000000000000000000000006"
+        }
+      ]
+    },
+    "final_url": "http://127.0.0.1:18022/price?token=0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913&block=52082837&amount=1000.000001",
+    "passed": true,
+    "seconds": 0.06039195798803121
+  },
+  {
+    "phase": "distinct-block-3",
+    "chain": "base",
+    "params": {
+      "token": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+      "block": 52082836,
+      "amount": "1000.000001"
+    },
+    "status": 200,
+    "body": {
+      "token": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+      "price": 0.9957135439023708,
+      "block": 52082836,
+      "chain": "base",
+      "block_timestamp": 1790955019,
+      "cached": false,
+      "trade_path": [
+        {
+          "token": "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913",
+          "price": 0.9957135439023708,
+          "source": "Liquidity-based sale estimate"
+        },
+        {
+          "token": "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913",
+          "price": 0.9957135439023708,
+          "source": "Uniswap V3 0x6c561b446416e1a00e8e93e221854d6ea4171372 via quoteExactInput(bytes,uint256)"
+        },
+        {
+          "token": "0x4200000000000000000000000000000000000006",
+          "price": 2699.94,
+          "source": "Chainlink historical USD for 0x4200000000000000000000000000000000000006"
+        }
+      ]
+    },
+    "final_url": "http://127.0.0.1:18022/price?token=0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913&block=52082836&amount=1000.000001",
+    "passed": true,
+    "seconds": 14.67319220805075
+  },
+  {
+    "phase": "distinct-block-3-repeat",
+    "chain": "base",
+    "params": {
+      "token": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+      "block": 52082836,
+      "amount": "1000.000001"
+    },
+    "status": 200,
+    "body": {
+      "token": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+      "price": 0.9957135439023708,
+      "block": 52082836,
+      "chain": "base",
+      "block_timestamp": 1790955019,
+      "cached": false,
+      "trade_path": [
+        {
+          "token": "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913",
+          "price": 0.9957135439023708,
+          "source": "Liquidity-based sale estimate"
+        },
+        {
+          "token": "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913",
+          "price": 0.9957135439023708,
+          "source": "Uniswap V3 0x6c561b446416e1a00e8e93e221854d6ea4171372 via quoteExactInput(bytes,uint256)"
+        },
+        {
+          "token": "0x4200000000000000000000000000000000000006",
+          "price": 2699.94,
+          "source": "Chainlink historical USD for 0x4200000000000000000000000000000000000006"
+        }
+      ]
+    },
+    "final_url": "http://127.0.0.1:18022/price?token=0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913&block=52082836&amount=1000.000001",
+    "passed": true,
+    "seconds": 0.05755512497853488
+  },
+  {
+    "phase": "distinct-block-4",
+    "chain": "base",
+    "params": {
+      "token": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+      "block": 52082835,
+      "amount": "1000.000001"
+    },
+    "status": 200,
+    "body": {
+      "token": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+      "price": 0.9957135439023708,
+      "block": 52082835,
+      "chain": "base",
+      "block_timestamp": 1790955017,
+      "cached": false,
+      "trade_path": [
+        {
+          "token": "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913",
+          "price": 0.9957135439023708,
+          "source": "Liquidity-based sale estimate"
+        },
+        {
+          "token": "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913",
+          "price": 0.9957135439023708,
+          "source": "Uniswap V3 0x6c561b446416e1a00e8e93e221854d6ea4171372 via quoteExactInput(bytes,uint256)"
+        },
+        {
+          "token": "0x4200000000000000000000000000000000000006",
+          "price": 2699.94,
+          "source": "Chainlink historical USD for 0x4200000000000000000000000000000000000006"
+        }
+      ]
+    },
+    "final_url": "http://127.0.0.1:18022/price?token=0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913&block=52082835&amount=1000.000001",
+    "passed": true,
+    "seconds": 14.300333749968559
+  },
+  {
+    "phase": "distinct-block-4-repeat",
+    "chain": "base",
+    "params": {
+      "token": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+      "block": 52082835,
+      "amount": "1000.000001"
+    },
+    "status": 200,
+    "body": {
+      "token": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+      "price": 0.9957135439023708,
+      "block": 52082835,
+      "chain": "base",
+      "block_timestamp": 1790955017,
+      "cached": false,
+      "trade_path": [
+        {
+          "token": "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913",
+          "price": 0.9957135439023708,
+          "source": "Liquidity-based sale estimate"
+        },
+        {
+          "token": "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913",
+          "price": 0.9957135439023708,
+          "source": "Uniswap V3 0x6c561b446416e1a00e8e93e221854d6ea4171372 via quoteExactInput(bytes,uint256)"
+        },
+        {
+          "token": "0x4200000000000000000000000000000000000006",
+          "price": 2699.94,
+          "source": "Chainlink historical USD for 0x4200000000000000000000000000000000000006"
+        }
+      ]
+    },
+    "final_url": "http://127.0.0.1:18022/price?token=0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913&block=52082835&amount=1000.000001",
+    "passed": true,
+    "seconds": 0.05662591697182506
+  }
+]

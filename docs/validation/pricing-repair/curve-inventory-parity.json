@@ -1,0 +1,23 @@
+{
+  "passed": true,
+  "before": {
+    "chain": "ethereum",
+    "head": 26106364,
+    "hash": "0xb8733709037b8235d6b5c91032fad919719fbca9b27c0b4b81ef1de07efc029e",
+    "seconds": 5.765029245056212,
+    "sha256": "598109f9027d91191ba3b1991da17674d700430294af1a62ca80afda89c9085a"
+  },
+  "after": {
+    "chain": "ethereum",
+    "head": 26106364,
+    "hash": "0xb8733709037b8235d6b5c91032fad919719fbca9b27c0b4b81ef1de07efc029e",
+    "seconds": 4.764454117976129,
+    "sha256": "598109f9027d91191ba3b1991da17674d700430294af1a62ca80afda89c9085a"
+  },
+  "counts": {
+    "tokens": 2564,
+    "registries": 2,
+    "factories": 7,
+    "coins": 1416
+  }
+}
