@@ -11,7 +11,10 @@ required warmup cancellation returned normally; ambiguous persisted errors were
 reused; transient failures entered the 404 cache; timeouts were attempted twice;
 and slow cancellation delayed the HTTP timeout response. These predate PRs
 152/156/157: signal handling was introduced in PRs 137/139, error caching in PR
-124, and the lookup timeout in PR 58.
+124, and the lookup timeout in PR 58. Classification timeouts and connectivity
+failures also returned 500; four route-level cases reproduced that behavior
+before repair. The handler dates to commit `80049c1`, before the recent PRs,
+and now preserves 504/502 statuses.
 
 Six pricing-fork regressions failed against the deployed revision: broader
 factory coverage was ignored for both token topic positions and alternatives;
@@ -40,7 +43,7 @@ allow 315 seconds to receive the server's 300-second timeout response.
 
 ## Validation completed so far
 
-- Server: 327 tests passed; 89% coverage. Ruff, format, strict mypy, deptry passed.
+- Server: 331 tests passed; 89% coverage. Ruff, format, strict mypy, deptry passed.
 - Real process SIGTERM during warmup and after readiness passed; cancelled startup
   did not log readiness, and both processes stopped within five seconds.
 - Saturation test fills exactly two active slots and 32 queued requests; additional
@@ -196,7 +199,8 @@ node during the outage. No provider switch or task deployment was performed.
 ## Remaining delivery gates
 
 Fork repair [PR #47](https://github.com/SatoshiAndKin/ypricemagic/pull/47) is a
-draft. Remaining gates: final fork validation, production image builds, linked
+draft, linked to server [PR #158](https://github.com/SatoshiAndKin/ypricemagic-server/pull/158).
+The production frontend Dockerfile built successfully. Remaining gates: final fork validation, production image builds, linked
 server feature-branch PR, fork
 merge then server lock refresh against `master`, pipeline deployment with image
 and installed dependency revision checks, corrected historical/current matrix,

@@ -674,7 +674,7 @@ async def _fetch_batch_prices(
     """Fetch prices for multiple tokens in parallel.
 
     Returns a list of (price, trade_path) tuples or None for tokens that couldn't be priced.
-    Does not raise exceptions - errors are logged and None is returned for that token.
+    Definitive unavailable prices return None; transient failures propagate.
     """
     try:
         results = await _lookup_batch_prices(tokens, block, amounts)
@@ -1240,6 +1240,10 @@ async def _classify_token(token: str) -> Any:
                 duration_ms=duration_ms,
             )
             return _make_error_response(
-                500,
+                504
+                if isinstance(e, TimeoutError)
+                else 502
+                if isinstance(e, (ConnectionError, OSError))
+                else 500,
                 f"Failed to classify token {token}: {e}",
             )

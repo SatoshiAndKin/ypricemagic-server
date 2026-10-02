@@ -336,3 +336,23 @@ async def test_timestamp_resolution_preserves_transient_status(
             params={"token" if endpoint == "price" else "tokens": TOKEN, "timestamp": "1734789347"},
         )
     assert response.status_code == status
+
+
+@pytest.mark.parametrize("root_path", ["/ethereum", "/base"])
+@pytest.mark.parametrize(
+    ("error", "status"),
+    [(TimeoutError("provider timeout"), 504), (ConnectionError("RPC offline"), 502)],
+)
+async def test_bucket_transient_failure_retains_http_status(
+    root_path: str, error: Exception, status: int
+) -> None:
+    lookup = AsyncMock(side_effect=error)
+    with patch("y.check_bucket", lookup):
+        async with httpx.AsyncClient(
+            transport=httpx.ASGITransport(app=server.app, root_path=root_path),
+            base_url="http://test",
+        ) as client:
+            response = await client.get(root_path + "/check_bucket", params={"token": TOKEN})
+    assert response.status_code == status
+    assert "error" in response.json()
+    assert lookup.await_count == 1
