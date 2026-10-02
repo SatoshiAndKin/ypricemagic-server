@@ -47,6 +47,8 @@ For local usage, open `http://localhost:<PORT>` from `traefik-proxy/.env`.
 
 Startup consumes indexed USDC pool events for each V2/V3 router, plus Balancer vault events, before reporting readiness. Other tokens are discovered on demand through their indexed creation events. Keep the pricing cache volumes across restarts to reuse event history. Sparse token scans use larger log ranges with bounded splitting when the RPC rejects them. Explicit range settings and known providers with smaller limits are respected. Full-inventory log ranges remain unchanged.
 
+The Ethereum Compose services use eight concurrent log reads and 200,000-block ranges, matching the configured web3-proxy's range limit. Override `YPRICEMAGIC_GETLOGS_DOP_ETHEREUM` and `YPRICEMAGIC_GETLOGS_BATCH_SIZE_ETHEREUM` for a different provider. These service settings apply to its registry scans as well as token indexes; the fork's global defaults remain unchanged. Curve coin metadata loads in bounded concurrent groups so its RPC reads can batch.
+
 CCIP reads are disabled on both pricing providers, so contract reverts cannot automatically trigger HTTP requests to contract-supplied URLs. The API cache rejects pickle metadata even if its SQLite records are tampered with. CI retains the full vulnerability inventory; `.trivyignore.yaml` documents three application-specific findings, their mitigations or build-context limits, and a November 1, 2026 review deadline. These exceptions do not mean the dependency packages are universally patched.
 
 For a deployed host-based setup, set `VIRTUAL_HOST` in `.env` (for example `VIRTUAL_HOST=ski-nuc-3.shorthair-fir.ts.net`) and access:
