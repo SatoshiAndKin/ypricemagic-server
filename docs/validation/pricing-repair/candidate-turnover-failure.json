@@ -1,0 +1,45 @@
+{
+  "passed": false,
+  "boundary": "isolated copied-cache candidates; not production soak",
+  "seconds": 3288.6918764589354,
+  "distinct_amounts": {
+    "ethereum": 2200,
+    "base": 2200
+  },
+  "distinct_heads": {
+    "ethereum": 160,
+    "base": 96
+  },
+  "requests": 2978,
+  "failures": [
+    {
+      "chain": "ethereum",
+      "phase": "current-block",
+      "params": {
+        "token": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+        "block": 26107234,
+        "amount": "1000.000001"
+      },
+      "passed": false,
+      "error": "HTTPError: HTTP Error 504: Gateway Timeout",
+      "seconds": 35.87553700001445
+    },
+    {
+      "phase": "current-worker",
+      "passed": false,
+      "error": "HTTPError: HTTP Error 504: Gateway Timeout"
+    }
+  ],
+  "peak_cgroup_bytes": {
+    "ethereum": 1068892160,
+    "base": 4919328768
+  },
+  "max_health_seconds": {
+    "ethereum": 0.05029129202011973,
+    "base": 0.3099976669764146
+  },
+  "max_cached_spot_seconds": {
+    "ethereum": 0.007639082963578403,
+    "base": 0.017975833034142852
+  }
+}
