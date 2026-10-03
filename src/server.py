@@ -138,6 +138,13 @@ async def _consume_pool_inventory(pools: AsyncIterator[Any]) -> int:
     return count
 
 
+async def _consume_pool_metadata(batches: AsyncIterator[list[Any]]) -> int:
+    count = 0
+    async for batch in batches:
+        count += len(batch)
+    return count
+
+
 async def _head_block() -> int:
     from dank_mids.brownie_patch import dank_eth
 
@@ -145,10 +152,12 @@ async def _head_block() -> int:
 
 
 async def _prewarm_uniswap() -> None:
-    """Load indexed USDC pools through the startup head.
+    """Load compact USDC metadata through the startup head.
 
     Other tokens are discovered on demand. Routers populate the anchor indexes
     in the owned background warmup; independent failures remain non-fatal.
+    Use the shared raw scan without constructing pool objects or starting legacy
+    filters that continue polling and compete with foreground discovery.
     """
     from y.constants import STABLECOINS
     from y.prices.dex.uniswap import uniswap_multiplexer
@@ -160,7 +169,10 @@ async def _prewarm_uniswap() -> None:
         try:
             logger.info(f"uniswap_{version}_pools_loading_started", router=name, tokens=tokens)
             counts = await asyncio.gather(
-                *(_consume_pool_inventory(router.pools_for_token(token, block)) for token in tokens)
+                *(
+                    _consume_pool_metadata(router.pool_metadata_batches(token, block))
+                    for token in tokens
+                )
             )
             logger.info(
                 f"uniswap_{version}_pools_loading_done",

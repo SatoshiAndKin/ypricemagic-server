@@ -2892,7 +2892,45 @@ class TestForceCacheBypass:
 class TestUniswapPrewarm:
     @pytest.mark.asyncio
     @pytest.mark.parametrize("version", ["v2", "v3", "v3_fork"])
-    async def test_anchor_indexes_complete_before_readiness(
+    async def test_warmup_counts_compact_metadata_without_starting_legacy_pool_filters(
+        self, mock_y_module: None, version: str
+    ) -> None:
+        import sys
+
+        from src import server
+
+        requested: list[tuple[str, int]] = []
+
+        async def batches(token: str, block: int) -> AsyncIterator[list[object]]:
+            requested.append((token, block))
+            yield ["pool-a", "pool-b"]
+            yield []
+            yield ["pool-c"]
+
+        class Router:
+            pool_metadata_batches = staticmethod(batches)
+
+            def pools_for_token(self, token: str, block: int) -> None:
+                raise AssertionError("legacy discovery starts competing background log filters")
+
+        router = Router()
+        multiplexer = sys.modules["y.prices.dex.uniswap"].uniswap_multiplexer
+        multiplexer.v2_routers = {"test": router} if version == "v2" else {}
+        multiplexer.v3 = router if version == "v3" else None
+        multiplexer.v3_forks = [router] if version == "v3_fork" else []
+        with patch("src.server.logger") as logger:
+            await server._prewarm_uniswap()
+        logger.warning.assert_not_called()
+        assert requested == [(sys.modules["y.constants"].usdc, 19000000)]
+        completed = [
+            call for call in logger.info.call_args_list if call.args[0].endswith("loading_done")
+        ]
+        assert len(completed) == 1
+        assert completed[0].kwargs["pools"] == 3
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("version", ["v2", "v3", "v3_fork"])
+    async def test_anchor_metadata_completes_at_startup_head(
         self, mock_y_module: None, version: str
     ) -> None:
         import sys
@@ -2905,15 +2943,15 @@ class TestUniswapPrewarm:
         finish = asyncio.Event()
         consumed: list[tuple[str, int]] = []
 
-        async def pools(token: str, block: int) -> AsyncIterator[object]:
+        async def pools(token: str, block: int) -> AsyncIterator[list[object]]:
             assert token in tokens and block == 19000000
             started.set()
             await finish.wait()
             consumed.append((token, block))
-            yield "pool"
+            yield ["pool"]
 
         class Router:
-            pools_for_token = staticmethod(pools)
+            pool_metadata_batches = staticmethod(pools)
 
             @property
             def __pools__(self) -> None:
@@ -2950,17 +2988,17 @@ class TestUniswapPrewarm:
 
         completed: list[str] = []
 
-        async def bad(token: str, block: int) -> AsyncIterator[object]:
+        async def bad(token: str, block: int) -> AsyncIterator[list[object]]:
             raise RuntimeError("indexed scan failed")
             yield  # pragma: no cover
 
-        async def good(token: str, block: int) -> AsyncIterator[object]:
+        async def good(token: str, block: int) -> AsyncIterator[list[object]]:
             completed.append(token)
-            yield "pool"
+            yield ["pool"]
 
         multiplexer = sys.modules["y.prices.dex.uniswap"].uniswap_multiplexer
-        failed = SimpleNamespace(pools_for_token=bad)
-        multiplexer.v2_routers = {"good": SimpleNamespace(pools_for_token=good)}
+        failed = SimpleNamespace(pool_metadata_batches=bad)
+        multiplexer.v2_routers = {"good": SimpleNamespace(pool_metadata_batches=good)}
         multiplexer.v3 = failed if version == "v3" else None
         multiplexer.v3_forks = [failed] if version == "v3_fork" else []
         if version == "v2":
@@ -2984,12 +3022,12 @@ class TestUniswapPrewarm:
         vars(sys.modules["y.constants"])["STABLECOINS"] = {native: "usdc", legacy: "usdbc"}
         requested: list[str] = []
 
-        async def pools(token: str, block: int) -> AsyncIterator[object]:
+        async def pools(token: str, block: int) -> AsyncIterator[list[object]]:
             requested.append(token)
-            yield "pool"
+            yield ["pool"]
 
         multiplexer = sys.modules["y.prices.dex.uniswap"].uniswap_multiplexer
-        multiplexer.v2_routers = {"test": SimpleNamespace(pools_for_token=pools)}
+        multiplexer.v2_routers = {"test": SimpleNamespace(pool_metadata_batches=pools)}
         await server._prewarm_uniswap()
         assert requested == [native]
 
@@ -2999,12 +3037,12 @@ class TestUniswapPrewarm:
 
         from src import server
 
-        async def cancelled(token: str, block: int) -> AsyncIterator[object]:
+        async def cancelled(token: str, block: int) -> AsyncIterator[list[object]]:
             raise asyncio.CancelledError()
             yield  # pragma: no cover
 
         multiplexer = sys.modules["y.prices.dex.uniswap"].uniswap_multiplexer
-        multiplexer.v2_routers = {"test": SimpleNamespace(pools_for_token=cancelled)}
+        multiplexer.v2_routers = {"test": SimpleNamespace(pool_metadata_batches=cancelled)}
         with pytest.raises(asyncio.CancelledError):
             await server._prewarm_uniswap()
 

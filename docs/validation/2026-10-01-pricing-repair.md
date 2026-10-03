@@ -339,6 +339,27 @@ candidate evidence only; further repair and production proof remain pending.
 
 ## Remaining delivery gates
 
+The latest [empty-cache Base WETH check](pricing-repair/base-empty-cache-weth-failure.json)
+still failed at 300.004 seconds despite successful startup in 18.22 seconds.
+This candidate used seven interpreted overlays from fork #48 over the original
+merged image; it is not final production-image proof. It stopped normally without
+an OOM. The profiler recorded more than 17,000 cache-range reads from the legacy
+background Uniswap warmup while foreground amount discovery was waiting.
+
+The server follow-up now warms the USDC anchor with compact metadata batches,
+counting entries without constructing pool objects or starting legacy filters.
+Three regressions fail on the prior server behavior, and the repaired server
+passes 336 tests, strict typing, formatting, lint, and dependency checks.
+The cold request is being repeated before accepting this repair.
+
+[Infrastructure PR #77](https://github.com/SatoshiAndKin/dockerfiles/pull/77)
+also corrects the proxy's explicit 128-block Geth log-history limit while leaving
+the state-history limit at 128. Its regression tests, complete local validation,
+native production-image configuration parser, and CI passed. The existing worker
+is applying the merged configuration; runtime and cold Ethereum acceptance are
+still pending. Ethereum continues using web3-proxy, and Base keeps its original
+provider.
+
 Validate and merge follow-up fork repairs, refresh the server lock against
 `master`, validate and deploy through the existing pipeline, then run the complete
 corrected historical/current matrix, public redirect and direct Tailscale/browser
