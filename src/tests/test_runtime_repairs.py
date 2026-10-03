@@ -356,3 +356,137 @@ async def test_bucket_transient_failure_retains_http_status(
     assert response.status_code == status
     assert "error" in response.json()
     assert lookup.await_count == 1
+
+
+@pytest.mark.asyncio
+async def test_optional_warmup_yields_until_every_owned_lookup_finishes() -> None:
+    from src.runtime import BackgroundWarmup, LookupSupervisor
+
+    starts = 0
+    warming, stopped, release = asyncio.Event(), asyncio.Event(), asyncio.Event()
+    active, first_finished = asyncio.Event(), asyncio.Event()
+
+    async def warm() -> None:
+        nonlocal starts
+        starts += 1
+        warming.set()
+        try:
+            await asyncio.Future()
+        finally:
+            stopped.set()
+
+    warmup = BackgroundWarmup(warm)
+    supervisor = LookupSupervisor(on_active=warmup.pause, on_idle=warmup.resume)
+    warmup.resume()
+    await asyncio.wait_for(warming.wait(), 1)
+
+    async def short() -> str:
+        active.set()
+        await release.wait()
+        return "short"
+
+    async def slow() -> str:
+        await release.wait()
+        await first_finished.wait()
+        return "slow"
+
+    short_task = asyncio.create_task(supervisor.run(short))
+    slow_task = asyncio.create_task(supervisor.run(slow))
+    try:
+        await asyncio.wait_for(active.wait(), 1)
+        await asyncio.wait_for(stopped.wait(), 1)
+        warming.clear()
+        release.set()
+        assert await short_task == "short"
+        assert starts == 1 and not warming.is_set()
+        first_finished.set()
+        assert await slow_task == "slow"
+        await asyncio.wait_for(warming.wait(), 1)
+        assert starts == 2
+    finally:
+        await supervisor.close()
+        await warmup.close()
+    assert warmup.done()
+
+
+@pytest.mark.asyncio
+async def test_warmup_resumption_waits_for_slow_cancellation_and_never_duplicates() -> None:
+    from src.runtime import BackgroundWarmup
+
+    starts = 0
+    entered, cancelled, cleanup = asyncio.Event(), asyncio.Event(), asyncio.Event()
+
+    async def warm() -> None:
+        nonlocal starts
+        starts += 1
+        entered.set()
+        try:
+            await asyncio.Future()
+        except asyncio.CancelledError:
+            cancelled.set()
+            await cleanup.wait()
+            raise
+
+    warmup = BackgroundWarmup(warm)
+    warmup.resume()
+    await asyncio.wait_for(entered.wait(), 1)
+    warmup.pause()
+    await asyncio.wait_for(cancelled.wait(), 1)
+    warmup.resume()
+    warmup.resume()
+    assert starts == 1
+    entered.clear()
+    cleanup.set()
+    await asyncio.wait_for(entered.wait(), 1)
+    assert starts == 2
+    await warmup.close()
+    warmup.resume()
+    assert starts == 2 and warmup.done()
+
+
+@pytest.mark.asyncio
+async def test_completed_warmup_is_not_restarted_before_completion_callback() -> None:
+    from src.runtime import BackgroundWarmup
+
+    work = AsyncMock()
+    warmup = BackgroundWarmup(work)
+    warmup.resume()
+    assert warmup.task is not None
+    await warmup.task
+    warmup.pause()
+    warmup.resume()
+    await asyncio.sleep(0)
+    work.assert_awaited_once()
+    await warmup.close()
+
+
+@pytest.mark.asyncio
+async def test_cancelled_last_queued_lookup_resumes_idle_warmup() -> None:
+    from src.runtime import LookupSupervisor
+
+    resumed, active, release = asyncio.Event(), asyncio.Event(), asyncio.Event()
+    supervisor = LookupSupervisor(active=1, on_idle=resumed.set)
+
+    async def first() -> None:
+        active.set()
+        await release.wait()
+
+    first_task = asyncio.create_task(supervisor.run(first))
+    await active.wait()
+    second_work = AsyncMock()
+    queued = asyncio.create_task(supervisor.run(second_work))
+    await asyncio.sleep(0)
+    assert supervisor.queued == 1
+    owned = next(iter(supervisor.tasks))
+    # Cancel the final queued waiter after slot release, before it can start.
+    owned.add_done_callback(lambda task: queued.cancel())
+    release.set()
+    try:
+        await first_task
+        with pytest.raises(asyncio.CancelledError):
+            await queued
+        assert supervisor.queued == 0 and not supervisor.tasks
+        second_work.assert_not_awaited()
+        assert resumed.is_set()
+    finally:
+        await supervisor.close()

@@ -10,7 +10,7 @@ from contextlib import asynccontextmanager
 from decimal import Decimal
 from importlib.metadata import PackageNotFoundError
 from importlib.metadata import version as _pkg_version
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 import sentry_sdk
 import structlog
@@ -42,7 +42,7 @@ from src.params import (
     parse_batch_params,
     parse_price_params,
 )
-from src.runtime import DeadlineMiddleware, LookupSupervisor, OverloadedError
+from src.runtime import BackgroundWarmup, DeadlineMiddleware, LookupSupervisor, OverloadedError
 
 if TYPE_CHECKING:
     from src.params import BatchParams
@@ -243,7 +243,7 @@ async def _prewarm_aave() -> None:
 
 
 async def _prewarm_balancer() -> None:
-    """Pre-load Balancer versions and consume V2 vault pool events through the head."""
+    """Pre-load Balancer versions and compact V2 registrations through the head."""
     try:
         from y.prices.dex.balancer.balancer import balancer_multiplexer
 
@@ -253,7 +253,10 @@ async def _prewarm_balancer() -> None:
         block = await _head_block()
         counts = (
             await asyncio.gather(
-                *(_consume_pool_inventory(vault.pools(block=block)) for vault in v2.vaults)
+                *(
+                    _consume_pool_metadata(cast(Any, vault).pool_metadata_batches(block))
+                    for vault in v2.vaults
+                )
             )
             if v2
             else []
@@ -338,8 +341,17 @@ async def _background_prewarm() -> None:
 async def _close_warmup() -> None:
     warmup = getattr(app.state, "warmup", None)
     if warmup is not None:
-        warmup.cancel()
-        await asyncio.wait([warmup], timeout=5)
+        await warmup.close()
+
+
+def _pause_background_warmup() -> None:
+    if warmup := getattr(app.state, "warmup", None):
+        warmup.pause()
+
+
+def _resume_background_warmup() -> None:
+    if warmup := getattr(app.state, "warmup", None):
+        warmup.resume()
 
 
 def _install_shutdown_handlers() -> dict[signal.Signals, Any]:
@@ -381,7 +393,9 @@ async def lifespan(app: FastAPI) -> Any:
     logging.getLogger("uvicorn.access").addFilter(_HealthAccessFilter())
 
     app.state.ready = False
-    app.state.lookups = LookupSupervisor()
+    app.state.lookups = LookupSupervisor(
+        on_active=_pause_background_warmup, on_idle=_resume_background_warmup
+    )
     app.state.warmup = None
     _shutdown_event.clear()
     # Chain the handlers installed by Uvicorn's capture_signals context. Removing
@@ -422,7 +436,8 @@ async def lifespan(app: FastAPI) -> Any:
         _init_sentry()
         if _shutdown_event.is_set():
             raise RuntimeError("shutdown during required initialization")
-        app.state.warmup = asyncio.create_task(_background_prewarm())
+        app.state.warmup = BackgroundWarmup(_background_prewarm)
+        app.state.warmup.resume()
     except BaseException as error:
         logger.error("startup_failed", error=str(error))
         for sig, handler in original_handlers.items():
@@ -764,7 +779,9 @@ def _make_overload_response() -> JSONResponse:
 async def _run_lookup(work: Any) -> Any:
     supervisor = getattr(app.state, "lookups", None)
     if supervisor is None or supervisor.loop is not asyncio.get_running_loop():
-        supervisor = app.state.lookups = LookupSupervisor()
+        supervisor = app.state.lookups = LookupSupervisor(
+            on_active=_pause_background_warmup, on_idle=_resume_background_warmup
+        )
     return await supervisor.run(work)
 
 

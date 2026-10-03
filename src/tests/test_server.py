@@ -3103,7 +3103,7 @@ class TestContractURLPolicy:
 
 class TestPrewarmReadiness:
     @pytest.mark.asyncio
-    async def test_balancer_warmup_consumes_vault_inventory(
+    async def test_balancer_warmup_consumes_compact_vault_metadata(
         self, mock_y_module: None, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         import sys
@@ -3113,12 +3113,12 @@ class TestPrewarmReadiness:
 
         consumed: list[int] = []
 
-        async def pools(*, block: int) -> AsyncIterator[object]:
+        async def pools(block: int) -> AsyncIterator[list[object]]:
             consumed.append(block)
-            yield "pool"
+            yield ["pool"]
 
         async def v2() -> object:
-            return SimpleNamespace(vaults=[SimpleNamespace(pools=pools)])
+            return SimpleNamespace(vaults=[SimpleNamespace(pool_metadata_batches=pools)])
 
         async def versions() -> list[object]:
             return []

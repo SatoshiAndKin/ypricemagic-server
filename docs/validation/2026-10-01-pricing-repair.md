@@ -337,33 +337,59 @@ same canonical hash, inside the existing deadline. The initial repaired copied-c
 run returned the unchanged WETH price `1969.89808` in 291.30 seconds. This is
 candidate evidence only; further repair and production proof remain pending.
 
+## Cold follow-up evidence (2026-10-03 UTC)
+
+The compact Uniswap warmup alone did not repair cold amount discovery. Factory
+inventories still ran sequentially, and Balancer's legacy live loader made a
+historical request wait for a current-head scan. Independent Uniswap inventories
+now overlap under the existing shared RPC limits. Balancer amount discovery reads
+block-bounded, paged registration metadata without pool objects or its live loader.
+Optional warmup yields while owned foreground lookups run and resumes when the
+last active or queued lookup finishes, including cancellation cleanup.
+
+The [fresh Base historical WETH amount check](pricing-repair/base-empty-historical-amount-pass.json)
+returned the exact `1969.89808` price in 217.256 seconds, with a 2.568 GB memory
+peak, zero OOMs, and a 2.690-second real SIGTERM shutdown. The same historical
+request previously timed out at 300 seconds. This remains candidate overlay
+proof; it does not establish the final installed fork or production image.
+
+The [fresh Ethereum Fastest check](pricing-repair/ethereum-empty-fastest-amount-pass.json)
+used the same production web3-proxy host's explicit `/fastest` endpoint. Required
+startup completed in 488.92 seconds, inside the unchanged 600-second grace. The
+historical USDC amount returned exactly `0.9989039883929369` in 237.184 seconds,
+with a 0.764 GB memory peak, zero OOMs, and a 0.581-second SIGTERM shutdown.
+Production's RPC setting has not been changed by this diagnostic.
+
+The [first current-block Base WETH request](pricing-repair/base-empty-current-deadline-failure.json)
+still expired at the 300-second deadline. A subsequent
+[larger-backfill candidate](pricing-repair/base-density-test-disk-failure.json)
+failed when the local validation Docker disk filled up. Both failures are retained.
+Only owned stopped test containers and their unique cache volumes were removed;
+production caches and retained database copies were preserved. Current-block cold
+acceptance is being repeated with available disk space.
+
+Infrastructure [PR #77](https://github.com/SatoshiAndKin/dockerfiles/pull/77)
+merged as `1a756fb233c189700af467d429fb6f0281bc17d0`. Deployment worker
+`2c8cb71f5e8446aba563bdbb054d909b` succeeded with exit zero. Both proxy configurations
+now retain Geth's archive log eligibility and its 128-block state limit. Runtime
+health passed and node/proxy/forwarder identities and restart counts were unchanged.
+
+The server passes 339 full-suite tests plus four subtests; the final queue-cancel
+regression also passes with all 31 runtime tests. Fork Python 3.12 targeted tests
+pass 401 cases using actual compiled dependency modules and strict typing. The
+older native full-suite run was interrupted after 24 deadline failures and 670
+passes; it is not accepted as green. A fresh full-suite run includes the latest
+protocol and Balancer repairs and restores Dank's default request rate from the
+validation-only five-request-per-second override.
+
 ## Remaining delivery gates
 
-The latest [empty-cache Base WETH check](pricing-repair/base-empty-cache-weth-failure.json)
-still failed at 300.004 seconds despite successful startup in 18.22 seconds.
-This candidate used seven interpreted overlays from fork #48 over the original
-merged image; it is not final production-image proof. It stopped normally without
-an OOM. The profiler recorded more than 17,000 cache-range reads from the legacy
-background Uniswap warmup while foreground amount discovery was waiting.
-
-The server follow-up now warms the USDC anchor with compact metadata batches,
-counting entries without constructing pool objects or starting legacy filters.
-Three regressions fail on the prior server behavior, and the repaired server
-passes 336 tests, strict typing, formatting, lint, and dependency checks.
-The cold request is being repeated before accepting this repair.
-
-[Infrastructure PR #77](https://github.com/SatoshiAndKin/dockerfiles/pull/77)
-also corrects the proxy's explicit 128-block Geth log-history limit while leaving
-the state-history limit at 128. Its regression tests, complete local validation,
-native production-image configuration parser, and CI passed. The existing worker
-is applying the merged configuration; runtime and cold Ethereum acceptance are
-still pending. Ethereum continues using web3-proxy, and Base keeps its original
-provider.
-
-Validate and merge follow-up fork repairs, refresh the server lock against
-`master`, validate and deploy through the existing pipeline, then run the complete
-corrected historical/current matrix, public redirect and direct Tailscale/browser
-smoke, timing comparisons, and at least 60 minutes of production soak with cache
-turnover, memory, restart, Docker OOM, and kernel OOM checks. Acceptance requires
-no unexpected pricing failures. The failed runs above cannot be erased by a
-successful recovery or restart.
+Complete first-current-block cold acceptance, persisted production-cache copies,
+full native validation and final image builds. Then merge follow-up fork repairs,
+refresh the server lock against `master`, validate and deploy through the existing
+pipeline, and verify the image and installed fork revisions plus both backend
+health checks. Complete the corrected current/historical matrix, public redirect
+and direct Tailscale/browser smoke, timing comparisons, and at least 60 minutes of
+production soak with concurrent traffic, cache turnover, memory, restart, Docker
+OOM, and kernel OOM checks. Acceptance requires no unexpected pricing failures.
+Failed runs are retained across recovery and restart.
