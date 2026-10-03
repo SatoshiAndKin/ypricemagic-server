@@ -1,7 +1,7 @@
 # Web3 v7 immutable pricing stack
 
 The server dependency is pinned to pricing revision
-`03acd2b9238def0549e7eaea371bd8d45c5e3377`, built on fork master `073c7ac8`.
+`a9f07c085c4d9d3bc152e1a6d0e9a88a4d7f5aa5`, built on fork master `073c7ac8`.
 That revision uses dank-mids `2a5a4d21fc8aa1d12a9146043871ade23084323c`, Brownie
 `7e529be8dfc1afa7bda2d6660c8a11c59a653a6e` and evmspec
 `f0df0d9d8e4e7a7000580054ce2c0b6b6193a14c`. The repaired ez-a-sync, cachebox
