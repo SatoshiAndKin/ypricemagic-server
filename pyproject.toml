@@ -3,7 +3,7 @@ name = "ypricemagic-server"
 version = "0.12.0"
 requires-python = ">=3.12,<3.13"
 dependencies = [
-    "ypricemagic @ git+https://github.com/SatoshiAndKin/ypricemagic.git@master",
+    "ypricemagic @ git+https://github.com/SatoshiAndKin/ypricemagic.git@8c8387ec15f4f8a119214df5971f10b79cfb6962",
     "fastapi",
     "uvicorn[standard]",
     "diskcache",
@@ -32,12 +32,12 @@ dev = [
 prerelease = "allow"
 # Allow old Brownie/ABI build pins and dank-mids' nested Git source in isolation.
 build-constraint-dependencies = [
-    "cchecksum>=0.3.0.dev0",
-    "evmspec @ git+https://github.com/SatoshiAndKin/evmspec.git@f0df0d9d8e4e7a7000580054ce2c0b6b6193a14c",
+    "cchecksum @ git+https://github.com/SatoshiAndKin/cchecksum.git@fff7e1fe87f4679ec96de1cebb1cdd8f5e94be44",
+    "evmspec @ git+https://github.com/SatoshiAndKin/evmspec.git@31c8540a14228ca49c77c19d565a6aaee3d0079f",
 ]
 override-dependencies = [
     # Brownie's frozen dependency list includes vulnerable and incompatible pins.
-    # Keep its Web3 6 API while allowing patched, compatible runtime packages.
+    # Preserve the server security overrides with the immutable Web3 v7 stack.
     "aiohttp>=3.14.3,<4",
     "cbor2>=5.9.0,<6",
     "idna>=3.20,<4",
@@ -47,9 +47,9 @@ override-dependencies = [
     "pytest>=8.0",
     "pytest-xdist>=3.0",
     "pytest-forked>=1.6",
-    "cchecksum>=0.4.3",
-    "faster-eth-abi>=5.2.30,<6",
-    "faster-eth-utils>=5.3.25",
+    "cchecksum @ git+https://github.com/SatoshiAndKin/cchecksum.git@fff7e1fe87f4679ec96de1cebb1cdd8f5e94be44",
+    "faster-eth-abi==5.2.30",
+    "faster-eth-utils==5.3.28",
     "protobuf>=6.33.5,<7",
     "ujson>=5.12.0",
     "urllib3>=2.6.3",
@@ -91,6 +91,7 @@ quote-style = "double"
 indent-style = "space"
 
 [tool.mypy]
+files = ["src"]
 python_version = "3.12"
 strict = true
 warn_return_any = true
@@ -103,7 +104,7 @@ python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
 asyncio_mode = "auto"
-addopts = "--durations=10 -v -p no:pytest_ethereum -p no:pytest-brownie"
+addopts = "--disable-plugin-autoload -p pytest_asyncio.plugin -p pytest_cov.plugin --durations=10 -v -p no:pytest_ethereum -p no:pytest-brownie --cov=src --cov-report=term-missing --cov-fail-under=60"
 
 [tool.coverage.run]
 source = ["src"]

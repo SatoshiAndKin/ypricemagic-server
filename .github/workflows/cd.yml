@@ -6,6 +6,10 @@ on:
   pull_request:
     branches: [main]
     types: [closed]
+    paths-ignore:
+      - "**.md"
+      - "docs/**"
+      - "runbooks/**"
   workflow_dispatch:
 
 concurrency:

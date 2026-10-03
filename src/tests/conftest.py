@@ -59,6 +59,21 @@ def ensure_tokenlist_fixture() -> None:
 
 
 @pytest.fixture(autouse=True)
+def isolated_price_cache(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> Generator[None, None, None]:
+    """Keep cached successes and failures scoped to their requesting test."""
+    from src import cache
+
+    cache.close_cache()
+    monkeypatch.setattr(cache, "CACHE_DIR", str(tmp_path / "prices"))
+    try:
+        yield
+    finally:
+        cache.close_cache()
+
+
+@pytest.fixture(autouse=True)
 def mock_y_module(monkeypatch: pytest.MonkeyPatch) -> None:
     """Mock the y module to avoid brownie network requirement during tests."""
 
