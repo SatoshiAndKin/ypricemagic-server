@@ -1,69 +1,52 @@
 # Web3 v7 immutable pricing stack
 
-The server dependency is pinned to pricing revision
-`f03904c8c79183703093bebc59ec6bf955e39e02`, built on fork master `073c7ac8`.
-That revision uses dank-mids `fa4b454fb8d33c2f412709da4daca522cd4f7e47`, Brownie
+The lock pins pricing `8c8387ec15f4f8a119214df5971f10b79cfb6962`, retaining
+pricing master `cb4a12376b807b1b9f27d9963f0c457edf02fda7`. It uses dank-mids
+`90baeae436f4d359538b11988c13a86004e2e087`, Brownie
 `7e529be8dfc1afa7bda2d6660c8a11c59a653a6e` and evmspec
-`f0df0d9d8e4e7a7000580054ce2c0b6b6193a14c`. The repaired ez-a-sync, cachebox
-and aiosqlite pins and existing server security overrides are preserved.
-The refreshed lock resolves Web3 7.16.0 exclusively.
+`31c8540a14228ca49c77c19d565a6aaee3d0079f`. Runtime overrides and isolated
+build constraints share cchecksum's owned-buffer revision
+`fff7e1fe87f4679ec96de1cebb1cdd8f5e94be44`. Existing native dependency fixes
+and security overrides are retained. The 149-package lock resolves Web3 7.16.0.
 
-The server implementation is unchanged: exact Decimal inputs, mixed batch order,
-duplicate tokens, spot cache behavior, transport deadlines, error sanitization,
-shutdown and existing cold-start mitigations retain their public contracts.
-Tests receive isolated disk caches to prevent cached responses from another test
-bypassing the behavior under test. Pytest flags and mypy targets are centralized
-in pyproject.toml; workflow/hook invocations use the configured runners. Workflow
-caches and path filters are retained, and immutable lock checks also run on PRs.
+Pin eth-abi 5.2.30 and faster-eth-utils 5.3.28, the exact versions tested in the
+native pricing image. Newer isolated source builds require a conflicting checksum
+version. Matching the tested graph makes a fresh locked build reproducible.
 
-A fresh Linux ARM64 image built using the existing Dockerfile and locked sources.
-All 333 server tests passed, including exact amounts, batching, cache/schema,
-startup/shutdown and cancellation regressions. Strict mypy passed all 18 source
-files; Ruff, formatting, actionlint and the immutable lock check passed. Application
-coverage was 89%. Installed native modules include Dank's controller and vendored
-aiolimiter, Brownie's caching middleware, evmspec._new, ez-a-sync, and the pricing
-conversion/exception modules. A separate pricing source run covers every changed
-runtime statement; compiled verification is independent.
+Current server main `de6a683` is merged, including uncached-request priority,
+readiness/deadline, routing and security repairs. The migration preserves public
+APIs, exact Decimal inputs, mixed batch ordering, duplicate tokens, spot caching,
+error sanitization, shutdown and existing cold-start mitigations. Test disk caches
+are isolated so previous responses cannot bypass the behavior under test. Pytest
+and mypy settings remain centralized; workflow caches/path filters are retained.
 
-The immutable Linux ARM64 image passed internal HTTP health, historical spot
-prices, duplicate/order-preserving batches, single and mixed amount requests,
-and spot-cache preservation on Ethereum (block 18,000,000) and Base (20,000,000).
-Independent native SDK checks retained exact raw amounts 1,000,001 and 2,000,001
-and canonical block hashes on both chains. The image uses its unchanged entrypoint
-and Dockerfile; no pricing overlays or diagnostic startup hooks were used.
+## Final image acceptance
 
-Validation-VM disk exhaustion interrupted the first run; only this migration's
-obsolete containers, caches and builder artifacts were removed before repeating
-acceptance. Base's first amount request reached the unchanged 300-second deadline
-while its catalog loaded. Repeating the same request after catalog loading passed,
-including exact amount and spot-cache assertions. This does not establish that
-an empty-cache Base amount request always completes within 300 seconds.
+A fresh Linux ARM64 image, `yprice-server:web3-v7-query-safe`, was built from the
+existing Dockerfile and locked sources. It runs the unchanged application entrypoint
+without pricing overlays or diagnostic startup hooks.
 
-The complete native pricing suite remains required. After the original archive
-provider exhausted its monthly capacity, an independent archive run completed
-2,310 passing cases and 17 skips with one batch/individual fOUSG price discrepancy
-at block 21,578,484. Three complete token-list replays at that block and all ten
-concurrent historical batch/individual tests passed unchanged. The full suite is
-being repeated with targeted price-path tracing. This migration remains draft
-pending that check. The archive profile uses a separate populated catalog snapshot,
-an encrypted loopback connection, eight concurrent cases and a 1,000-call multicall
-limit; it does not establish empty-cache startup performance. Deployment is separate.
+- **346 tests and four subtests passed** under the debug allocator.
+- Strict mypy passed **18 source files**; Ruff, formatting, deptry and the immutable
+  lock check passed. All hosted server checks passed, including backend image build.
+- Native imports include Dank's controller and vendored aiolimiter, Brownie's caching
+  middleware, evmspec._new, ez-a-sync and all ten declared pricing extensions.
+- All **eight real Ethereum HTTP scenarios** passed: health, historical USDC/WETH,
+  cached reads, ordered duplicate batches, single/mixed amounts and preservation
+  of the spot cache after amount quotes, at block 18,000,000.
+- Separate native SDK calls preserve raw USDC amounts **1,000,001** and **2,000,001**
+  with canonical block hash
+  `0x95b198e154acbfc64109dfd22d8224fe927fd8dfdedfae01587674482ba4baf3`.
 
+The freshly compiled pricing suite passed **2,664 tests with 17 skips**. Its separate
+source profile covers **40/40 changed runtime statements (100%)**, independently of
+compiled verification. Brownie's native memory/explorer regressions passed all
+77 cases, and the SDK archive suite passed all 33. Fresh evmspec builds pass 365
+cases with the same two pre-existing trace-enum failures as the original schema
+revision; those unrelated failures are documented in its build repair PR.
 
-The refreshed lock also pins cchecksum's owned-buffer repair at
-`fff7e1fe87f4679ec96de1cebb1cdd8f5e94be44` in runtime overrides and isolated
-build constraints. A fresh image with these exact sources passed all 333 server
-cases under the debug allocator, strict mypy for 18 files, Ruff, formatting,
-deptry and the immutable lock check. All eight Ethereum HTTP scenarios passed
-through encrypted loopback archive access. Repeating Base startup against the
-original provider hit its exhausted monthly quota; anonymous alternatives rejected
-large log requests or denied access. The prior Base image checks remain historical
-evidence and are not final acceptance of this refreshed image.
-
-The latest full pricing repeat completed 2,310 passes and 17 skips with two exact
-batch-equality failures in the yvCurve/IronBank lending market. A separate pricing
-repair isolates its oracle from simulated interest accrual while retaining JSON-RPC
-batching. Its controlled HTTP regression and three exact-block token-list replays
-pass, as do 827 focused cases and strict mypy for 242 files. This server lock still
-needs that final pricing revision and the completed full-suite acceptance. It is a
-draft and has not been deployed.
+Archive checks use a populated catalog snapshot and do not establish empty-cache
+startup performance. Final Base verification is explicitly deferred at the user's
+request following the original provider's exhausted monthly quota. Earlier Base
+results are not acceptance of this final image. No migration PR has been merged,
+and deployment remains a separate step. Original draft branches are retained.
