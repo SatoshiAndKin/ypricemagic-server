@@ -1,7 +1,7 @@
 # Web3 v7 immutable pricing stack
 
-The lock pins pricing `8ef2e54bf23e74573555c8feb6120fd6c3825925`, retaining merged
-pricing master `9fdfeb101751a1d82eb41dccb87c8c06fbac9e75`. It uses merged dank-mids
+The manifest and lock pin merged pricing master
+`e64d4282f4dfeca3b291f65790a6262ae3018965` (pricing PR #51). They directly pin merged dank-mids
 `33d64a962a2ff2a60f4ddb0d1d17e6b0fbbd89c0`, Brownie
 `7e529be8dfc1afa7bda2d6660c8a11c59a653a6e` and evmspec
 `31c8540a14228ca49c77c19d565a6aaee3d0079f`. Runtime overrides and isolated
@@ -77,3 +77,24 @@ cases** pass through the installed native controller. Archive checks use private
 catalog and ABI snapshots under the debug allocator, with 8 GiB/no swap/4 CPUs/512
 processes; they do not establish empty-cache startup performance. Server main's
 merged Base production pause is retained. Base verification remains deferred.
+
+## Merged pricing PR #51 acceptance
+
+The server directly pins pricing `e64d4282f4dfeca3b291f65790a6262ae3018965`
+and dank-mids `33d64a962a2ff2a60f4ddb0d1d17e6b0fbbd89c0`. Pricing's merged
+file tree is identical to the tested `8ef2e54b` revision above. The refreshed lock
+retains all 149 package versions and changes only the pricing source revision.
+
+A fresh actual-Dockerfile Linux ARM64 build,
+`yprice-server:merged-pricing-e64d428`, passes **346 tests and four subtests**, with
+**90.22% source coverage**, clean mypy (18 files), Ruff, formatting (26 files),
+deptry and locked/offline resolution. Direct-URL metadata verifies both merged
+revisions and the retained native dependency repairs. All 15 distinct audited
+modules load compiled extensions, including all ten pricing build targets.
+
+The unchanged entrypoint passes the same **eight real Ethereum HTTP scenarios**
+with a fresh price cache. Separate native calls preserve raw USDC amounts
+**1,000,001** and **2,000,001** with the exact canonical hash above. Graceful
+SIGTERM shutdown completes; Uvicorn then re-raises SIGTERM (expected exit 143).
+The validation uses private populated catalog/ABI snapshots with 8 GiB/no swap,
+4 CPUs and 512 processes. Base stays paused and its verification stays deferred.

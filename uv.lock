@@ -2223,7 +2223,7 @@ wheels = [
 [[package]]
 name = "ypricemagic"
 version = "0.0.1.dev1563"
-source = { git = "https://github.com/SatoshiAndKin/ypricemagic.git?rev=8ef2e54bf23e74573555c8feb6120fd6c3825925#8ef2e54bf23e74573555c8feb6120fd6c3825925" }
+source = { git = "https://github.com/SatoshiAndKin/ypricemagic.git?rev=e64d4282f4dfeca3b291f65790a6262ae3018965#e64d4282f4dfeca3b291f65790a6262ae3018965" }
 dependencies = [
     { name = "aiosqlite" },
     { name = "asyncpg" },
@@ -2254,6 +2254,7 @@ name = "ypricemagic-server"
 version = "0.12.0"
 source = { virtual = "." }
 dependencies = [
+    { name = "dank-mids" },
     { name = "diskcache" },
     { name = "fastapi" },
     { name = "prometheus-client" },
@@ -2281,6 +2282,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
+    { name = "dank-mids", git = "https://github.com/SatoshiAndKin/dank_mids.git?rev=33d64a962a2ff2a60f4ddb0d1d17e6b0fbbd89c0" },
     { name = "deptry", marker = "extra == 'dev'" },
     { name = "diskcache" },
     { name = "fastapi" },
@@ -2299,6 +2301,6 @@ requires-dist = [
     { name = "tenacity" },
     { name = "uvicorn", extras = ["standard"] },
     { name = "vulture", marker = "extra == 'dev'" },
-    { name = "ypricemagic", git = "https://github.com/SatoshiAndKin/ypricemagic.git?rev=8ef2e54bf23e74573555c8feb6120fd6c3825925" },
+    { name = "ypricemagic", git = "https://github.com/SatoshiAndKin/ypricemagic.git?rev=e64d4282f4dfeca3b291f65790a6262ae3018965" },
 ]
 provides-extras = ["dev"]
