@@ -1,8 +1,10 @@
 # Pricing, startup, and validation repair
 
-Updated October 2, 2026. The repair is in progress. Production acceptance has not been claimed. Production
-continues to run server `2cf834e5e63303a0d75431a22e000c14f45024e6` and pricing fork
-`69dda57e63039a359420a4177ca688c378e9be9a` until both linked repairs are validated.
+Updated October 2, 2026. The repair is in progress. Production acceptance has not
+been claimed. The first repair pair deployed server
+`be640a5bc2f0e1db3ced13b29b0f77fb7a5b4de7` with pricing fork
+`073c7ac801ca36128eb27efc64031851ab6f2101`. Its failed acceptance runs and remaining
+gates are recorded below.
 
 ## Reproduced failures and provenance
 
@@ -292,20 +294,177 @@ ski-lambo-1 was unreachable over both LAN and Tailscale from 06:20 UTC on
 October 2. It became reachable again with a new uptime around 15:56 UTC; the
 system Docker web3-proxy was healthy when checked, and both public backend
 health checks recovered. Candidate validation continued against an independent
-node during the outage. No provider switch or task deployment was performed.
+node during the outage. Production providers were preserved.
+
+## First repair deployment and uncovered failures
+
+Fork [PR #47](https://github.com/SatoshiAndKin/ypricemagic/pull/47) merged to
+`master` as `073c7ac801ca36128eb27efc64031851ab6f2101`, followed by server
+[PR #158](https://github.com/SatoshiAndKin/ypricemagic-server/pull/158), merged as
+`be640a5bc2f0e1db3ced13b29b0f77fb7a5b4de7`. All 13 fork checks and six server
+checks passed. [Deployment run 37064574100](https://github.com/SatoshiAndKin/ypricemagic-server/actions/runs/37064574100)
+succeeded; the deployment worker independently recorded success for request
+`9049ee4d6bca44ee94342bf1ce421a13`.
+
+[Deployment assertions](pricing-repair/production-first-deployment-assertions.json)
+passed for all three images. Both backends installed the merged fork revision,
+loaded compiled code, retained their original provider and cache volumes, and
+have an 8 GiB limit with swap disabled. Container-to-ready times were 17.56 seconds
+for Ethereum and 21.46 seconds for Base. Neither backend had an OOM or restart.
+
+Production acceptance **failed**. The [public timing run](pricing-repair/production-first-deployment-benchmark.json)
+passed 16 requests before Base WETH at block 24,000,000, amount `0.1`, returned
+HTTP 504 after 300.07 seconds. The server enforced one deadline promptly, but the
+underlying cold discovery remains a release failure. Historical USDC goldens and
+mixed-batch ordering still matched exactly. Ethereum's first historical quote
+was 8.53 seconds, first historical WETH 52.51 seconds, and three previously unseen
+recent-block quotes 9.45, 7.34, and 7.18 seconds. These timings do not establish a
+complete matrix or soak.
+
+The separate [candidate turnover run](pricing-repair/candidate-turnover-failure.json)
+also failed: Ethereum USDC at block 26,107,234, amount `1000.000001`, returned
+HTTP 504 after 35.88 seconds. Both chains completed 2,200 distinct amounts and
+retained exact post-eviction historical results; there were no OOMs or restarts.
+Peak cgroup use was approximately 1.00 GiB for Ethereum and 4.58 GiB for Base.
+This isolated run lasted 54.81 minutes and is not a production soak. Its failure
+remains recorded independently of any later recovery.
+
+A fresh copy of the untouched Base production SQLite backup reproduced the
+WETH failure at 300.01 seconds. Profiling found expensive historical backfill
+and many immutable Solidly stable-flag reads. Follow-up work carries the stable
+flag from the factory event and retries one transient transport timeout at the
+same canonical hash, inside the existing deadline. The initial repaired copied-cache
+run returned the unchanged WETH price `1969.89808` in 291.30 seconds. This is
+candidate evidence only; further repair and production proof remain pending.
+
+## Cold follow-up evidence (2026-10-03 UTC)
+
+The compact Uniswap warmup alone did not repair cold amount discovery. Factory
+inventories still ran sequentially, and Balancer's legacy live loader made a
+historical request wait for a current-head scan. Independent Uniswap inventories
+now overlap under the existing shared RPC limits. Balancer amount discovery reads
+block-bounded, paged registration metadata without pool objects or its live loader.
+Optional warmup yields while owned foreground lookups run and resumes when the
+last active or queued lookup finishes, including cancellation cleanup.
+
+The [fresh Base historical WETH amount check](pricing-repair/base-empty-historical-amount-pass.json)
+returned the exact `1969.89808` price in 217.256 seconds, with a 2.568 GB memory
+peak, zero OOMs, and a 2.690-second real SIGTERM shutdown. The same historical
+request previously timed out at 300 seconds. This remains candidate overlay
+proof; it does not establish the final installed fork or production image.
+
+The [fresh Ethereum Fastest check](pricing-repair/ethereum-empty-fastest-amount-pass.json)
+used the same production web3-proxy host's explicit `/fastest` endpoint. Required
+startup completed in 488.92 seconds, inside the unchanged 600-second grace. The
+historical USDC amount returned exactly `0.9989039883929369` in 237.184 seconds,
+with a 0.764 GB memory peak, zero OOMs, and a 0.581-second SIGTERM shutdown.
+Production's RPC setting has not been changed by this diagnostic.
+
+The [first current-block Base WETH request](pricing-repair/base-empty-current-deadline-failure.json)
+still expired at the 300-second deadline. A subsequent
+[larger-backfill candidate](pricing-repair/base-density-test-disk-failure.json)
+failed when the local validation Docker disk filled up. Both failures are retained.
+Only owned stopped test containers and their unique cache volumes were removed;
+production caches and retained database copies were preserved. Current-block cold
+acceptance is being repeated with available disk space.
+
+Infrastructure [PR #77](https://github.com/SatoshiAndKin/dockerfiles/pull/77)
+merged as `1a756fb233c189700af467d429fb6f0281bc17d0`. Deployment worker
+`2c8cb71f5e8446aba563bdbb054d909b` succeeded with exit zero. Both proxy configurations
+now retain Geth's archive log eligibility and its 128-block state limit. Runtime
+health passed and node/proxy/forwarder identities and restart counts were unchanged.
+
+The server passes 339 full-suite tests plus four subtests; the final queue-cancel
+regression also passes with all 31 runtime tests. Fork Python 3.12 targeted tests
+pass 401 cases using actual compiled dependency modules and strict typing. The
+older native full-suite run was interrupted after 24 deadline failures and 670
+passes; it is not accepted as green. A fresh full-suite run includes the latest
+protocol and Balancer repairs and restores Dank's default request rate from the
+validation-only five-request-per-second override.
+
+## Final runtime verification and provider block (2026-10-03 UTC)
+
+Fork [PR #48](https://github.com/SatoshiAndKin/ypricemagic/pull/48) at runtime
+revision `71d227ea` completed native Python 3.12 validation: **2,640 passed,
+17 skipped**, strict mypy across 244 files, and all ten compiled-module imports.
+The final focused run passed 652 tests. The final native run took 32.55 minutes,
+peaked at 3,588,620,288 cgroup bytes, and recorded no OOM or limit events under
+8 GiB with zero swap. Complete provenance is retained in the fork's
+[audit directory](https://github.com/SatoshiAndKin/ypricemagic/tree/fix/cold-pool-state-recovery/audits/results/2026-10-02-cold-pricing-followup).
+
+The physical-host truly empty Base candidate passed startup in **552.39 seconds**
+and first current WETH amount 0.1 in **280.02 seconds**. A consistent read-only
+copy of production caches then passed Ethereum's 16-phase benchmark, including
+exact historical USDC, unseen tokens, changed amounts, repeats and three distinct
+blocks. Its current WETH first/repeat/changed-amount timings were
+**98.682 / 0.041 / 0.097 seconds**. Base's copied-cache historical and three-block
+phases passed, but current WETH at block **52117208** still returned **HTTP 504
+after 300.003 seconds**. That failure remains a release gate.
+
+The corrected candidate matrix passed **112 comparisons** (94 Ethereum,
+18 Base), with each required chain explicitly checked. Eight Ethereum cases
+establish availability without an independent reference. These are isolated
+interpreted-overlay checks on copied caches; they do not establish final-image
+identity, production routing, or a successful soak.
+
+At 11:03 UTC, the unchanged Base Alchemy endpoint returned **HTTP 429: monthly
+capacity limit exceeded**. It still denied requests at 11:23 UTC. Production
+Ethereum remained healthy, while Base became unhealthy; neither backend restarted
+or OOMed. Capacity restoration is requested, and provider/billing configuration
+was not changed. This later denial does not erase or establish the cause of the
+earlier copied-cache timeout. A subsequent GC diagnostic failed during startup
+and produced no quote profile.
+
+The outage exposed an older routing failure: the default Docker provider removes
+unhealthy service routes and returns HTTP 404. App labels now use
+`traefik.docker.allownonrunning=true` to retain routes through startup, unhealthy
+periods and shutdown on the deployed Traefik 3.7.13. Traefik still excludes those
+containers from the load balancer. Explicit service names use the default
+`passhostheader=true` setting, allowing each image's single exposed port to be
+selected without a partial empty server entry. An explicit `server.port` label
+instead returns HTTP 500 while empty; the failed candidate is retained.
+
+The existing deployment worker only updates app containers. The per-container
+option therefore deploys through that pipeline without a shared-proxy update.
+The shared global-setting experiment in proxy PR #3 is superseded and its subtree
+import reverted; neither was deployed.
+
+The actual [Ethereum labels and aggregate health](pricing-repair/proxy-health-routing-ethereum.json)
+and [Base labels and chain health](pricing-repair/proxy-health-routing-base.json)
+passed isolated Docker routing checks: unavailable HTTP 503, healthy/recovered
+HTTP 200, unknown host HTTP 404, stopped HTTP 503 and restarted HTTP 200. A healthy
+replacement remains reachable with a stopped old replica; two stopped replicas
+return 503 and recovery succeeds. The three Compose files validate. Server
+verification again passed **346 tests plus four subtests**, 90.22% coverage,
+Ruff, formatting, strict mypy across 18 files and deptry. The app routing repair and linked pricing follow-ups remain unmerged and
+undeployed.
+
+## Follow-up merge and lock refresh (2026-10-03 UTC)
+
+Fork PR #48 merged at 16:29 UTC as
+`cb4a12376b807b1b9f27d9963f0c457edf02fda7`. The server lockfile was refreshed
+from fork `master` to that exact revision, without changing other package versions.
+Its local Python 3.12 installation includes all ten native extensions; the ten
+changed runtime files match the final native-validated source hashes.
+[Installation evidence](pricing-repair/merged-followup-fork-installation.json)
+distinguishes extension-file checks from the previous full native import tests.
+The refreshed environment passed 346 server tests plus four subtests, 90.22%
+coverage, Ruff, formatting, strict mypy, deptry and lockfile validation. The final
+amd64 image CI build must pass with this lock before the server PR merges.
+
+At 16:30 UTC, production Ethereum remained healthy; Base still returned the
+Alchemy monthly-capacity HTTP 429. Neither backend had restarted or OOMed.
+The copied-cache Base quote failure and production acceptance gates remain
+recorded separately from the authorized PR merges.
 
 ## Remaining delivery gates
 
-Fork repair [PR #47](https://github.com/SatoshiAndKin/ypricemagic/pull/47) merged
-to `master` as `073c7ac801ca36128eb27efc64031851ab6f2101` after all 13 CI checks
-and the complete native validation passed. The companion server
-[PR #158](https://github.com/SatoshiAndKin/ypricemagic-server/pull/158) now locks
-that exact `master` revision. The production frontend Dockerfile built
-successfully. The [refreshed production backend image](pricing-repair/merged-fork-production-image.json)
-built, imported its compiled dependencies, and contains all ten expected compiled
-pricing files at the merged fork revision. All 333 server tests and static checks
-passed with that lock. Remaining gates: server CI validation,
-server merge, pipeline deployment with image
-and installed dependency revision checks, corrected historical/current matrix,
-public redirect and browser smoke, and a 60-minute production soak with cache
-turnover, memory, restart, Docker OOM, and kernel OOM checks.
+Complete the server lock-refresh CI and merge the server follow-up. Then deploy
+through the existing pipeline and verify image and installed fork revisions plus
+both backend health checks. Base capacity restoration and a passing copied-cache
+current amount quote remain required for production acceptance. Complete the
+corrected current/historical matrix, public redirect and direct Tailscale/browser
+smoke, timing comparisons, and at least 60 minutes of production soak with
+concurrent traffic, cache turnover, memory, restart, Docker OOM, and kernel OOM
+checks. Acceptance requires no unexpected pricing failures. Failed runs are
+retained across recovery and restart.

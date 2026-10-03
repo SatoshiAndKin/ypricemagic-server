@@ -15,16 +15,75 @@ class OverloadedError(Exception):
     """No lookup capacity is available."""
 
 
+class BackgroundWarmup:
+    """Resume optional initialization only when foreground lookup work is idle."""
+
+    def __init__(self, work: Callable[[], Awaitable[None]]) -> None:
+        self.work = work
+        self.task: asyncio.Task[None] | None = None
+        self.paused = True
+        self.closing = False
+        self.completed = False
+
+    def pause(self) -> None:
+        self.paused = True
+        if self.task is not None:
+            self.task.cancel()
+
+    def resume(self) -> None:
+        self.paused = False
+        if self.closing or self.completed or (self.task is not None and not self.task.done()):
+            return
+        if self.task is not None and not self.task.cancelled():
+            self.completed = True
+            self.task.exception()
+            return
+
+        async def execute() -> None:
+            await self.work()
+
+        self.task = asyncio.create_task(execute())
+        self.task.add_done_callback(self._finished)
+
+    def _finished(self, task: asyncio.Task[None]) -> None:
+        if not task.cancelled():
+            self.completed = True
+            task.exception()
+        elif not self.paused:
+            self.resume()
+
+    def cancel(self) -> None:
+        self.closing = True
+        self.pause()
+
+    def done(self) -> bool:
+        return self.task is None or self.task.done()
+
+    async def close(self) -> None:
+        self.cancel()
+        if self.task is not None:
+            await asyncio.wait([self.task], timeout=5)
+
+
 class LookupSupervisor:
     """Own lookup tasks and retain their slot until cleanup actually finishes."""
 
-    def __init__(self, active: int = 2, queued: int = 32) -> None:
+    def __init__(
+        self,
+        active: int = 2,
+        queued: int = 32,
+        *,
+        on_active: Callable[[], None] | None = None,
+        on_idle: Callable[[], None] | None = None,
+    ) -> None:
         self.loop = asyncio.get_running_loop()
         self.slots = asyncio.Semaphore(active)
         self.max_queued = queued
         self.queued = 0
         self.tasks: set[asyncio.Task[Any]] = set()
         self.closing = False
+        self.on_active = on_active
+        self.on_idle = on_idle
 
     async def run(self, work: Callable[[], Awaitable[T]]) -> T:
         if self.closing or (self.slots.locked() and self.queued >= self.max_queued):
@@ -32,11 +91,18 @@ class LookupSupervisor:
         self.queued += 1
         try:
             await self.slots.acquire()
-        finally:
+        except asyncio.CancelledError:
+            self.queued -= 1
+            self._resume_when_idle()
+            raise
+        else:
             self.queued -= 1
         if self.closing:
             self.slots.release()
             raise OverloadedError("Price lookup backend is draining")
+
+        if self.on_active is not None:
+            self.on_active()
 
         async def execute() -> T:
             return await work()
@@ -55,6 +121,11 @@ class LookupSupervisor:
         self.slots.release()
         if not task.cancelled():
             task.exception()  # Observe failures even after the client has left.
+        self._resume_when_idle()
+
+    def _resume_when_idle(self) -> None:
+        if not self.closing and not self.tasks and not self.queued and self.on_idle is not None:
+            self.on_idle()
 
     def cancel(self) -> None:
         self.closing = True

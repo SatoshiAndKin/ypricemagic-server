@@ -1,0 +1,23 @@
+{
+  "installed_commit_url": "https://github.com/SatoshiAndKin/ypricemagic/commit/cb4a12376b807b1b9f27d9963f0c457edf02fda7",
+  "python_version": "3.12.12 (main, Feb 12 2026, 00:42:34) [Clang 21.1.4 ]",
+  "compiled_extension_files": {
+    "y._db.brownie": "/Users/bryan/code/ypricemagic-server/.venv/lib/python3.12/site-packages/y/_db/brownie.cpython-312-darwin.so",
+    "y._db.config": "/Users/bryan/code/ypricemagic-server/.venv/lib/python3.12/site-packages/y/_db/config.cpython-312-darwin.so",
+    "y._db.decorators": "/Users/bryan/code/ypricemagic-server/.venv/lib/python3.12/site-packages/y/_db/decorators.cpython-312-darwin.so",
+    "y._db.utils.stringify": "/Users/bryan/code/ypricemagic-server/.venv/lib/python3.12/site-packages/y/_db/utils/stringify.cpython-312-darwin.so",
+    "y.ENVIRONMENT_VARIABLES": "/Users/bryan/code/ypricemagic-server/.venv/lib/python3.12/site-packages/y/ENVIRONMENT_VARIABLES.cpython-312-darwin.so",
+    "y.convert": "/Users/bryan/code/ypricemagic-server/.venv/lib/python3.12/site-packages/y/convert.cpython-312-darwin.so",
+    "y.exceptions": "/Users/bryan/code/ypricemagic-server/.venv/lib/python3.12/site-packages/y/exceptions.cpython-312-darwin.so",
+    "y.networks": "/Users/bryan/code/ypricemagic-server/.venv/lib/python3.12/site-packages/y/networks.cpython-312-darwin.so",
+    "y.prices.utils.sense_check": "/Users/bryan/code/ypricemagic-server/.venv/lib/python3.12/site-packages/y/prices/utils/sense_check.cpython-312-darwin.so",
+    "y.utils.gather": "/Users/bryan/code/ypricemagic-server/.venv/lib/python3.12/site-packages/y/utils/gather.cpython-312-darwin.so"
+  },
+  "runtime_overlay_hashes_match_final_native_validated_source": true,
+  "dependency_imports": [
+    "brownie",
+    "dank_mids",
+    "cachebox"
+  ],
+  "scope": "Local Python 3.12 installation and extension files; real native imports and full fork runtime tests are in the previous 2640-test validation. Final amd64 image build remains a CI check."
+}

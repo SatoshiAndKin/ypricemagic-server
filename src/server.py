@@ -10,7 +10,7 @@ from contextlib import asynccontextmanager
 from decimal import Decimal
 from importlib.metadata import PackageNotFoundError
 from importlib.metadata import version as _pkg_version
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 import sentry_sdk
 import structlog
@@ -42,7 +42,7 @@ from src.params import (
     parse_batch_params,
     parse_price_params,
 )
-from src.runtime import DeadlineMiddleware, LookupSupervisor, OverloadedError
+from src.runtime import BackgroundWarmup, DeadlineMiddleware, LookupSupervisor, OverloadedError
 
 if TYPE_CHECKING:
     from src.params import BatchParams
@@ -138,17 +138,27 @@ async def _consume_pool_inventory(pools: AsyncIterator[Any]) -> int:
     return count
 
 
+async def _consume_pool_metadata(batches: AsyncIterator[list[Any]]) -> int:
+    count = 0
+    async for batch in batches:
+        count += len(batch)
+    return count
+
+
 async def _head_block() -> int:
     from dank_mids.brownie_patch import dank_eth
 
     return int(await dank_eth.block_number)
 
 
-async def _prewarm_uniswap() -> None:
-    """Load indexed USDC pools through the startup head.
+async def _prewarm_uniswap(*, required: bool = False) -> None:
+    """Load compact USDC metadata through the startup head.
 
     Other tokens are discovered on demand. Routers populate the anchor indexes
-    in the owned background warmup; independent failures remain non-fatal.
+    in the owned warmup. Base requires the shared factory backfill before
+    readiness so its first current-block quote can reuse the raw event history.
+    Use the shared raw scan without constructing pool objects or starting legacy
+    filters that continue polling and compete with foreground discovery.
     """
     from y.constants import STABLECOINS
     from y.prices.dex.uniswap import uniswap_multiplexer
@@ -159,9 +169,19 @@ async def _prewarm_uniswap() -> None:
     async def _load(router: Any, version: str, name: str) -> None:
         try:
             logger.info(f"uniswap_{version}_pools_loading_started", router=name, tokens=tokens)
-            counts = await asyncio.gather(
-                *(_consume_pool_inventory(router.pools_for_token(token, block)) for token in tokens)
-            )
+            tasks = [
+                asyncio.create_task(
+                    _consume_pool_metadata(router.pool_metadata_batches(token, block))
+                )
+                for token in tokens
+            ]
+            try:
+                counts = await asyncio.gather(*tasks)
+            finally:
+                for task in tasks:
+                    if not task.done():
+                        task.cancel()
+                await asyncio.gather(*tasks, return_exceptions=True)
             logger.info(
                 f"uniswap_{version}_pools_loading_done",
                 router=name,
@@ -170,13 +190,22 @@ async def _prewarm_uniswap() -> None:
                 block=block,
             )
         except Exception as error:
+            if required:
+                raise
             logger.warning("uniswap_prewarm_failed", router=name, version=version, error=str(error))
 
     tasks = [_load(router, "v2", name) for name, router in uniswap_multiplexer.v2_routers.items()]
     if uniswap_multiplexer.v3:
         tasks.append(_load(uniswap_multiplexer.v3, "v3", str(uniswap_multiplexer.v3)))
     tasks.extend(_load(fork, "v3", str(fork)) for fork in uniswap_multiplexer.v3_forks)
-    await asyncio.gather(*tasks)
+    owned = [asyncio.create_task(task) for task in tasks]
+    try:
+        await asyncio.gather(*owned)
+    finally:
+        for task in owned:
+            if not task.done():
+                task.cancel()
+        await asyncio.gather(*owned, return_exceptions=True)
 
 
 async def _prewarm_compound() -> None:
@@ -231,7 +260,7 @@ async def _prewarm_aave() -> None:
 
 
 async def _prewarm_balancer() -> None:
-    """Pre-load Balancer versions and consume V2 vault pool events through the head."""
+    """Pre-load Balancer versions and compact V2 registrations through the head."""
     try:
         from y.prices.dex.balancer.balancer import balancer_multiplexer
 
@@ -241,7 +270,10 @@ async def _prewarm_balancer() -> None:
         block = await _head_block()
         counts = (
             await asyncio.gather(
-                *(_consume_pool_inventory(vault.pools(block=block)) for vault in v2.vaults)
+                *(
+                    _consume_pool_metadata(cast(Any, vault).pool_metadata_batches(block))
+                    for vault in v2.vaults
+                )
             )
             if v2
             else []
@@ -278,6 +310,8 @@ async def _prewarm_with_shutdown(curve_registry: Any) -> None:
     prewarm_tasks: list[asyncio.Task[None]] = [
         asyncio.create_task(_prewarm_curve()),
     ]
+    if CHAIN_NAME == "base":
+        prewarm_tasks.append(asyncio.create_task(_prewarm_uniswap(required=True)))
 
     async def _wait_for_shutdown() -> None:
         await _shutdown_event.wait()
@@ -326,8 +360,17 @@ async def _background_prewarm() -> None:
 async def _close_warmup() -> None:
     warmup = getattr(app.state, "warmup", None)
     if warmup is not None:
-        warmup.cancel()
-        await asyncio.wait([warmup], timeout=5)
+        await warmup.close()
+
+
+def _pause_background_warmup() -> None:
+    if warmup := getattr(app.state, "warmup", None):
+        warmup.pause()
+
+
+def _resume_background_warmup() -> None:
+    if warmup := getattr(app.state, "warmup", None):
+        warmup.resume()
 
 
 def _install_shutdown_handlers() -> dict[signal.Signals, Any]:
@@ -369,7 +412,9 @@ async def lifespan(app: FastAPI) -> Any:
     logging.getLogger("uvicorn.access").addFilter(_HealthAccessFilter())
 
     app.state.ready = False
-    app.state.lookups = LookupSupervisor()
+    app.state.lookups = LookupSupervisor(
+        on_active=_pause_background_warmup, on_idle=_resume_background_warmup
+    )
     app.state.warmup = None
     _shutdown_event.clear()
     # Chain the handlers installed by Uvicorn's capture_signals context. Removing
@@ -410,7 +455,8 @@ async def lifespan(app: FastAPI) -> Any:
         _init_sentry()
         if _shutdown_event.is_set():
             raise RuntimeError("shutdown during required initialization")
-        app.state.warmup = asyncio.create_task(_background_prewarm())
+        app.state.warmup = BackgroundWarmup(_background_prewarm)
+        app.state.warmup.resume()
     except BaseException as error:
         logger.error("startup_failed", error=str(error))
         for sig, handler in original_handlers.items():
@@ -752,7 +798,9 @@ def _make_overload_response() -> JSONResponse:
 async def _run_lookup(work: Any) -> Any:
     supervisor = getattr(app.state, "lookups", None)
     if supervisor is None or supervisor.loop is not asyncio.get_running_loop():
-        supervisor = app.state.lookups = LookupSupervisor()
+        supervisor = app.state.lookups = LookupSupervisor(
+            on_active=_pause_background_warmup, on_idle=_resume_background_warmup
+        )
     return await supervisor.run(work)
 
 

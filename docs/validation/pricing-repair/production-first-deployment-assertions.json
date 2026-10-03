@@ -1,0 +1,26 @@
+{
+  "passed": true,
+  "services": [
+    {
+      "service": "frontend",
+      "passed": true,
+      "revision": "be640a5bc2f0e1db3ced13b29b0f77fb7a5b4de7",
+      "startup_seconds": null,
+      "container_to_ready_seconds": null
+    },
+    {
+      "service": "ypm-ethereum",
+      "passed": true,
+      "revision": "be640a5bc2f0e1db3ced13b29b0f77fb7a5b4de7",
+      "startup_seconds": 11.57,
+      "container_to_ready_seconds": 17.559508
+    },
+    {
+      "service": "ypm-base",
+      "passed": true,
+      "revision": "be640a5bc2f0e1db3ced13b29b0f77fb7a5b4de7",
+      "startup_seconds": 15.51,
+      "container_to_ready_seconds": 21.463586
+    }
+  ]
+}
