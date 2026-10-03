@@ -227,10 +227,10 @@ The gear icon (⚙) opens a tokenlist manager where you can toggle lists on/off,
 
 ## Supported Chains
 
-| Chain     | Chain ID |
-|-----------|----------|
-| ethereum  | 1        |
-| base      | 8453     |
+| Chain                       | Chain ID |
+|-----------------------------|----------|
+| ethereum                    | 1        |
+| base (paused in production) | 8453     |
 
 ## Tech Stack
 
@@ -302,10 +302,14 @@ images after a PR merges to `main`, or after a manual workflow dispatch. It then
 posts the merged commit to Tank's deployment webhook. Tank rolls out the services
 and records the final health result separately from the GitHub delivery result.
 
-Production runs Ethereum, Base, and the frontend. The frontend and API documentation
-list only these two chains. Removing a service from Compose does not remove an
-existing container; retire its containers separately and keep the named cache
-volumes. Do not use volume removal during this change.
+Production runs Ethereum and the frontend. Base pricing is temporarily paused after
+its Alchemy RPC reached the monthly capacity limit; it is omitted from production
+Compose so deployments cannot restart it. Base implementation support remains for
+later reactivation, and its named cache volumes are retained.
+
+Removing a service from Compose does not stop an existing container. Disable its
+restart policy and stop it separately; do not remove its named volumes. Restore
+Base to production Compose only when an acceptable RPC source is available.
 
 Required GitHub Actions settings: `DEPLOY_WEBHOOK_URL` variable and `WEBHOOK_SECRET`
 secret.
@@ -313,8 +317,8 @@ secret.
 ## Private production access
 
 The production UI is https://ski-nuc-3.shorthair-fir.ts.net:9443/. Connect to
-Tailscale first. Chain APIs keep their existing paths, such as `/ethereum` and
-`/base`. The previous `ypricemagic.stytt.com` route is retired.
+Tailscale first. Ethereum APIs keep their existing `/ethereum` paths. Base APIs are
+unavailable while Base pricing is paused. The previous `ypricemagic.stytt.com` route is retired.
 
 Set `VIRTUAL_HOST=ski-nuc-3.shorthair-fir.ts.net` and
 `TRAEFIK_ENTRYPOINT=web2` in the production `.env`. Set
