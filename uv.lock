@@ -493,7 +493,7 @@ wheels = [
 [[package]]
 name = "dank-mids"
 version = "4.20.215"
-source = { git = "https://github.com/SatoshiAndKin/dank_mids.git?rev=90baeae436f4d359538b11988c13a86004e2e087#90baeae436f4d359538b11988c13a86004e2e087" }
+source = { git = "https://github.com/SatoshiAndKin/dank_mids.git?rev=33d64a962a2ff2a60f4ddb0d1d17e6b0fbbd89c0#33d64a962a2ff2a60f4ddb0d1d17e6b0fbbd89c0" }
 dependencies = [
     { name = "aiofiles" },
     { name = "aiolimiter" },
@@ -2222,8 +2222,8 @@ wheels = [
 
 [[package]]
 name = "ypricemagic"
-version = "0.0.1.dev1573"
-source = { git = "https://github.com/SatoshiAndKin/ypricemagic.git?rev=8c8387ec15f4f8a119214df5971f10b79cfb6962#8c8387ec15f4f8a119214df5971f10b79cfb6962" }
+version = "0.0.1.dev1563"
+source = { git = "https://github.com/SatoshiAndKin/ypricemagic.git?rev=8ef2e54bf23e74573555c8feb6120fd6c3825925#8ef2e54bf23e74573555c8feb6120fd6c3825925" }
 dependencies = [
     { name = "aiosqlite" },
     { name = "asyncpg" },
@@ -2299,6 +2299,6 @@ requires-dist = [
     { name = "tenacity" },
     { name = "uvicorn", extras = ["standard"] },
     { name = "vulture", marker = "extra == 'dev'" },
-    { name = "ypricemagic", git = "https://github.com/SatoshiAndKin/ypricemagic.git?rev=8c8387ec15f4f8a119214df5971f10b79cfb6962" },
+    { name = "ypricemagic", git = "https://github.com/SatoshiAndKin/ypricemagic.git?rev=8ef2e54bf23e74573555c8feb6120fd6c3825925" },
 ]
 provides-extras = ["dev"]
