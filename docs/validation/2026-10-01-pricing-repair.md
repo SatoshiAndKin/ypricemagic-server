@@ -439,14 +439,32 @@ verification again passed **346 tests plus four subtests**, 90.22% coverage,
 Ruff, formatting, strict mypy across 18 files and deptry. The app routing repair and linked pricing follow-ups remain unmerged and
 undeployed.
 
+## Follow-up merge and lock refresh (2026-10-03 UTC)
+
+Fork PR #48 merged at 16:29 UTC as
+`cb4a12376b807b1b9f27d9963f0c457edf02fda7`. The server lockfile was refreshed
+from fork `master` to that exact revision, without changing other package versions.
+Its local Python 3.12 installation includes all ten native extensions; the ten
+changed runtime files match the final native-validated source hashes.
+[Installation evidence](pricing-repair/merged-followup-fork-installation.json)
+distinguishes extension-file checks from the previous full native import tests.
+The refreshed environment passed 346 server tests plus four subtests, 90.22%
+coverage, Ruff, formatting, strict mypy, deptry and lockfile validation. The final
+amd64 image CI build must pass with this lock before the server PR merges.
+
+At 16:30 UTC, production Ethereum remained healthy; Base still returned the
+Alchemy monthly-capacity HTTP 429. Neither backend had restarted or OOMed.
+The copied-cache Base quote failure and production acceptance gates remain
+recorded separately from the authorized PR merges.
+
 ## Remaining delivery gates
 
-Complete first-current-block cold acceptance, persisted production-cache copies,
-full native validation and final image builds. Then merge follow-up fork repairs,
-refresh the server lock against `master`, validate and deploy through the existing
-pipeline, and verify the image and installed fork revisions plus both backend
-health checks. Complete the corrected current/historical matrix, public redirect
-and direct Tailscale/browser smoke, timing comparisons, and at least 60 minutes of
-production soak with concurrent traffic, cache turnover, memory, restart, Docker
-OOM, and kernel OOM checks. Acceptance requires no unexpected pricing failures.
-Failed runs are retained across recovery and restart.
+Complete the server lock-refresh CI and merge the server follow-up. Then deploy
+through the existing pipeline and verify image and installed fork revisions plus
+both backend health checks. Base capacity restoration and a passing copied-cache
+current amount quote remain required for production acceptance. Complete the
+corrected current/historical matrix, public redirect and direct Tailscale/browser
+smoke, timing comparisons, and at least 60 minutes of production soak with
+concurrent traffic, cache turnover, memory, restart, Docker OOM, and kernel OOM
+checks. Acceptance requires no unexpected pricing failures. Failed runs are
+retained across recovery and restart.
