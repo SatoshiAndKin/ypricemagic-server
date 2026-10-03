@@ -39,5 +39,12 @@ while its catalog loaded. Repeating the same request after catalog loading passe
 including exact amount and spot-cache assertions. This does not establish that
 an empty-cache Base amount request always completes within 300 seconds.
 
-The complete native pricing suite is running after the Web3 session-lock repair.
-This migration remains draft until that final check passes. Deployment is separate.
+The complete native pricing suite remains required. After the original archive
+provider exhausted its monthly capacity, an independent archive run completed
+2,310 passing cases and 17 skips with one batch/individual fOUSG price discrepancy
+at block 21,578,484. Three complete token-list replays at that block and all ten
+concurrent historical batch/individual tests passed unchanged. The full suite is
+being repeated with targeted price-path tracing. This migration remains draft
+pending that check. The archive profile uses a separate populated catalog snapshot,
+an encrypted loopback connection, eight concurrent cases and a 1,000-call multicall
+limit; it does not establish empty-cache startup performance. Deployment is separate.
