@@ -74,7 +74,9 @@ All endpoints are chain-scoped via path prefix (`/{chain}/...`), routed by Traef
 
 ## Supported Chains
 
-`ethereum` (1), `base` (8453)
+`ethereum` (1) is active in production. `base` (8453) implementation support remains,
+but its production service is temporarily disabled to avoid paid RPC usage. Keep
+the Base cache volumes for later reactivation.
 
 ## Architecture
 
