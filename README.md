@@ -286,6 +286,14 @@ docker compose up --build
 
 Brownie cache volumes (`brownie-<chain>`) persist across deploys so contract metadata doesn't need to be re-fetched.
 
+The shared proxy retains routes for starting or unhealthy containers. Health and
+pricing requests return HTTP 503 until a backend becomes healthy, rather than
+losing the route and returning HTTP 404. Backend and frontend images each expose
+one port, so service labels retain the explicit service name with
+`passhostheader=true` and let Docker select that port. An explicit `server.port`
+label produces HTTP 500 for an empty service in Traefik 3.7. Apply the proxy
+subtree update separately from the app rollout.
+
 ### CD pipeline
 
 The GitHub Actions workflow (`.github/workflows/cd.yml`) builds and publishes both

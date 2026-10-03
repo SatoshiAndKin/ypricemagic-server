@@ -382,6 +382,56 @@ passes; it is not accepted as green. A fresh full-suite run includes the latest
 protocol and Balancer repairs and restores Dank's default request rate from the
 validation-only five-request-per-second override.
 
+## Final runtime verification and provider block (2026-10-03 UTC)
+
+Fork [PR #48](https://github.com/SatoshiAndKin/ypricemagic/pull/48) at runtime
+revision `71d227ea` completed native Python 3.12 validation: **2,640 passed,
+17 skipped**, strict mypy across 244 files, and all ten compiled-module imports.
+The final focused run passed 652 tests. The final native run took 32.55 minutes,
+peaked at 3,588,620,288 cgroup bytes, and recorded no OOM or limit events under
+8 GiB with zero swap. Complete provenance is retained in the fork's
+[audit directory](https://github.com/SatoshiAndKin/ypricemagic/tree/fix/cold-pool-state-recovery/audits/results/2026-10-02-cold-pricing-followup).
+
+The physical-host truly empty Base candidate passed startup in **552.39 seconds**
+and first current WETH amount 0.1 in **280.02 seconds**. A consistent read-only
+copy of production caches then passed Ethereum's 16-phase benchmark, including
+exact historical USDC, unseen tokens, changed amounts, repeats and three distinct
+blocks. Its current WETH first/repeat/changed-amount timings were
+**98.682 / 0.041 / 0.097 seconds**. Base's copied-cache historical and three-block
+phases passed, but current WETH at block **52117208** still returned **HTTP 504
+after 300.003 seconds**. That failure remains a release gate.
+
+The corrected candidate matrix passed **112 comparisons** (94 Ethereum,
+18 Base), with each required chain explicitly checked. Eight Ethereum cases
+establish availability without an independent reference. These are isolated
+interpreted-overlay checks on copied caches; they do not establish final-image
+identity, production routing, or a successful soak.
+
+At 11:03 UTC, the unchanged Base Alchemy endpoint returned **HTTP 429: monthly
+capacity limit exceeded**. It still denied requests at 11:23 UTC. Production
+Ethereum remained healthy, while Base became unhealthy; neither backend restarted
+or OOMed. Capacity restoration is requested, and provider/billing configuration
+was not changed. This later denial does not erase or establish the cause of the
+earlier copied-cache timeout. A subsequent GC diagnostic failed during startup
+and produced no quote profile.
+
+The outage exposed an older routing failure: the default Docker provider removes
+unhealthy service routes and returns HTTP 404. Shared proxy
+[PR #3](https://github.com/SatoshiAndKin/traefik-proxy/pull/3) retains empty
+services. This server imports the change through its required upstream subtree
+workflow and retains explicit service names with the default `passhostheader=true`
+setting. Its images expose one port each, allowing Docker to select the port.
+An explicit `server.port` label in Traefik 3.7.13 instead leaves a partial server
+entry that returns HTTP 500 while empty; that failed candidate is retained.
+
+The actual [Ethereum labels and aggregate health](pricing-repair/proxy-health-routing-ethereum.json)
+and [Base labels and chain health](pricing-repair/proxy-health-routing-base.json)
+passed isolated Docker routing checks: unavailable HTTP 503, healthy/recovered
+HTTP 200, unknown host HTTP 404. The three Compose files validate. Server
+verification again passed **346 tests plus four subtests**, 90.22% coverage,
+Ruff, formatting, strict mypy across 18 files and deptry. The proxy repair remains
+unmerged and undeployed, as do the linked pricing follow-ups.
+
 ## Remaining delivery gates
 
 Complete first-current-block cold acceptance, persisted production-cache copies,
