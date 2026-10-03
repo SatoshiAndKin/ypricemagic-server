@@ -10,8 +10,8 @@ overrides = [
     { name = "aiohttp", specifier = ">=3.14.3,<4" },
     { name = "cbor2", specifier = ">=5.9.0,<6" },
     { name = "cchecksum", git = "https://github.com/SatoshiAndKin/cchecksum.git?rev=fff7e1fe87f4679ec96de1cebb1cdd8f5e94be44" },
-    { name = "faster-eth-abi", specifier = ">=5.2.30,<6" },
-    { name = "faster-eth-utils", specifier = ">=5.3.25" },
+    { name = "faster-eth-abi", specifier = "==5.2.30" },
+    { name = "faster-eth-utils", specifier = "==5.3.28" },
     { name = "idna", specifier = ">=3.20,<4" },
     { name = "packaging", specifier = ">=24.0" },
     { name = "protobuf", specifier = ">=6.33.5,<7" },
@@ -27,7 +27,7 @@ overrides = [
 ]
 build-constraints = [
     { name = "cchecksum", git = "https://github.com/SatoshiAndKin/cchecksum.git?rev=fff7e1fe87f4679ec96de1cebb1cdd8f5e94be44" },
-    { name = "evmspec", git = "https://github.com/SatoshiAndKin/evmspec.git?rev=f0df0d9d8e4e7a7000580054ce2c0b6b6193a14c" },
+    { name = "evmspec", git = "https://github.com/SatoshiAndKin/evmspec.git?rev=31c8540a14228ca49c77c19d565a6aaee3d0079f" },
 ]
 
 [[package]]
@@ -493,7 +493,7 @@ wheels = [
 [[package]]
 name = "dank-mids"
 version = "4.20.215"
-source = { git = "https://github.com/SatoshiAndKin/dank_mids.git?rev=fa4b454fb8d33c2f412709da4daca522cd4f7e47#fa4b454fb8d33c2f412709da4daca522cd4f7e47" }
+source = { git = "https://github.com/SatoshiAndKin/dank_mids.git?rev=90baeae436f4d359538b11988c13a86004e2e087#90baeae436f4d359538b11988c13a86004e2e087" }
 dependencies = [
     { name = "aiofiles" },
     { name = "aiolimiter" },
@@ -832,7 +832,7 @@ wheels = [
 [[package]]
 name = "evmspec"
 version = "0.5.2"
-source = { git = "https://github.com/SatoshiAndKin/evmspec.git?rev=f0df0d9d8e4e7a7000580054ce2c0b6b6193a14c#f0df0d9d8e4e7a7000580054ce2c0b6b6193a14c" }
+source = { git = "https://github.com/SatoshiAndKin/evmspec.git?rev=31c8540a14228ca49c77c19d565a6aaee3d0079f#31c8540a14228ca49c77c19d565a6aaee3d0079f" }
 dependencies = [
     { name = "cachetools" },
     { name = "cchecksum" },
@@ -885,7 +885,7 @@ wheels = [
 
 [[package]]
 name = "faster-eth-abi"
-version = "5.2.31"
+version = "5.2.30"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "cchecksum" },
@@ -895,19 +895,19 @@ dependencies = [
     { name = "mypy-extensions" },
     { name = "parsimonious" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/9b/c5/6b985c62eab60a49b2bc3e899f11fe2c84329d60500159bbceb6186e0542/faster_eth_abi-5.2.31.tar.gz", hash = "sha256:7458e2ecc12e06d1498c5507f080a6b1cec65130603668172574dcfbe6a429dd", size = 98747, upload-time = "2026-07-11T21:12:06.474Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/bc/6c/e5e4b3cb2a4070725874787f4c7bd2262838d60ba888dedf3bad1bb25a8e/faster_eth_abi-5.2.30.tar.gz", hash = "sha256:0bc450603dec34c92641b34c8068e76ff5064970f1aaf5359b8b1919420a328c", size = 89308, upload-time = "2026-06-21T13:16:02.88Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/c9/e6/8b02911a006f65bcb66fa33968bd10bdf805201c8b1dd6d4c5f34747f124/faster_eth_abi-5.2.31-cp312-cp312-macosx_11_0_arm64.whl", hash = "sha256:191f2510636e325ad8d81d81fcaabe738193f4030a95176cc5db3437526bd532", size = 336342, upload-time = "2026-07-11T21:11:49.865Z" },
-    { url = "https://files.pythonhosted.org/packages/d9/48/f01dc6b75f5c32b9b9dbcc13127e8cee3a8ac1683df6b328053e24ae8849/faster_eth_abi-5.2.31-cp312-cp312-manylinux1_i686.manylinux_2_28_i686.manylinux_2_5_i686.whl", hash = "sha256:de886dfaebbc9646faf24e0cc82e58f61d0883515fe8d2201f22a0ce1df29a90", size = 568008, upload-time = "2026-07-11T21:11:36.171Z" },
-    { url = "https://files.pythonhosted.org/packages/b4/8a/11791380b3a34af28c4ecb1ea52b632c3f5ebfc138b81065bd36158a3ab3/faster_eth_abi-5.2.31-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:8d8a5427fb675b62ae61bb525dcfd0c116bb0095a4b9d890c6b200233be84fef", size = 550307, upload-time = "2026-07-11T21:11:29.475Z" },
-    { url = "https://files.pythonhosted.org/packages/11/a2/a529e11bd3dfcddc8c688e3b26142f30305ac0b31e681760338a84cbc580/faster_eth_abi-5.2.31-cp312-cp312-musllinux_1_2_x86_64.whl", hash = "sha256:33112b958074dcfec3a3fc9087bda58cfcdf8753a0aee9475a9a69afbdf3663d", size = 550220, upload-time = "2026-07-11T21:11:42.535Z" },
-    { url = "https://files.pythonhosted.org/packages/ba/db/69a05d0ec45d60a8f00121ac4ac3d165d1f58c90180dd32a013e66beb654/faster_eth_abi-5.2.31-cp312-cp312-win32.whl", hash = "sha256:0c67fc75b835a18da9e47a104e3420811af9226e74f1a9cd931cfda0e3116041", size = 254407, upload-time = "2026-07-11T21:12:02.406Z" },
-    { url = "https://files.pythonhosted.org/packages/60/c6/ce15733cc83f7a0c4ca1b97e48db1c541457326b5643ca3a914aa49f44aa/faster_eth_abi-5.2.31-cp312-cp312-win_amd64.whl", hash = "sha256:d87dcc8c0ff0d440aeada55ca3d7dda10aa32061f5564de2a1a41c3f65c184c3", size = 281391, upload-time = "2026-07-11T21:11:56.066Z" },
+    { url = "https://files.pythonhosted.org/packages/44/c3/af33b9f5212c37f3e441e11b0e9db801f35e5d7db19971dee286013b1fe9/faster_eth_abi-5.2.30-cp312-cp312-macosx_11_0_arm64.whl", hash = "sha256:da0fe2ed43fc5259f7ee511c1697414899991ecc0c322717fbe7d6941480029b", size = 334958, upload-time = "2026-06-21T13:15:45.999Z" },
+    { url = "https://files.pythonhosted.org/packages/2f/75/08c66ae5c7b4de78ae89352a2c4d2383522a3f970409587ad3d62eaa93fe/faster_eth_abi-5.2.30-cp312-cp312-manylinux1_i686.manylinux_2_28_i686.manylinux_2_5_i686.whl", hash = "sha256:0875363cdf79434cd16b923209c8f6ced5b79756fc0d0958389a383b95d00d3c", size = 565648, upload-time = "2026-06-21T13:15:32.216Z" },
+    { url = "https://files.pythonhosted.org/packages/c4/14/7137b2e45d36b86170a7acab111831b2e4af310ffc6ee4f4b0760061de9b/faster_eth_abi-5.2.30-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:9070f094729cfdad00d24b9434270fcddfa6ac575ce2556ae2bcd21250dc5c79", size = 548586, upload-time = "2026-06-21T13:15:25.188Z" },
+    { url = "https://files.pythonhosted.org/packages/01/1b/5dd0be7da93622eeb3e13b699fee917c0717af0ce293a4d3bf737889a023/faster_eth_abi-5.2.30-cp312-cp312-musllinux_1_2_x86_64.whl", hash = "sha256:ff231aa41465deac79a950fda1b5c6f2cb22f11661226edd7d7f0c1bab89a8a7", size = 548287, upload-time = "2026-06-21T13:15:39.311Z" },
+    { url = "https://files.pythonhosted.org/packages/18/67/312a994c60679c9a4b71433ef974db8b45248770b2434256d8c40f5c0bc2/faster_eth_abi-5.2.30-cp312-cp312-win32.whl", hash = "sha256:ea04e2dc59f26695bf25eebef83a70e93acecd58764b920a29ba44bfc26173cc", size = 253662, upload-time = "2026-06-21T13:15:58.682Z" },
+    { url = "https://files.pythonhosted.org/packages/6d/ef/bdfaefb9fc3328bb0f11b37ec06671c7c582313d2d592c21e95b4a8bada6/faster_eth_abi-5.2.30-cp312-cp312-win_amd64.whl", hash = "sha256:5ea98b799bec2e893cbfa485c852bd77337e31bfbc5dcb09707ce0e003f7bd17", size = 280194, upload-time = "2026-06-21T13:15:52.69Z" },
 ]
 
 [[package]]
 name = "faster-eth-utils"
-version = "5.3.29"
+version = "5.3.28"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "cchecksum" },
@@ -919,23 +919,23 @@ dependencies = [
     { name = "pydantic" },
     { name = "toolz", marker = "implementation_name == 'pypy'" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/24/c1/2f874b341de4060bd01f24bc014d16aec254614b21608c8c863702bbc431/faster_eth_utils-5.3.29.tar.gz", hash = "sha256:1a650f7fcfe5ba5f0476dcfdd05d600b73b71c39171b5c1b804ea1911655e125", size = 132026, upload-time = "2026-07-11T17:21:05.042Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/6a/34/d930a968c50a07b47855e374298c83bc4d9bdafbd3f0d9609fc036a816b2/faster_eth_utils-5.3.28.tar.gz", hash = "sha256:5cc51b22351ae29cb17adc0c75ebfe60dc1cf3993db54fc2b42195a5b4a229b0", size = 132009, upload-time = "2026-06-20T09:26:19.663Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/53/28/75100b583638961ef660a3487dcd6658368614cf890a3898997dd33956df/faster_eth_utils-5.3.29-cp312-cp312-macosx_10_13_x86_64.whl", hash = "sha256:6d6378b077eaa5a3bba9cf1a494fe620388c3375540c09c7b97fb3f0174e25fc", size = 468474, upload-time = "2026-07-11T17:20:30.364Z" },
-    { url = "https://files.pythonhosted.org/packages/b8/cd/dfa306fe157a6f512f99537a7b06083f936e4e1a749210caca96dcea79cb/faster_eth_utils-5.3.29-cp312-cp312-macosx_11_0_arm64.whl", hash = "sha256:746b76ebca5789f64fc159f8b811f4144fc96f33b444475fbc0ca97fc71d003f", size = 462055, upload-time = "2026-07-11T17:20:38.362Z" },
-    { url = "https://files.pythonhosted.org/packages/89/50/b5fbd6501e9894ca2a33c04cbc3a6f2d2b0a331999d0a65883b8a462edd9/faster_eth_utils-5.3.29-cp312-cp312-manylinux1_i686.manylinux_2_28_i686.manylinux_2_5_i686.whl", hash = "sha256:4eeea714ed194485db179e6e42d1791a7cc011745e78372786d09177cef0b8ab", size = 740617, upload-time = "2026-07-11T17:19:21.828Z" },
-    { url = "https://files.pythonhosted.org/packages/bb/40/bb25e0a8e47b392e2d4457b7424445461cff338085b382e1ef8b2dffa725/faster_eth_utils-5.3.29-cp312-cp312-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:c940eb115928e83cc93cfa41d641d248bd965c15276f8b232f30b87cbeeba952", size = 705554, upload-time = "2026-07-11T17:19:29.836Z" },
-    { url = "https://files.pythonhosted.org/packages/1a/99/2d9e5489dc9e110dcb856561c26067e5ef0390def96f4befcac0ab1af3e3/faster_eth_utils-5.3.29-cp312-cp312-manylinux2014_armv7l.manylinux_2_17_armv7l.manylinux_2_31_armv7l.whl", hash = "sha256:6273f18116fbaf2d7a27a4fdd254c1fc49f9337064ffe91f9635d0decf44630a", size = 718443, upload-time = "2026-07-11T17:19:51.996Z" },
-    { url = "https://files.pythonhosted.org/packages/af/b6/8abaaeb45f6c4ebad522c5a1f29bd3c298d26c35647c5cba42c7ef8404a1/faster_eth_utils-5.3.29-cp312-cp312-manylinux2014_ppc64le.manylinux_2_17_ppc64le.manylinux_2_28_ppc64le.whl", hash = "sha256:d2138ef2c061cb860241062a21d50799abd171cdb255014c6ce0c36275d9e3f3", size = 756175, upload-time = "2026-07-11T17:19:37.451Z" },
-    { url = "https://files.pythonhosted.org/packages/55/c2/a56f7e2b1db6b42adcd52abb47d8868dc998d3b8987bb4af97a4d44bf6aa/faster_eth_utils-5.3.29-cp312-cp312-manylinux2014_s390x.manylinux_2_17_s390x.manylinux_2_28_s390x.whl", hash = "sha256:3346eeb667e19e655fd4ba63a3d18ec70be57c9f94d1faa0e7c7d9172996752c", size = 755543, upload-time = "2026-07-11T17:19:44.017Z" },
-    { url = "https://files.pythonhosted.org/packages/5a/33/f0ac7f0186ff8680052ce3400c8c51fe2b817de6f5cf5054f64d0e020679/faster_eth_utils-5.3.29-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:a0f8996d4d21db42a9cfc7940f8fe31c638909a76c0d8efd3a02108e22f388e9", size = 716878, upload-time = "2026-07-11T17:19:14.168Z" },
-    { url = "https://files.pythonhosted.org/packages/fe/3e/138c92b33a3e67bf4a46e32b367cfee35be8f6c1e5b8193ca21ab38e0adc/faster_eth_utils-5.3.29-cp312-cp312-musllinux_1_2_aarch64.whl", hash = "sha256:9e656491ac49c79610a757abc0dab20c3d5333e45f8b85e5f2cc735e48c9c112", size = 696494, upload-time = "2026-07-11T17:20:07.303Z" },
-    { url = "https://files.pythonhosted.org/packages/0b/c3/f2f1d6f3197f5d3b68292c983574037bd275f515e83c875ee9e583ab8e13/faster_eth_utils-5.3.29-cp312-cp312-musllinux_1_2_armv7l.whl", hash = "sha256:3d64d4f35458b6ab68b60f66be117b0184dabc1c2c83ba6936f00ae3e5223add", size = 722991, upload-time = "2026-07-11T17:20:22.585Z" },
-    { url = "https://files.pythonhosted.org/packages/6b/f7/9a4dedcc346dac9fbf78ed626244bac7ae86ba484c1c201c96494bce4fad/faster_eth_utils-5.3.29-cp312-cp312-musllinux_1_2_i686.whl", hash = "sha256:b0eb5ae181fcc9cdd75c0013b917c5539adc6811d7f1d7e2120d538e5e58345a", size = 734770, upload-time = "2026-07-11T17:20:14.798Z" },
-    { url = "https://files.pythonhosted.org/packages/f3/9a/f2f802f34ab4e1ec03866d8388155d6faddd23e6a870c49308af1adca990/faster_eth_utils-5.3.29-cp312-cp312-musllinux_1_2_x86_64.whl", hash = "sha256:23d6244af1a7f2ee48c21d9620f16d1b4e88e5bd6a72dd27c8ec0d841c58e8cd", size = 711606, upload-time = "2026-07-11T17:19:59.663Z" },
-    { url = "https://files.pythonhosted.org/packages/53/1c/8f60b4b68178d8410fb4283b008255f5c47d03fa9321a67729284efe74da/faster_eth_utils-5.3.29-cp312-cp312-win32.whl", hash = "sha256:e13c52c7c5724df694f57015b173737afc65ba75be5dae1d8e0735a951f5e191", size = 333541, upload-time = "2026-07-11T17:21:00.198Z" },
-    { url = "https://files.pythonhosted.org/packages/8c/ab/3426a748e76039928fe2c08a2005e7a30be2460986aad8cfaeaab9c24c90/faster_eth_utils-5.3.29-cp312-cp312-win_amd64.whl", hash = "sha256:d2e641c7cfa9ebb94b9cff8757a107b4ed69410116382a4c3032fb7841fdd3aa", size = 371343, upload-time = "2026-07-11T17:20:45.883Z" },
-    { url = "https://files.pythonhosted.org/packages/f6/3b/1abf5ef9468771c216ce3e05c20586e756b7bb402d204981952880dc97dc/faster_eth_utils-5.3.29-cp312-cp312-win_arm64.whl", hash = "sha256:1bb887694694cb4340b1d606cc445827a36db2f283700d416854df718df3e8cb", size = 346390, upload-time = "2026-07-11T17:20:52.866Z" },
+    { url = "https://files.pythonhosted.org/packages/28/27/e2cc83acdd2ec56d6ab94bee473efa5b6a9f60b839a493062b3f30290a25/faster_eth_utils-5.3.28-cp312-cp312-macosx_10_13_x86_64.whl", hash = "sha256:f05fd9cdaa25aef48cb10d011f0def4f3c2c7002ab0bd0f47a88241e3afb0829", size = 475967, upload-time = "2026-06-20T09:25:43.258Z" },
+    { url = "https://files.pythonhosted.org/packages/83/a0/86796e612357b1679bf3282cf04087956d395f551d645d8bb484b7b1db2a/faster_eth_utils-5.3.28-cp312-cp312-macosx_11_0_arm64.whl", hash = "sha256:51782fa343258349832ec612fb294a166660c8b140ba86dc19bc0a1680b724f9", size = 462130, upload-time = "2026-06-20T09:25:50.393Z" },
+    { url = "https://files.pythonhosted.org/packages/8d/9b/a9dc5a26964f2b6a66f44ab52830633aa1fa2758a22f0bbb6dcce2f1ce17/faster_eth_utils-5.3.28-cp312-cp312-manylinux1_i686.manylinux_2_28_i686.manylinux_2_5_i686.whl", hash = "sha256:473fd1cda93d97033d15c2821481c1e02784114b8417bb0031849dfc2420d330", size = 739879, upload-time = "2026-06-20T09:24:37.019Z" },
+    { url = "https://files.pythonhosted.org/packages/fc/72/0a2a295bf9440c809dd794fd0db7f4571208af4075a0a8b86c17829d5b6a/faster_eth_utils-5.3.28-cp312-cp312-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:0af84f55934f53128c3b058448e3e0062ee13e906540fe01a1a5695f589b2a73", size = 704134, upload-time = "2026-06-20T09:24:45.089Z" },
+    { url = "https://files.pythonhosted.org/packages/64/f1/ac0ebe7337231818f4153b98e8a4c545abef578762786ce8c70b6eb40bf1/faster_eth_utils-5.3.28-cp312-cp312-manylinux2014_armv7l.manylinux_2_17_armv7l.manylinux_2_31_armv7l.whl", hash = "sha256:995b4b4b632be29b53180e565892352995126fe8467e0d0033b10fb12f749e73", size = 717331, upload-time = "2026-06-20T09:25:06.468Z" },
+    { url = "https://files.pythonhosted.org/packages/7e/d4/1735239d5a769bbec75be029c68039e478b9f57cdc142de2110c84a56d27/faster_eth_utils-5.3.28-cp312-cp312-manylinux2014_ppc64le.manylinux_2_17_ppc64le.manylinux_2_28_ppc64le.whl", hash = "sha256:29c13672fbdf5bae42d9e7992017f34ac67f22cdc8e86a0e538587c38d64d9c4", size = 755540, upload-time = "2026-06-20T09:24:52.162Z" },
+    { url = "https://files.pythonhosted.org/packages/03/d0/d5f521b4896a77c1f1713a748a28e4f1b0fe85d79998f47252f0c4e7ccd7/faster_eth_utils-5.3.28-cp312-cp312-manylinux2014_s390x.manylinux_2_17_s390x.manylinux_2_28_s390x.whl", hash = "sha256:49765948fca783124e0e63a7ec8071638641606d0fa9f440458f0b195d24bf91", size = 754999, upload-time = "2026-06-20T09:24:59.275Z" },
+    { url = "https://files.pythonhosted.org/packages/1d/76/f3611b4956882758977968b75d062c351704d6fba575357ab1bf55345e07/faster_eth_utils-5.3.28-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:a57d32a2127c83a5c8054d315f8c76e9b813bc48faafd8614a127885bb051918", size = 716106, upload-time = "2026-06-20T09:24:30Z" },
+    { url = "https://files.pythonhosted.org/packages/7c/d8/5c1a10214232e479f34d94d531405f1fe2e1b4a3c5f86b8fd1d6aca4915c/faster_eth_utils-5.3.28-cp312-cp312-musllinux_1_2_aarch64.whl", hash = "sha256:c492b37541701ec5bc1526580781fb30670186b68b16580d5212b1d62a57a054", size = 695051, upload-time = "2026-06-20T09:25:20.703Z" },
+    { url = "https://files.pythonhosted.org/packages/0a/e2/95e2529bb3b7c11e2edeb73abbc8686d5f11f5f7e1aa04d14edf38b28378/faster_eth_utils-5.3.28-cp312-cp312-musllinux_1_2_armv7l.whl", hash = "sha256:c15a5e555ee5d3d666a172351a2168f147e7505c2ffbbea2a169dfc263a25ba8", size = 721717, upload-time = "2026-06-20T09:25:35.633Z" },
+    { url = "https://files.pythonhosted.org/packages/fc/cd/6dbe2aaf7a5bd4c1d66b459ed53e653f2afd1e39bdf9f0c8fc3f7a3eb1c7/faster_eth_utils-5.3.28-cp312-cp312-musllinux_1_2_i686.whl", hash = "sha256:f86da18d1bf251f7a3df7e39b3cc9646e8cda0199d985db460dc00a94e904dd4", size = 733494, upload-time = "2026-06-20T09:25:28.039Z" },
+    { url = "https://files.pythonhosted.org/packages/2a/77/d6a5ad5168d476c3063027a06192c182878a588701abd2eb5e94ccb98e9b/faster_eth_utils-5.3.28-cp312-cp312-musllinux_1_2_x86_64.whl", hash = "sha256:7e453f527586c8581d965dac4badf03605d805936d6083e2a0eef81e77d66bad", size = 710889, upload-time = "2026-06-20T09:25:13.236Z" },
+    { url = "https://files.pythonhosted.org/packages/46/25/c2f80084d6231c07b26ee8c8ac8316575f0b7a433f67e879d76b63753a25/faster_eth_utils-5.3.28-cp312-cp312-win32.whl", hash = "sha256:52660e0be5bc2a3d96c8e342c8f9d4f6ad9da26bb82044015a0e9c006642a366", size = 332788, upload-time = "2026-06-20T09:26:14.145Z" },
+    { url = "https://files.pythonhosted.org/packages/ac/c5/dc9bdb8dcc104ff7e60c5d030d98f0924053ba3205b2d0cfca42cad3d873/faster_eth_utils-5.3.28-cp312-cp312-win_amd64.whl", hash = "sha256:631db68e30e8effd445a14c651669e75c56d87346dedfa77df08f92a874a25d3", size = 369697, upload-time = "2026-06-20T09:25:58.264Z" },
+    { url = "https://files.pythonhosted.org/packages/2e/aa/3d8e179351e8d3387c81e810c2397faf0a42222fa0fae80a20c2f6188175/faster_eth_utils-5.3.28-cp312-cp312-win_arm64.whl", hash = "sha256:3b76859f8e4428aa5e6e107aa614450f7a77dd89df83d3bdb86be68804d53ce3", size = 345566, upload-time = "2026-06-20T09:26:06.323Z" },
 ]
 
 [[package]]
@@ -2222,8 +2222,8 @@ wheels = [
 
 [[package]]
 name = "ypricemagic"
-version = "0.0.1.dev1569"
-source = { git = "https://github.com/SatoshiAndKin/ypricemagic.git?rev=15b21f8b88b9c2eb9a8e211a9dba4d09aaa34c08#15b21f8b88b9c2eb9a8e211a9dba4d09aaa34c08" }
+version = "0.0.1.dev1573"
+source = { git = "https://github.com/SatoshiAndKin/ypricemagic.git?rev=8c8387ec15f4f8a119214df5971f10b79cfb6962#8c8387ec15f4f8a119214df5971f10b79cfb6962" }
 dependencies = [
     { name = "aiosqlite" },
     { name = "asyncpg" },
@@ -2299,6 +2299,6 @@ requires-dist = [
     { name = "tenacity" },
     { name = "uvicorn", extras = ["standard"] },
     { name = "vulture", marker = "extra == 'dev'" },
-    { name = "ypricemagic", git = "https://github.com/SatoshiAndKin/ypricemagic.git?rev=15b21f8b88b9c2eb9a8e211a9dba4d09aaa34c08" },
+    { name = "ypricemagic", git = "https://github.com/SatoshiAndKin/ypricemagic.git?rev=8c8387ec15f4f8a119214df5971f10b79cfb6962" },
 ]
 provides-extras = ["dev"]
