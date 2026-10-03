@@ -17,15 +17,6 @@ Keep `driver: bridge` explicit. Existing deployments record that setting in the
 network configuration hash. Removing it makes Compose try to recreate the shared
 network, which fails while other app containers remain attached.
 
-Unhealthy or starting app containers keep their configured routes, so unavailable
-services return a server error instead of an unrelated HTTP 404. They receive no
-requests until their Docker health check succeeds. To receive HTTP 503 for an
-empty service on Traefik 3.7, let Docker select the port from the image's single
-`EXPOSE` declaration. Keep an explicit service name with a load-balancer setting
-such as `traefik.http.services.<name>.loadbalancer.passhostheader=true`; an explicit
-`server.port` label leaves a partial server entry and produces HTTP 500 while
-unhealthy. Apps that expose multiple ports still require an explicit port.
-
 For Tailscale HTTPS, assign apps that share the machine's Tailscale hostname to
 different entrypoints. On ski-nuc-3, use `web` for Compare DEX Routers and `web2`
 for ypricemagic-server, with `VIRTUAL_HOST=ski-nuc-3.shorthair-fir.ts.net` in each

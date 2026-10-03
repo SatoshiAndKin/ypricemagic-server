@@ -10,7 +10,6 @@ services:
       - "--api.insecure=true"
       - "--providers.docker=true"
       - "--providers.docker.exposedbydefault=false"
-      - "--providers.docker.allowEmptyServices=true"
       - "--providers.docker.network=traefik-proxy"
       - "--entrypoints.web.address=:80"
       - "--entrypoints.web.forwardedheaders.trustedips=${TRUSTED_PROXY_IPS:-127.0.0.1/32,::1/128}"
