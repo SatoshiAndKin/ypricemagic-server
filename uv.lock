@@ -9,7 +9,7 @@ prerelease-mode = "allow"
 overrides = [
     { name = "aiohttp", specifier = ">=3.14.3,<4" },
     { name = "cbor2", specifier = ">=5.9.0,<6" },
-    { name = "cchecksum", specifier = ">=0.4.3" },
+    { name = "cchecksum", git = "https://github.com/SatoshiAndKin/cchecksum.git?rev=fff7e1fe87f4679ec96de1cebb1cdd8f5e94be44" },
     { name = "faster-eth-abi", specifier = ">=5.2.30,<6" },
     { name = "faster-eth-utils", specifier = ">=5.3.25" },
     { name = "idna", specifier = ">=3.20,<4" },
@@ -26,7 +26,7 @@ overrides = [
     { name = "wheel", specifier = ">=0.46.2" },
 ]
 build-constraints = [
-    { name = "cchecksum", specifier = ">=0.3.0.dev0" },
+    { name = "cchecksum", git = "https://github.com/SatoshiAndKin/cchecksum.git?rev=fff7e1fe87f4679ec96de1cebb1cdd8f5e94be44" },
     { name = "evmspec", git = "https://github.com/SatoshiAndKin/evmspec.git?rev=f0df0d9d8e4e7a7000580054ce2c0b6b6193a14c" },
 ]
 
@@ -308,34 +308,12 @@ wheels = [
 
 [[package]]
 name = "cchecksum"
-version = "0.4.5"
-source = { registry = "https://pypi.org/simple" }
+version = "0.4.4+ownedbuffer1"
+source = { git = "https://github.com/SatoshiAndKin/cchecksum.git?rev=fff7e1fe87f4679ec96de1cebb1cdd8f5e94be44#fff7e1fe87f4679ec96de1cebb1cdd8f5e94be44" }
 dependencies = [
     { name = "eth-hash" },
     { name = "eth-typing" },
     { name = "safe-pysha3" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/61/b6/2b7bca5e6d3c3c496cf2ea0a6dcac4c960065a0233c22e0a6354e85d0bb5/cchecksum-0.4.5.tar.gz", hash = "sha256:208df2ef2ed46e812e102b4a30b3bd1d3259729b01ea365a0712428564ec360b", size = 181816, upload-time = "2026-07-10T21:55:34.378Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/1d/81/4907aa8b3cef596ced2983d879022ffe216363b78fc200d027ab3444daee/cchecksum-0.4.5-cp312-cp312-macosx_10_13_x86_64.whl", hash = "sha256:49e88f1860ae444581f1eb89d8645dd13930026b2ccb128ae63d9a3c8c431d40", size = 264479, upload-time = "2026-07-10T21:54:55.768Z" },
-    { url = "https://files.pythonhosted.org/packages/59/83/4fa00bde45350306b5095b30bf7b3e15110125f2d3d529373bd9ad182456/cchecksum-0.4.5-cp312-cp312-macosx_11_0_arm64.whl", hash = "sha256:e4ec61f047789de964a46fe1fe1ff9f3aa900304a359850fb249f1e0f3ce77ae", size = 263765, upload-time = "2026-07-10T21:55:04.184Z" },
-    { url = "https://files.pythonhosted.org/packages/9f/23/c052a6c0648fcfe15504c0bf01b190c88bf2d1ab343ace6f3176adee6416/cchecksum-0.4.5-cp312-cp312-manylinux1_i686.manylinux_2_28_i686.manylinux_2_5_i686.whl", hash = "sha256:d998a4162ec788094175a530b23eafde7216985ecb21e0e2c7968a6d35876c0b", size = 690996, upload-time = "2026-07-10T21:53:14.061Z" },
-    { url = "https://files.pythonhosted.org/packages/83/e8/99615309cab2115e1bfcc0171b71c32f2bc347008c2b74534ec9c04e63f8/cchecksum-0.4.5-cp312-cp312-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:98ee20a8a9dce3c8a49ee08f3c5c4eec604ed259dc960eef33bfbcb5c7999276", size = 707532, upload-time = "2026-07-10T21:53:06.292Z" },
-    { url = "https://files.pythonhosted.org/packages/44/59/63d1aff21a0715d8aee726d77af076dd698555eb39925e843c9fe7726387/cchecksum-0.4.5-cp312-cp312-manylinux2014_armv7l.manylinux_2_17_armv7l.manylinux_2_31_armv7l.whl", hash = "sha256:bd20d806dc101709b5d19efe528ed8e00c290952c0df2f48e3463a4235c58d35", size = 651233, upload-time = "2026-07-10T21:53:37.871Z" },
-    { url = "https://files.pythonhosted.org/packages/06/25/b366e8d448d7cf31ac94e1c86ea9495c6ff03d971a1b3d516a11665181cf/cchecksum-0.4.5-cp312-cp312-manylinux2014_ppc64le.manylinux_2_17_ppc64le.manylinux_2_28_ppc64le.whl", hash = "sha256:e430ba361938d79387430f20bf08c059471905688a703ff83c8f6c7e03be296a", size = 737536, upload-time = "2026-07-10T21:53:22.126Z" },
-    { url = "https://files.pythonhosted.org/packages/85/af/9380857e33243d61d706265e71bb571f255adc0880a3587d82be14525e5d/cchecksum-0.4.5-cp312-cp312-manylinux2014_s390x.manylinux_2_17_s390x.manylinux_2_28_s390x.whl", hash = "sha256:6b2c13530d3c082b5785209e0b57e1711c48bf679430afe6a1ac208c8fd5c00c", size = 753055, upload-time = "2026-07-10T21:53:29.893Z" },
-    { url = "https://files.pythonhosted.org/packages/76/d9/4509149db25a43c60eecfbd9266ed029589ea39950b6404a72ccd9f12938/cchecksum-0.4.5-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:25b850209b39541e82973ea4926c6da26cafa8f49bc996ac5c6d4c030235ec7d", size = 714729, upload-time = "2026-07-10T21:52:58.313Z" },
-    { url = "https://files.pythonhosted.org/packages/9c/4d/4b17fe5d010de2ec28e5c608dabfedb62ad0626d6f4fa1fefdfd29678e61/cchecksum-0.4.5-cp312-cp312-manylinux_2_31_riscv64.manylinux_2_39_riscv64.whl", hash = "sha256:ad4fab062e3ec469f1b5468284596abf112af734542431cb49c5e12e455ffdba", size = 659145, upload-time = "2026-07-10T21:53:46.938Z" },
-    { url = "https://files.pythonhosted.org/packages/67/d7/783faf151e8975faef09163a8b76e5aada9386a29558571078cd918c370b/cchecksum-0.4.5-cp312-cp312-musllinux_1_2_aarch64.whl", hash = "sha256:29be03818505b7931bebe3d304efa68da7c6c9a97ced223d42297377acc00d12", size = 697028, upload-time = "2026-07-10T21:54:03.891Z" },
-    { url = "https://files.pythonhosted.org/packages/e0/59/d34296fbcfb86cbe1a5e1cd1a475a45f8cc4c961f61a41fb3af5f9e0189b/cchecksum-0.4.5-cp312-cp312-musllinux_1_2_armv7l.whl", hash = "sha256:efe2e88808ebd4d2b8bb42d21c294290c068e737b25aefb6452801edc2024013", size = 694859, upload-time = "2026-07-10T21:54:39.094Z" },
-    { url = "https://files.pythonhosted.org/packages/21/91/c80d2edfd35a6fadd87b3512c977da78e515c08fd615e26c714066cffe22/cchecksum-0.4.5-cp312-cp312-musllinux_1_2_i686.whl", hash = "sha256:1215861c995d5bcfff42ade3f84d7e0e6858b2f6242709fe1006b3e9e50789ad", size = 699664, upload-time = "2026-07-10T21:54:12.616Z" },
-    { url = "https://files.pythonhosted.org/packages/16/ed/a6ed8315902fe3968f7594db740078b607846d8bca090ec583d280cce921/cchecksum-0.4.5-cp312-cp312-musllinux_1_2_ppc64le.whl", hash = "sha256:baecfd4c7373eaf46c963dae33101fcd7638ed7182f6f71d49bf91a2927629e8", size = 728680, upload-time = "2026-07-10T21:54:21.68Z" },
-    { url = "https://files.pythonhosted.org/packages/d7/c2/92f510fd97f4d83315db86dc752e682d96deb4619364f56b165c3104399c/cchecksum-0.4.5-cp312-cp312-musllinux_1_2_riscv64.whl", hash = "sha256:fff80a06abb135a707af05f0932c7d950975ec4da00d1b4fd21d727e369e3a0e", size = 657948, upload-time = "2026-07-10T21:54:47.166Z" },
-    { url = "https://files.pythonhosted.org/packages/44/5f/a419096432f642e83a1206738c3d82b63712254f2305355ec5f7161edb37/cchecksum-0.4.5-cp312-cp312-musllinux_1_2_s390x.whl", hash = "sha256:eab8553f3462b0e30e6b5cf9514badabafdac06060b56e5683ad34550c781c77", size = 731459, upload-time = "2026-07-10T21:54:30.13Z" },
-    { url = "https://files.pythonhosted.org/packages/08/4d/0ecb3239d4664266e7a38da6dc8822624aa348d84af2309f331fbaf92479/cchecksum-0.4.5-cp312-cp312-musllinux_1_2_x86_64.whl", hash = "sha256:09c7852eab35da89c1075e220bd6d3c28056eb73fd82a6de728a449513bf1a60", size = 712322, upload-time = "2026-07-10T21:53:54.714Z" },
-    { url = "https://files.pythonhosted.org/packages/36/5b/1fca827836ba3563fadba2388bd7e60a5e56eaea68b408a55e6835c904b9/cchecksum-0.4.5-cp312-cp312-win32.whl", hash = "sha256:9ce9dc47056f2aae41e90d736a3ae16373cbca6a383bf1bc79b4467fd7c59ddb", size = 241363, upload-time = "2026-07-10T21:55:28.309Z" },
-    { url = "https://files.pythonhosted.org/packages/97/b3/8d09004b372316df1eeef5f4ba41d0ba7eee4dbc5e3701264ee87c6b4a20/cchecksum-0.4.5-cp312-cp312-win_amd64.whl", hash = "sha256:1ea17cf5251c42c2e7c7fabd6feea6c67354fba31d702a50ec31141d3e5d018c", size = 252655, upload-time = "2026-07-10T21:55:12.399Z" },
-    { url = "https://files.pythonhosted.org/packages/76/db/02a4683df172b5ba203f555dae84b85f06a2daa94a3f37f89a72bf78909a/cchecksum-0.4.5-cp312-cp312-win_arm64.whl", hash = "sha256:2e4d534e834910c22b4faca8023505609191d5fa392df51829d81610a8ec91c0", size = 245361, upload-time = "2026-07-10T21:55:20.211Z" },
 ]
 
 [[package]]
@@ -515,7 +493,7 @@ wheels = [
 [[package]]
 name = "dank-mids"
 version = "4.20.215"
-source = { git = "https://github.com/SatoshiAndKin/dank_mids.git?rev=2a5a4d21fc8aa1d12a9146043871ade23084323c#2a5a4d21fc8aa1d12a9146043871ade23084323c" }
+source = { git = "https://github.com/SatoshiAndKin/dank_mids.git?rev=fa4b454fb8d33c2f412709da4daca522cd4f7e47#fa4b454fb8d33c2f412709da4daca522cd4f7e47" }
 dependencies = [
     { name = "aiofiles" },
     { name = "aiolimiter" },
@@ -2244,8 +2222,8 @@ wheels = [
 
 [[package]]
 name = "ypricemagic"
-version = "0.0.1.dev1563"
-source = { git = "https://github.com/SatoshiAndKin/ypricemagic.git?rev=a9f07c085c4d9d3bc152e1a6d0e9a88a4d7f5aa5#a9f07c085c4d9d3bc152e1a6d0e9a88a4d7f5aa5" }
+version = "0.0.1.dev1565"
+source = { git = "https://github.com/SatoshiAndKin/ypricemagic.git?rev=f03904c8c79183703093bebc59ec6bf955e39e02#f03904c8c79183703093bebc59ec6bf955e39e02" }
 dependencies = [
     { name = "aiosqlite" },
     { name = "asyncpg" },
@@ -2321,6 +2299,6 @@ requires-dist = [
     { name = "tenacity" },
     { name = "uvicorn", extras = ["standard"] },
     { name = "vulture", marker = "extra == 'dev'" },
-    { name = "ypricemagic", git = "https://github.com/SatoshiAndKin/ypricemagic.git?rev=a9f07c085c4d9d3bc152e1a6d0e9a88a4d7f5aa5" },
+    { name = "ypricemagic", git = "https://github.com/SatoshiAndKin/ypricemagic.git?rev=f03904c8c79183703093bebc59ec6bf955e39e02" },
 ]
 provides-extras = ["dev"]

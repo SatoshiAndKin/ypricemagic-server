@@ -3,7 +3,7 @@ name = "ypricemagic-server"
 version = "0.12.0"
 requires-python = ">=3.12,<3.13"
 dependencies = [
-    "ypricemagic @ git+https://github.com/SatoshiAndKin/ypricemagic.git@a9f07c085c4d9d3bc152e1a6d0e9a88a4d7f5aa5",
+    "ypricemagic @ git+https://github.com/SatoshiAndKin/ypricemagic.git@f03904c8c79183703093bebc59ec6bf955e39e02",
     "fastapi",
     "uvicorn[standard]",
     "diskcache",
@@ -32,7 +32,7 @@ dev = [
 prerelease = "allow"
 # Allow old Brownie/ABI build pins and dank-mids' nested Git source in isolation.
 build-constraint-dependencies = [
-    "cchecksum>=0.3.0.dev0",
+    "cchecksum @ git+https://github.com/SatoshiAndKin/cchecksum.git@fff7e1fe87f4679ec96de1cebb1cdd8f5e94be44",
     "evmspec @ git+https://github.com/SatoshiAndKin/evmspec.git@f0df0d9d8e4e7a7000580054ce2c0b6b6193a14c",
 ]
 override-dependencies = [
@@ -47,7 +47,7 @@ override-dependencies = [
     "pytest>=8.0",
     "pytest-xdist>=3.0",
     "pytest-forked>=1.6",
-    "cchecksum>=0.4.3",
+    "cchecksum @ git+https://github.com/SatoshiAndKin/cchecksum.git@fff7e1fe87f4679ec96de1cebb1cdd8f5e94be44",
     "faster-eth-abi>=5.2.30,<6",
     "faster-eth-utils>=5.3.25",
     "protobuf>=6.33.5,<7",
