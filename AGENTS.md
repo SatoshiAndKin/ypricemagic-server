@@ -25,7 +25,7 @@ API available at `http://localhost:8000`. Interactive UI at `/`.
 uv run pytest
 
 # Run tests with coverage
-uv run pytest --cov=src --cov-report=term-missing
+uv run pytest
 
 # Lint
 uv run ruff check .
@@ -34,7 +34,7 @@ uv run ruff check .
 uv run ruff format .
 
 # Type check
-uv run mypy src/
+uv run mypy
 
 # Check unused dependencies
 uv run deptry .

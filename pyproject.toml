@@ -3,7 +3,7 @@ name = "ypricemagic-server"
 version = "0.12.0"
 requires-python = ">=3.12,<3.13"
 dependencies = [
-    "ypricemagic @ git+https://github.com/SatoshiAndKin/ypricemagic.git@master",
+    "ypricemagic @ git+https://github.com/SatoshiAndKin/ypricemagic.git@03acd2b9238def0549e7eaea371bd8d45c5e3377",
     "fastapi",
     "uvicorn[standard]",
     "diskcache",
@@ -37,7 +37,7 @@ build-constraint-dependencies = [
 ]
 override-dependencies = [
     # Brownie's frozen dependency list includes vulnerable and incompatible pins.
-    # Keep its Web3 6 API while allowing patched, compatible runtime packages.
+    # Preserve the server security overrides with the immutable Web3 v7 stack.
     "aiohttp>=3.14.3,<4",
     "cbor2>=5.9.0,<6",
     "idna>=3.20,<4",
@@ -91,6 +91,7 @@ quote-style = "double"
 indent-style = "space"
 
 [tool.mypy]
+files = ["src"]
 python_version = "3.12"
 strict = true
 warn_return_any = true
@@ -103,7 +104,7 @@ python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
 asyncio_mode = "auto"
-addopts = "--durations=10 -v -p no:pytest_ethereum -p no:pytest-brownie"
+addopts = "--disable-plugin-autoload -p pytest_asyncio.plugin -p pytest_cov.plugin --durations=10 -v -p no:pytest_ethereum -p no:pytest-brownie --cov=src --cov-report=term-missing --cov-fail-under=60"
 
 [tool.coverage.run]
 source = ["src"]
