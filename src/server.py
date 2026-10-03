@@ -151,11 +151,12 @@ async def _head_block() -> int:
     return int(await dank_eth.block_number)
 
 
-async def _prewarm_uniswap() -> None:
+async def _prewarm_uniswap(*, required: bool = False) -> None:
     """Load compact USDC metadata through the startup head.
 
     Other tokens are discovered on demand. Routers populate the anchor indexes
-    in the owned background warmup; independent failures remain non-fatal.
+    in the owned warmup. Base requires the shared factory backfill before
+    readiness so its first current-block quote can reuse the raw event history.
     Use the shared raw scan without constructing pool objects or starting legacy
     filters that continue polling and compete with foreground discovery.
     """
@@ -168,12 +169,19 @@ async def _prewarm_uniswap() -> None:
     async def _load(router: Any, version: str, name: str) -> None:
         try:
             logger.info(f"uniswap_{version}_pools_loading_started", router=name, tokens=tokens)
-            counts = await asyncio.gather(
-                *(
+            tasks = [
+                asyncio.create_task(
                     _consume_pool_metadata(router.pool_metadata_batches(token, block))
-                    for token in tokens
                 )
-            )
+                for token in tokens
+            ]
+            try:
+                counts = await asyncio.gather(*tasks)
+            finally:
+                for task in tasks:
+                    if not task.done():
+                        task.cancel()
+                await asyncio.gather(*tasks, return_exceptions=True)
             logger.info(
                 f"uniswap_{version}_pools_loading_done",
                 router=name,
@@ -182,13 +190,22 @@ async def _prewarm_uniswap() -> None:
                 block=block,
             )
         except Exception as error:
+            if required:
+                raise
             logger.warning("uniswap_prewarm_failed", router=name, version=version, error=str(error))
 
     tasks = [_load(router, "v2", name) for name, router in uniswap_multiplexer.v2_routers.items()]
     if uniswap_multiplexer.v3:
         tasks.append(_load(uniswap_multiplexer.v3, "v3", str(uniswap_multiplexer.v3)))
     tasks.extend(_load(fork, "v3", str(fork)) for fork in uniswap_multiplexer.v3_forks)
-    await asyncio.gather(*tasks)
+    owned = [asyncio.create_task(task) for task in tasks]
+    try:
+        await asyncio.gather(*owned)
+    finally:
+        for task in owned:
+            if not task.done():
+                task.cancel()
+        await asyncio.gather(*owned, return_exceptions=True)
 
 
 async def _prewarm_compound() -> None:
@@ -293,6 +310,8 @@ async def _prewarm_with_shutdown(curve_registry: Any) -> None:
     prewarm_tasks: list[asyncio.Task[None]] = [
         asyncio.create_task(_prewarm_curve()),
     ]
+    if CHAIN_NAME == "base":
+        prewarm_tasks.append(asyncio.create_task(_prewarm_uniswap(required=True)))
 
     async def _wait_for_shutdown() -> None:
         await _shutdown_event.wait()

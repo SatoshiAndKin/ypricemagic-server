@@ -2891,6 +2891,72 @@ class TestForceCacheBypass:
 
 class TestUniswapPrewarm:
     @pytest.mark.asyncio
+    @pytest.mark.parametrize("required", [False, True])
+    async def test_cancellation_joins_all_router_work(
+        self, mock_y_module: None, required: bool
+    ) -> None:
+        import sys
+
+        from src import server
+
+        started = [asyncio.Event(), asyncio.Event()]
+        stopped = [asyncio.Event(), asyncio.Event()]
+
+        def router(index: int) -> SimpleNamespace:
+            async def batches(token: str, block: int) -> AsyncIterator[list[object]]:
+                started[index].set()
+                try:
+                    await asyncio.Event().wait()
+                    yield []
+                finally:
+                    await asyncio.sleep(0)
+                    stopped[index].set()
+
+            return SimpleNamespace(pool_metadata_batches=batches)
+
+        multiplexer = sys.modules["y.prices.dex.uniswap"].uniswap_multiplexer
+        multiplexer.v2_routers = {str(index): router(index) for index in range(2)}
+        task = asyncio.create_task(server._prewarm_uniswap(required=required))
+        await asyncio.wait_for(asyncio.gather(*(event.wait() for event in started)), 1)
+        task.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await asyncio.wait_for(task, 1)
+        assert all(event.is_set() for event in stopped)
+
+    @pytest.mark.asyncio
+    async def test_required_failure_propagates_and_joins_other_router(
+        self, mock_y_module: None
+    ) -> None:
+        import sys
+
+        from src import server
+
+        started = asyncio.Event()
+        stopped = asyncio.Event()
+
+        async def bad(token: str, block: int) -> AsyncIterator[list[object]]:
+            await started.wait()
+            raise RuntimeError("required indexed scan failed")
+            yield  # pragma: no cover
+
+        async def slow(token: str, block: int) -> AsyncIterator[list[object]]:
+            started.set()
+            try:
+                await asyncio.Event().wait()
+                yield []
+            finally:
+                stopped.set()
+
+        multiplexer = sys.modules["y.prices.dex.uniswap"].uniswap_multiplexer
+        multiplexer.v2_routers = {
+            "bad": SimpleNamespace(pool_metadata_batches=bad),
+            "slow": SimpleNamespace(pool_metadata_batches=slow),
+        }
+        with pytest.raises(RuntimeError, match="required indexed scan failed"):
+            await asyncio.wait_for(server._prewarm_uniswap(required=True), 1)
+        assert stopped.is_set()
+
+    @pytest.mark.asyncio
     @pytest.mark.parametrize("version", ["v2", "v3", "v3_fork"])
     async def test_warmup_counts_compact_metadata_without_starting_legacy_pool_filters(
         self, mock_y_module: None, version: str
@@ -3102,6 +3168,90 @@ class TestContractURLPolicy:
 
 
 class TestPrewarmReadiness:
+    @pytest.mark.asyncio
+    async def test_base_readiness_waits_for_shared_factory_history(
+        self, mock_y_module: None, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        from src import server
+
+        started = asyncio.Event()
+        finish = asyncio.Event()
+        entered = asyncio.Event()
+
+        async def inventory(*, required: bool = False) -> None:
+            assert required
+            started.set()
+            await finish.wait()
+
+        async def startup() -> None:
+            async with server.lifespan(server.app):
+                entered.set()
+
+        monkeypatch.setattr(server, "CHAIN_NAME", "base")
+        monkeypatch.setattr(server, "_prewarm_uniswap", inventory)
+        monkeypatch.setattr(server, "_background_prewarm", AsyncMock())
+        task = asyncio.create_task(startup())
+        try:
+            await asyncio.wait_for(started.wait(), 1)
+            assert not entered.is_set()
+            assert not server.app.state.ready
+            finish.set()
+            await asyncio.wait_for(task, 1)
+            assert entered.is_set()
+        finally:
+            task.cancel()
+            await asyncio.gather(task, return_exceptions=True)
+
+    @pytest.mark.asyncio
+    async def test_base_factory_failure_aborts_startup_without_readiness(
+        self, mock_y_module: None, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        from src import server
+
+        monkeypatch.setattr(server, "CHAIN_NAME", "base")
+        inventory = AsyncMock(side_effect=RuntimeError("required factory history failed"))
+        background = AsyncMock()
+        monkeypatch.setattr(server, "_prewarm_uniswap", inventory)
+        monkeypatch.setattr(server, "_background_prewarm", background)
+        with (
+            patch("src.server.logger") as logger,
+            pytest.raises(RuntimeError, match="required factory history failed"),
+        ):
+            async with server.lifespan(server.app):
+                pytest.fail("failed initialization entered ready lifespan")
+        inventory.assert_awaited_once_with(required=True)
+        background.assert_not_awaited()
+        assert not server.app.state.ready
+        assert all(call.args[0] != "server_ready" for call in logger.info.call_args_list)
+
+    @pytest.mark.asyncio
+    async def test_base_shutdown_joins_required_factory_history(
+        self, mock_y_module: None, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        from src import server
+
+        started = asyncio.Event()
+        stopped = asyncio.Event()
+        shutdown = asyncio.Event()
+
+        async def inventory(*, required: bool = False) -> None:
+            assert required
+            started.set()
+            try:
+                await asyncio.Event().wait()
+            finally:
+                stopped.set()
+
+        monkeypatch.setattr(server, "CHAIN_NAME", "base")
+        monkeypatch.setattr(server, "_shutdown_event", shutdown)
+        monkeypatch.setattr(server, "_prewarm_uniswap", inventory)
+        task = asyncio.create_task(server._prewarm_with_shutdown(None))
+        await asyncio.wait_for(started.wait(), 1)
+        shutdown.set()
+        with pytest.raises(RuntimeError, match="shutdown"):
+            await asyncio.wait_for(task, 1)
+        assert stopped.is_set()
+
     @pytest.mark.asyncio
     async def test_balancer_warmup_consumes_compact_vault_metadata(
         self, mock_y_module: None, monkeypatch: pytest.MonkeyPatch
