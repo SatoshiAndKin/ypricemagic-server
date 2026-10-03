@@ -43,6 +43,7 @@ services:
       - appcache-ethereum:/app/cache
     labels:
       traefik.enable: "true"
+      traefik.docker.allownonrunning: "true"
       docker-rollout.pre-stop-hook: "touch /tmp/drain && sleep 10"
       traefik.http.routers.ypm-ethereum.rule: "Host(`${VIRTUAL_HOST:-localhost}`) && PathPrefix(`/ethereum`)"
       traefik.http.routers.ypm-ethereum.entrypoints: ${TRAEFIK_ENTRYPOINT:-web}
@@ -73,6 +74,7 @@ services:
       - appcache-base:/app/cache
     labels:
       traefik.enable: "true"
+      traefik.docker.allownonrunning: "true"
       docker-rollout.pre-stop-hook: "touch /tmp/drain && sleep 10"
       traefik.http.routers.ypm-base.rule: "Host(`${VIRTUAL_HOST:-localhost}`) && PathPrefix(`/base`)"
       traefik.http.routers.ypm-base.entrypoints: ${TRAEFIK_ENTRYPOINT:-web}
@@ -85,6 +87,7 @@ services:
     image: ghcr.io/satoshiandkin/ypricemagic-server-frontend:latest
     labels:
       traefik.enable: "true"
+      traefik.docker.allownonrunning: "true"
       docker-rollout.pre-stop-hook: "touch /tmp/drain && sleep 10"
       traefik.http.routers.ypm-frontend.rule: "Host(`${VIRTUAL_HOST:-localhost}`) && !PathPrefix(`/ethereum`) && !PathPrefix(`/arbitrum`) && !PathPrefix(`/optimism`) && !PathPrefix(`/base`) && !PathPrefix(`/bsc`) && !PathPrefix(`/polygon`) && !PathPrefix(`/fantom`) && !PathPrefix(`/health`)"
       traefik.http.routers.ypm-frontend.entrypoints: ${TRAEFIK_ENTRYPOINT:-web}

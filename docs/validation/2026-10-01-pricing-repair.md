@@ -416,21 +416,28 @@ earlier copied-cache timeout. A subsequent GC diagnostic failed during startup
 and produced no quote profile.
 
 The outage exposed an older routing failure: the default Docker provider removes
-unhealthy service routes and returns HTTP 404. Shared proxy
-[PR #3](https://github.com/SatoshiAndKin/traefik-proxy/pull/3) retains empty
-services. This server imports the change through its required upstream subtree
-workflow and retains explicit service names with the default `passhostheader=true`
-setting. Its images expose one port each, allowing Docker to select the port.
-An explicit `server.port` label in Traefik 3.7.13 instead leaves a partial server
-entry that returns HTTP 500 while empty; that failed candidate is retained.
+unhealthy service routes and returns HTTP 404. App labels now use
+`traefik.docker.allownonrunning=true` to retain routes through startup, unhealthy
+periods and shutdown on the deployed Traefik 3.7.13. Traefik still excludes those
+containers from the load balancer. Explicit service names use the default
+`passhostheader=true` setting, allowing each image's single exposed port to be
+selected without a partial empty server entry. An explicit `server.port` label
+instead returns HTTP 500 while empty; the failed candidate is retained.
+
+The existing deployment worker only updates app containers. The per-container
+option therefore deploys through that pipeline without a shared-proxy update.
+The shared global-setting experiment in proxy PR #3 is superseded and its subtree
+import reverted; neither was deployed.
 
 The actual [Ethereum labels and aggregate health](pricing-repair/proxy-health-routing-ethereum.json)
 and [Base labels and chain health](pricing-repair/proxy-health-routing-base.json)
 passed isolated Docker routing checks: unavailable HTTP 503, healthy/recovered
-HTTP 200, unknown host HTTP 404. The three Compose files validate. Server
+HTTP 200, unknown host HTTP 404, stopped HTTP 503 and restarted HTTP 200. A healthy
+replacement remains reachable with a stopped old replica; two stopped replicas
+return 503 and recovery succeeds. The three Compose files validate. Server
 verification again passed **346 tests plus four subtests**, 90.22% coverage,
-Ruff, formatting, strict mypy across 18 files and deptry. The proxy repair remains
-unmerged and undeployed, as do the linked pricing follow-ups.
+Ruff, formatting, strict mypy across 18 files and deptry. The app routing repair and linked pricing follow-ups remain unmerged and
+undeployed.
 
 ## Remaining delivery gates
 
