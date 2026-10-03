@@ -25,6 +25,19 @@ aiolimiter, Brownie's caching middleware, evmspec._new, ez-a-sync, and the prici
 conversion/exception modules. A separate pricing source run covers every changed
 runtime statement; compiled verification is independent.
 
-Live Ethereum/Base startup, price, batch, amount and cache scenarios and the
-complete native pricing suite remain acceptance requirements. This migration
-stays draft until those checks pass. Deployment is separate.
+The immutable Linux ARM64 image passed internal HTTP health, historical spot
+prices, duplicate/order-preserving batches, single and mixed amount requests,
+and spot-cache preservation on Ethereum (block 18,000,000) and Base (20,000,000).
+Independent native SDK checks retained exact raw amounts 1,000,001 and 2,000,001
+and canonical block hashes on both chains. The image uses its unchanged entrypoint
+and Dockerfile; no pricing overlays or diagnostic startup hooks were used.
+
+Validation-VM disk exhaustion interrupted the first run; only this migration's
+obsolete containers, caches and builder artifacts were removed before repeating
+acceptance. Base's first amount request reached the unchanged 300-second deadline
+while its catalog loaded. Repeating the same request after catalog loading passed,
+including exact amount and spot-cache assertions. This does not establish that
+an empty-cache Base amount request always completes within 300 seconds.
+
+The complete native pricing suite is running after the Web3 session-lock repair.
+This migration remains draft until that final check passes. Deployment is separate.
