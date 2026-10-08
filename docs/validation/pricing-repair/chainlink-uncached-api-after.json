@@ -1,0 +1,21 @@
+{
+  "request": "token=0xdAC17F958D2ee523a2206206994597C13D831ec7&timestamp=1766610229&ignore_pools=0x0000000000000000000000000000000000000311",
+  "seconds": 0.20903724990785122,
+  "status": 200,
+  "body": {
+    "token": "0xdAC17F958D2ee523a2206206994597C13D831ec7",
+    "price": 0.999275,
+    "block": 24085045,
+    "chain": "ethereum",
+    "block_timestamp": 1766610227,
+    "cached": false,
+    "trade_path": [
+      {
+        "token": "0xdAC17F958D2ee523a2206206994597C13D831ec7",
+        "price": 0.999275,
+        "source": "Chainlink historical stablecoin USD for 0xdAC17F958D2ee523a2206206994597C13D831ec7"
+      }
+    ]
+  },
+  "passed": true
+}

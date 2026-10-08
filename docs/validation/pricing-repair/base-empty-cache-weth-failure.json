@@ -1,0 +1,32 @@
+{
+  "chain": "base",
+  "empty_cache": true,
+  "provider": "production Base current provider",
+  "passed": false,
+  "overlay_commit": "c196667708e61e8c3a7a2789f4b717123c3eadca",
+  "overlay_sha256": {
+    "prices/_rpc.py": "6feaa924f7689cf37af28fea4387738e034de3b3fe3dddf97e465e826886b7ad",
+    "prices/_markets.py": "5c14f927008cd0bfec4e4696b9d3b679696612bcf0d3df4e0073b330918904f0",
+    "prices/dex/uniswap/v2.py": "067f2bf936fdc0f6f519b191ac6e424536972d7811de0c2c0fd83ada46193c7e",
+    "prices/dex/uniswap/v3.py": "b2a9657c4c7cdfce1f2e30e78a2a5d976448a796971a567742e1f5674cbe79e3",
+    "prices/stable_swap/curve.py": "43735d9296034368cf047e096a8ed4b97cae3136ed81beec4662b3219e81ad7b",
+    "utils/_factory_history.py": "f3a275b530e9b182cd7e894348d8a883c5f1489149681fcb29ea3a8ab8e69ef1",
+    "utils/_log_ranges.py": "5d919b2b0c617de06f4751c439fe082c5c7bd93f80bb9117c951277a63c08e13"
+  },
+  "base_image_installed_fork": "073c7ac801ca36128eb27efc64031851ab6f2101",
+  "proof_scope": "empty-cache candidate with seven interpreted runtime overlays, not final production image",
+  "startup_seconds": 18.21851693361532,
+  "healthy_within_600": true,
+  "historical_weth_amount": {
+    "status": 504,
+    "body": "{\"error\":\"Price lookup timed out after 300 seconds\"}",
+    "seconds": 300.00362316705287,
+    "passed": false
+  },
+  "memory_before_cleanup": "2793529344\nlow 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0\n",
+  "cleanup": {
+    "Status": "exited",
+    "ExitCode": 0,
+    "OOMKilled": false
+  }
+}

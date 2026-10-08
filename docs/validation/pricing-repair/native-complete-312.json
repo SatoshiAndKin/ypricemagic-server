@@ -1,0 +1,80 @@
+{
+  "run": {
+    "command": [
+      "sh",
+      "/runner/full_suite.sh"
+    ],
+    "docker_context": "colima-ypricemagic",
+    "builder": "ypricemagic-validation-55871f24db8c",
+    "complete": true,
+    "started_unix": 1790970306.713652,
+    "source_sha": "47182f53dd6d73e59b027485bc5647d5adb75934",
+    "source_revision": "worktree",
+    "source_archive_sha256": "9f63f94d067162cc134e010e35b238a30cb7ae27effb96f884aa26b30927f762",
+    "image": "sha256:96ec7aab0eb97e9928dedea70edbceeaf3e26e6a4babccc1729fe7f9c5a4c0db",
+    "exit_code": 0,
+    "oom_killed": false,
+    "missing_reports": [],
+    "below_memory_target": true,
+    "elapsed_seconds": 3379.4410660266876
+  },
+  "pytest-summary": {
+    "exit_code": 0,
+    "counts": {
+      "setup:passed": 2303,
+      "call:skipped": 11,
+      "teardown:passed": 2303,
+      "call:passed": 2292,
+      "setup:skipped": 6,
+      "teardown:skipped": 6
+    },
+    "collected": 2309
+  },
+  "command": {
+    "command": [
+      "sh",
+      "/runner/full_suite.sh"
+    ],
+    "exit_code": 0,
+    "interrupted": false,
+    "elapsed_seconds": 3376.965662689996,
+    "peak_sampled_process_rss_bytes": 1206980608,
+    "cgroup_before": {
+      "memory.current": "8925184",
+      "memory.peak": "8925184",
+      "memory.max": "8589934592",
+      "memory.swap.max": "0",
+      "memory.events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0",
+      "cpu.max": "400000 100000",
+      "pids.max": "512",
+      "pids.current": "2"
+    },
+    "cgroup_after": {
+      "memory.current": "976277504",
+      "memory.peak": "2221281280",
+      "memory.max": "8589934592",
+      "memory.swap.max": "0",
+      "memory.events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0",
+      "cpu.max": "400000 100000",
+      "pids.max": "512",
+      "pids.current": "2"
+    }
+  },
+  "compiled-modules": {
+    "y._db.brownie": "/work/y/_db/brownie.cpython-312-aarch64-linux-gnu.so",
+    "y._db.config": "/work/y/_db/config.cpython-312-aarch64-linux-gnu.so",
+    "y._db.decorators": "/work/y/_db/decorators.cpython-312-aarch64-linux-gnu.so",
+    "y._db.utils.stringify": "/work/y/_db/utils/stringify.cpython-312-aarch64-linux-gnu.so",
+    "y.ENVIRONMENT_VARIABLES": "/work/y/ENVIRONMENT_VARIABLES.cpython-312-aarch64-linux-gnu.so",
+    "y.convert": "/work/y/convert.cpython-312-aarch64-linux-gnu.so",
+    "y.exceptions": "/work/y/exceptions.cpython-312-aarch64-linux-gnu.so",
+    "y.networks": "/work/y/networks.cpython-312-aarch64-linux-gnu.so",
+    "y.prices.utils.sense_check": "/work/y/prices/utils/sense_check.cpython-312-aarch64-linux-gnu.so",
+    "y.utils.gather": "/work/y/utils/gather.cpython-312-aarch64-linux-gnu.so"
+  },
+  "passed": true,
+  "validated_code_commit": "3d99762acb70ef2aab88981b14e55abc1df2d4b9",
+  "source_files_matched": 203,
+  "typing_source_files": 241,
+  "source_evidence": "https://github.com/SatoshiAndKin/ypricemagic/blob/fa6733aef70a75ea0da6279c26b35abb8a68cc7a/audits/results/2026-10-02-pricing-repair/native-complete-312.json"
+}

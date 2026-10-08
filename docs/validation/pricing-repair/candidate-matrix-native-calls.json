@@ -1,0 +1,1677 @@
+{
+  "required_chains": [
+    "ethereum",
+    "base"
+  ],
+  "live_chains": [
+    "ethereum",
+    "base"
+  ],
+  "passed": true,
+  "results": [
+    {
+      "token": {
+        "name": "USDC",
+        "address": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+        "tolerance": 0.02,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1766610229,
+      "ypm_price": 1.0,
+      "ref_price": 0.9999017003588037,
+      "ypm_error": null,
+      "ref_error": null,
+      "passed": true,
+      "ypm_seconds": 0.003569292020983994
+    },
+    {
+      "token": {
+        "name": "USDC",
+        "address": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+        "tolerance": 0.02,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1774386241,
+      "ypm_price": 1.0,
+      "ref_price": 0.9998283200395653,
+      "ypm_error": null,
+      "ref_error": null,
+      "passed": true,
+      "ypm_seconds": 0.003574333037249744
+    },
+    {
+      "token": {
+        "name": "USDC",
+        "address": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+        "tolerance": 0.02,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1782162237,
+      "ypm_price": 1.0,
+      "ref_price": 0.9998078962911873,
+      "ypm_error": null,
+      "ref_error": null,
+      "passed": true,
+      "ypm_seconds": 0.003238416975364089
+    },
+    {
+      "token": {
+        "name": "USDC",
+        "address": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+        "tolerance": 0.02,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1789938220,
+      "ypm_price": 1.0,
+      "ref_price": 0.9997134057820749,
+      "ypm_error": null,
+      "ref_error": null,
+      "passed": true,
+      "ypm_seconds": 0.002887916984036565
+    },
+    {
+      "token": {
+        "name": "USDT",
+        "address": "0xdAC17F958D2ee523a2206206994597C13D831ec7",
+        "tolerance": 0.02,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1766610229,
+      "ypm_price": 1.0,
+      "ref_price": 0.9994863030232269,
+      "ypm_error": null,
+      "ref_error": null,
+      "passed": true,
+      "ypm_seconds": 0.002112500020302832
+    },
+    {
+      "token": {
+        "name": "USDT",
+        "address": "0xdAC17F958D2ee523a2206206994597C13D831ec7",
+        "tolerance": 0.02,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1774386241,
+      "ypm_price": 1.0,
+      "ref_price": 0.9995203711007122,
+      "ypm_error": null,
+      "ref_error": null,
+      "passed": true,
+      "ypm_seconds": 0.0039291250286623836
+    },
+    {
+      "token": {
+        "name": "USDT",
+        "address": "0xdAC17F958D2ee523a2206206994597C13D831ec7",
+        "tolerance": 0.02,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1782162237,
+      "ypm_price": 0.99889,
+      "ref_price": 0.9989643152742992,
+      "ypm_error": null,
+      "ref_error": null,
+      "passed": true,
+      "ypm_seconds": 0.0028377920389175415
+    },
+    {
+      "token": {
+        "name": "USDT",
+        "address": "0xdAC17F958D2ee523a2206206994597C13D831ec7",
+        "tolerance": 0.02,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1789938220,
+      "ypm_price": 0.99965,
+      "ref_price": 0.9997347365066176,
+      "ypm_error": null,
+      "ref_error": null,
+      "passed": true,
+      "ypm_seconds": 0.0022828750079497695
+    },
+    {
+      "token": {
+        "name": "DAI",
+        "address": "0x6B175474E89094C44Da98b954EedeAC495271d0F",
+        "tolerance": 0.02,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1766610347,
+      "ypm_price": 1.0,
+      "ref_price": 0.9991830118569837,
+      "ypm_error": null,
+      "ref_error": null,
+      "passed": true,
+      "ypm_seconds": 0.0029182920698076487
+    },
+    {
+      "token": {
+        "name": "DAI",
+        "address": "0x6B175474E89094C44Da98b954EedeAC495271d0F",
+        "tolerance": 0.02,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1774386238,
+      "ypm_price": 1.0,
+      "ref_price": 1.0000401969477482,
+      "ypm_error": null,
+      "ref_error": null,
+      "passed": true,
+      "ypm_seconds": 0.0037574999732896686
+    },
+    {
+      "token": {
+        "name": "DAI",
+        "address": "0x6B175474E89094C44Da98b954EedeAC495271d0F",
+        "tolerance": 0.02,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1782162232,
+      "ypm_price": 0.99955064,
+      "ref_price": 0.9997293454249023,
+      "ypm_error": null,
+      "ref_error": null,
+      "passed": true,
+      "ypm_seconds": 0.0034722089767456055
+    },
+    {
+      "token": {
+        "name": "DAI",
+        "address": "0x6B175474E89094C44Da98b954EedeAC495271d0F",
+        "tolerance": 0.02,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1789938220,
+      "ypm_price": 0.99971611,
+      "ref_price": 1.000073662164266,
+      "ypm_error": null,
+      "ref_error": null,
+      "passed": true,
+      "ypm_seconds": 0.003461083979345858
+    },
+    {
+      "token": {
+        "name": "WETH",
+        "address": "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
+        "tolerance": 0.1,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1766610334,
+      "ypm_price": 2945.8069987,
+      "ref_price": 2944.1043597179005,
+      "ypm_error": null,
+      "ref_error": null,
+      "passed": true,
+      "ypm_seconds": 0.005716750049032271
+    },
+    {
+      "token": {
+        "name": "WETH",
+        "address": "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
+        "tolerance": 0.1,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1774386235,
+      "ypm_price": 2152.74,
+      "ref_price": 2148.3795850378024,
+      "ypm_error": null,
+      "ref_error": null,
+      "passed": true,
+      "ypm_seconds": 0.005052125081419945
+    },
+    {
+      "token": {
+        "name": "WETH",
+        "address": "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
+        "tolerance": 0.1,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1782161991,
+      "ypm_price": 1737.10071127,
+      "ref_price": 1730.7762447482023,
+      "ypm_error": null,
+      "ref_error": null,
+      "passed": true,
+      "ypm_seconds": 0.004137624986469746
+    },
+    {
+      "token": {
+        "name": "WETH",
+        "address": "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
+        "tolerance": 0.1,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1789938220,
+      "ypm_price": 2634.73008196,
+      "ref_price": 2623.4375589215288,
+      "ypm_error": null,
+      "ref_error": null,
+      "passed": true,
+      "ypm_seconds": 0.003142916946671903
+    },
+    {
+      "token": {
+        "name": "WBTC",
+        "address": "0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599",
+        "tolerance": 0.1,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1766610228,
+      "ypm_price": 87544.3875184,
+      "ref_price": 87234.72269651946,
+      "ypm_error": null,
+      "ref_error": null,
+      "passed": true,
+      "ypm_seconds": 0.004269000026397407
+    },
+    {
+      "token": {
+        "name": "WBTC",
+        "address": "0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599",
+        "tolerance": 0.1,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1774386235,
+      "ypm_price": 70135.21238031,
+      "ref_price": 69924.79497515279,
+      "ypm_error": null,
+      "ref_error": null,
+      "passed": true,
+      "ypm_seconds": 0.0038221250288188457
+    },
+    {
+      "token": {
+        "name": "WBTC",
+        "address": "0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599",
+        "tolerance": 0.1,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1782162231,
+      "ypm_price": 64393.22,
+      "ref_price": 64302.967009459695,
+      "ypm_error": null,
+      "ref_error": null,
+      "passed": true,
+      "ypm_seconds": 0.0014888329897075891
+    },
+    {
+      "token": {
+        "name": "WBTC",
+        "address": "0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599",
+        "tolerance": 0.1,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1789938300,
+      "ypm_price": 81106.5915078,
+      "ref_price": 80819.66767166286,
+      "ypm_error": null,
+      "ref_error": null,
+      "passed": true,
+      "ypm_seconds": 0.0015520410379394889
+    },
+    {
+      "token": {
+        "name": "UNI",
+        "address": "0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984",
+        "tolerance": 0.1,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1766610229,
+      "ypm_price": 5.78606493,
+      "ref_price": 5.7654363226575285,
+      "ypm_error": null,
+      "ref_error": null,
+      "passed": true,
+      "ypm_seconds": 0.0012625420931726694
+    },
+    {
+      "token": {
+        "name": "UNI",
+        "address": "0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984",
+        "tolerance": 0.1,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1774386234,
+      "ypm_price": 3.58833779,
+      "ref_price": 3.5964356175368812,
+      "ypm_error": null,
+      "ref_error": null,
+      "passed": true,
+      "ypm_seconds": 0.0015079580480232835
+    },
+    {
+      "token": {
+        "name": "UNI",
+        "address": "0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984",
+        "tolerance": 0.1,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1782162245,
+      "ypm_price": 3.007,
+      "ref_price": 3.0051570196047908,
+      "ypm_error": null,
+      "ref_error": null,
+      "passed": true,
+      "ypm_seconds": 0.0015992909902706742
+    },
+    {
+      "token": {
+        "name": "UNI",
+        "address": "0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984",
+        "tolerance": 0.1,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1789938220,
+      "ypm_price": 8.64276158,
+      "ref_price": 8.64858807618047,
+      "ypm_error": null,
+      "ref_error": null,
+      "passed": true,
+      "ypm_seconds": 0.0012097919825464487
+    },
+    {
+      "token": {
+        "name": "LINK",
+        "address": "0x514910771AF9Ca656af840dff83E8264EcF986CA",
+        "tolerance": 0.1,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1766610238,
+      "ypm_price": 12.24474079,
+      "ref_price": 12.233939497173518,
+      "ypm_error": null,
+      "ref_error": null,
+      "passed": true,
+      "ypm_seconds": 0.0017431250307708979
+    },
+    {
+      "token": {
+        "name": "LINK",
+        "address": "0x514910771AF9Ca656af840dff83E8264EcF986CA",
+        "tolerance": 0.1,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1774386238,
+      "ypm_price": 9.179182,
+      "ref_price": 9.20617653977834,
+      "ypm_error": null,
+      "ref_error": null,
+      "passed": true,
+      "ypm_seconds": 0.0011223750188946724
+    },
+    {
+      "token": {
+        "name": "LINK",
+        "address": "0x514910771AF9Ca656af840dff83E8264EcF986CA",
+        "tolerance": 0.1,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1782162231,
+      "ypm_price": 7.9285479,
+      "ref_price": 7.911343443245072,
+      "ypm_error": null,
+      "ref_error": null,
+      "passed": true,
+      "ypm_seconds": 0.0012980420142412186
+    },
+    {
+      "token": {
+        "name": "LINK",
+        "address": "0x514910771AF9Ca656af840dff83E8264EcF986CA",
+        "tolerance": 0.1,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1789938220,
+      "ypm_price": 12.411478,
+      "ref_price": 12.398049929411359,
+      "ypm_error": null,
+      "ref_error": null,
+      "passed": true,
+      "ypm_seconds": 0.0012760839890688658
+    },
+    {
+      "token": {
+        "name": "AAVE",
+        "address": "0x7Fc66500c84A76Ad7e9c93437bFc5Ac33E2DDaE9",
+        "tolerance": 0.1,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1766610235,
+      "ypm_price": 148.029563,
+      "ref_price": 147.6845279528043,
+      "ypm_error": null,
+      "ref_error": null,
+      "passed": true,
+      "ypm_seconds": 0.0015284159453585744
+    },
+    {
+      "token": {
+        "name": "AAVE",
+        "address": "0x7Fc66500c84A76Ad7e9c93437bFc5Ac33E2DDaE9",
+        "tolerance": 0.1,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1774386235,
+      "ypm_price": 111.49271,
+      "ref_price": 111.12811856297914,
+      "ypm_error": null,
+      "ref_error": null,
+      "passed": true,
+      "ypm_seconds": 0.0012326668947935104
+    },
+    {
+      "token": {
+        "name": "AAVE",
+        "address": "0x7Fc66500c84A76Ad7e9c93437bFc5Ac33E2DDaE9",
+        "tolerance": 0.1,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1782162244,
+      "ypm_price": 75.34417203,
+      "ref_price": 75.28031619119122,
+      "ypm_error": null,
+      "ref_error": null,
+      "passed": true,
+      "ypm_seconds": 0.0015793748898431659
+    },
+    {
+      "token": {
+        "name": "AAVE",
+        "address": "0x7Fc66500c84A76Ad7e9c93437bFc5Ac33E2DDaE9",
+        "tolerance": 0.1,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1789938220,
+      "ypm_price": 136.55481,
+      "ref_price": 136.06186870754112,
+      "ypm_error": null,
+      "ref_error": null,
+      "passed": true,
+      "ypm_seconds": 0.0012478330172598362
+    },
+    {
+      "token": {
+        "name": "CRV",
+        "address": "0xD533a949740bb3306d119CC777fa900bA034cd52",
+        "tolerance": 0.1,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1766610005,
+      "ypm_price": 0.37667418,
+      "ref_price": 0.3746305349180522,
+      "ypm_error": null,
+      "ref_error": null,
+      "passed": true,
+      "ypm_seconds": 0.001600292045623064
+    },
+    {
+      "token": {
+        "name": "CRV",
+        "address": "0xD533a949740bb3306d119CC777fa900bA034cd52",
+        "tolerance": 0.1,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1774385996,
+      "ypm_price": 0.22276055,
+      "ref_price": 0.22417920349848303,
+      "ypm_error": null,
+      "ref_error": null,
+      "passed": true,
+      "ypm_seconds": 0.0016094580059871078
+    },
+    {
+      "token": {
+        "name": "CRV",
+        "address": "0xD533a949740bb3306d119CC777fa900bA034cd52",
+        "tolerance": 0.1,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1782162005,
+      "ypm_price": 0.20833043,
+      "ref_price": 0.20999645403054026,
+      "ypm_error": null,
+      "ref_error": null,
+      "passed": true,
+      "ypm_seconds": 0.0013384169433265924
+    },
+    {
+      "token": {
+        "name": "CRV",
+        "address": "0xD533a949740bb3306d119CC777fa900bA034cd52",
+        "tolerance": 0.1,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1789938100,
+      "ypm_price": 0.35093161,
+      "ref_price": 0.3507215170496773,
+      "ypm_error": null,
+      "ref_error": null,
+      "passed": true,
+      "ypm_seconds": 0.0012951669050380588
+    },
+    {
+      "token": {
+        "name": "SDT",
+        "address": "0x73968b9a57c6E53d41345FD57a6E6ae27d6CDB2F",
+        "tolerance": 0.1,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1766609947,
+      "ypm_price": 0.2544973029369794,
+      "ref_price": 0.2550040237389995,
+      "ypm_error": null,
+      "ref_error": null,
+      "passed": true,
+      "ypm_seconds": 0.001309167011640966
+    },
+    {
+      "token": {
+        "name": "SDT",
+        "address": "0x73968b9a57c6E53d41345FD57a6E6ae27d6CDB2F",
+        "tolerance": 0.1,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1774385949,
+      "ypm_price": 0.14302921980633898,
+      "ref_price": 0.143966136444881,
+      "ypm_error": null,
+      "ref_error": null,
+      "passed": true,
+      "ypm_seconds": 0.001316665904596448
+    },
+    {
+      "token": {
+        "name": "SDT",
+        "address": "0x73968b9a57c6E53d41345FD57a6E6ae27d6CDB2F",
+        "tolerance": 0.1,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1782161923,
+      "ypm_price": 0.10172945558250152,
+      "ref_price": 0.10380059348729848,
+      "ypm_error": null,
+      "ref_error": null,
+      "passed": true,
+      "ypm_seconds": 0.001186167006380856
+    },
+    {
+      "token": {
+        "name": "SDT",
+        "address": "0x73968b9a57c6E53d41345FD57a6E6ae27d6CDB2F",
+        "tolerance": 0.1,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1789937500,
+      "ypm_price": 0.11094477350149096,
+      "ref_price": 0.11111333723780961,
+      "ypm_error": null,
+      "ref_error": null,
+      "passed": true,
+      "ypm_seconds": 0.00130558293312788
+    },
+    {
+      "token": {
+        "name": "YB",
+        "address": "0x01791F726B4103694969820be083196cC7c045fF",
+        "tolerance": 0.1,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1766609997,
+      "ypm_price": 0.3788302809545296,
+      "ref_price": 0.38073497892263597,
+      "ypm_error": null,
+      "ref_error": null,
+      "passed": true,
+      "ypm_seconds": 0.0011989580234512687
+    },
+    {
+      "token": {
+        "name": "YB",
+        "address": "0x01791F726B4103694969820be083196cC7c045fF",
+        "tolerance": 0.1,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1774385941,
+      "ypm_price": 0.11496373760784998,
+      "ref_price": 0.11501711726611383,
+      "ypm_error": null,
+      "ref_error": null,
+      "passed": true,
+      "ypm_seconds": 0.001261417055502534
+    },
+    {
+      "token": {
+        "name": "YB",
+        "address": "0x01791F726B4103694969820be083196cC7c045fF",
+        "tolerance": 0.1,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1782161928,
+      "ypm_price": 0.0775282039211881,
+      "ref_price": 0.07785373941293226,
+      "ypm_error": null,
+      "ref_error": null,
+      "passed": true,
+      "ypm_seconds": 0.0011188749922439456
+    },
+    {
+      "token": {
+        "name": "YB",
+        "address": "0x01791F726B4103694969820be083196cC7c045fF",
+        "tolerance": 0.1,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1789937500,
+      "ypm_price": 0.08483501724404151,
+      "ref_price": 0.0858592101221501,
+      "ypm_error": null,
+      "ref_error": null,
+      "passed": true,
+      "ypm_seconds": 0.0009366669692099094
+    },
+    {
+      "token": {
+        "name": "yYB",
+        "address": "0x22222222aea0076fca927a3f44dc0b4fdf9479d6",
+        "tolerance": 0.1,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1766610235,
+      "ypm_price": 0.37788310585891727,
+      "ref_price": 0.3796519604799721,
+      "ypm_error": null,
+      "ref_error": null,
+      "passed": true,
+      "ypm_seconds": 0.0009373750071972609
+    },
+    {
+      "token": {
+        "name": "yYB",
+        "address": "0x22222222aea0076fca927a3f44dc0b4fdf9479d6",
+        "tolerance": 0.1,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1774383228,
+      "ypm_price": 0.11289274334803197,
+      "ref_price": 0.11258597476464567,
+      "ypm_error": null,
+      "ref_error": null,
+      "passed": true,
+      "ypm_seconds": 0.0012006249744445086
+    },
+    {
+      "token": {
+        "name": "yYB",
+        "address": "0x22222222aea0076fca927a3f44dc0b4fdf9479d6",
+        "tolerance": 0.1,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1782159328,
+      "ypm_price": 0.07703007031092311,
+      "ref_price": 0.07737302882409751,
+      "ypm_error": null,
+      "ref_error": null,
+      "passed": true,
+      "ypm_seconds": 0.0012423750013113022
+    },
+    {
+      "token": {
+        "name": "yYB",
+        "address": "0x22222222aea0076fca927a3f44dc0b4fdf9479d6",
+        "tolerance": 0.1,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1789944231,
+      "ypm_price": 0.08048121460042272,
+      "ref_price": 0.08124213581853827,
+      "ypm_error": null,
+      "ref_error": null,
+      "passed": true,
+      "ypm_seconds": 0.001217791112139821
+    },
+    {
+      "token": {
+        "name": "stkAAVE",
+        "address": "0x4da27a545c0c5B758a6BA100e3a049001de870f5",
+        "tolerance": 0.1,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1766609908,
+      "ypm_price": 148.029563,
+      "ref_price": 146.99789931622027,
+      "ypm_error": null,
+      "ref_error": null,
+      "passed": true,
+      "ypm_seconds": 0.0014408749993890524
+    },
+    {
+      "token": {
+        "name": "stkAAVE",
+        "address": "0x4da27a545c0c5B758a6BA100e3a049001de870f5",
+        "tolerance": 0.1,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1774385949,
+      "ypm_price": 111.49271,
+      "ref_price": 110.07351067274764,
+      "ypm_error": null,
+      "ref_error": null,
+      "passed": true,
+      "ypm_seconds": 0.0011864160187542439
+    },
+    {
+      "token": {
+        "name": "stkAAVE",
+        "address": "0x4da27a545c0c5B758a6BA100e3a049001de870f5",
+        "tolerance": 0.1,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1782161931,
+      "ypm_price": 75.34417203,
+      "ref_price": 74.19914825856081,
+      "ypm_error": null,
+      "ref_error": null,
+      "passed": true,
+      "ypm_seconds": 0.0014849170111119747
+    },
+    {
+      "token": {
+        "name": "stkAAVE",
+        "address": "0x4da27a545c0c5B758a6BA100e3a049001de870f5",
+        "tolerance": 0.1,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1789937500,
+      "ypm_price": 137.48,
+      "ref_price": 136.57844409064276,
+      "ypm_error": null,
+      "ref_error": null,
+      "passed": true,
+      "ypm_seconds": 0.0011714170686900616
+    },
+    {
+      "token": {
+        "name": "plDAI",
+        "address": "0x49d716DFe60b37379010A75329ae09428f17118d",
+        "tolerance": 0.02,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1790961201,
+      "ypm_price": 0.9998364,
+      "ref_price": null,
+      "ypm_error": null,
+      "ref_error": "no DefiLlama data",
+      "passed": "ypm_only",
+      "ypm_seconds": 0.1287247920408845
+    },
+    {
+      "token": {
+        "name": "plUSDC",
+        "address": "0xBD87447F48ad729C5c4b8bcb503e1395F62e8B98",
+        "tolerance": 0.02,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1790961201,
+      "ypm_price": 1.0,
+      "ref_price": null,
+      "ypm_error": null,
+      "ref_error": "no DefiLlama data",
+      "passed": "ypm_only",
+      "ypm_seconds": 0.019750042003579438
+    },
+    {
+      "token": {
+        "name": "sDAI",
+        "address": "0x83F20F44975D03b1b09e64809B757c47f942BEeA",
+        "tolerance": 0.02,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1766611301,
+      "ypm_price": 1.1699729501091507,
+      "ref_price": 1.169016803207125,
+      "ypm_error": null,
+      "ref_error": null,
+      "passed": true,
+      "ypm_seconds": 0.0031542499782517552
+    },
+    {
+      "token": {
+        "name": "sDAI",
+        "address": "0x83F20F44975D03b1b09e64809B757c47f942BEeA",
+        "tolerance": 0.02,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1774387372,
+      "ypm_price": 1.17356220671683,
+      "ref_price": 1.1735268933647078,
+      "ypm_error": null,
+      "ref_error": null,
+      "passed": true,
+      "ypm_seconds": 0.001426124945282936
+    },
+    {
+      "token": {
+        "name": "sDAI",
+        "address": "0x83F20F44975D03b1b09e64809B757c47f942BEeA",
+        "tolerance": 0.02,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1782162858,
+      "ypm_price": 1.1766332322235296,
+      "ref_price": 1.176967049163432,
+      "ypm_error": null,
+      "ref_error": null,
+      "passed": true,
+      "ypm_seconds": 0.0014735410222783685
+    },
+    {
+      "token": {
+        "name": "sDAI",
+        "address": "0x83F20F44975D03b1b09e64809B757c47f942BEeA",
+        "tolerance": 0.02,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1789937908,
+      "ypm_price": 1.1807101513086744,
+      "ref_price": 1.1808202243725423,
+      "ypm_error": null,
+      "ref_error": null,
+      "passed": true,
+      "ypm_seconds": 0.0014844579854980111
+    },
+    {
+      "token": {
+        "name": "weETH",
+        "address": "0xCd5fE23C85820F7B72D0926FC9b05b43E359b7ee",
+        "tolerance": 0.1,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1766609942,
+      "ypm_price": 3193.846019822469,
+      "ref_price": 3192.4177573287006,
+      "ypm_error": null,
+      "ref_error": null,
+      "passed": true,
+      "ypm_seconds": 0.002360000042244792
+    },
+    {
+      "token": {
+        "name": "weETH",
+        "address": "0xCd5fE23C85820F7B72D0926FC9b05b43E359b7ee",
+        "tolerance": 0.1,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1774385940,
+      "ypm_price": 2348.260001636071,
+      "ref_price": 2343.6691113208144,
+      "ypm_error": null,
+      "ref_error": null,
+      "passed": true,
+      "ypm_seconds": 0.001490625087171793
+    },
+    {
+      "token": {
+        "name": "weETH",
+        "address": "0xCd5fE23C85820F7B72D0926FC9b05b43E359b7ee",
+        "tolerance": 0.1,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1782161985,
+      "ypm_price": 1906.3279601707125,
+      "ref_price": 1899.063943258615,
+      "ypm_error": null,
+      "ref_error": null,
+      "passed": true,
+      "ypm_seconds": 0.001449208939447999
+    },
+    {
+      "token": {
+        "name": "weETH",
+        "address": "0xCd5fE23C85820F7B72D0926FC9b05b43E359b7ee",
+        "tolerance": 0.1,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1789937500,
+      "ypm_price": 2908.579138804106,
+      "ref_price": 2910.08058537394,
+      "ypm_error": null,
+      "ref_error": null,
+      "passed": true,
+      "ypm_seconds": 0.0013197920052334666
+    },
+    {
+      "token": {
+        "name": "aDAI-v1",
+        "address": "0xfC1E690f61EFd961294b3e1Ce3313fBD8aa4f85d",
+        "tolerance": 0.02,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1766609707,
+      "ypm_price": 1.0,
+      "ref_price": 0.9981563335642711,
+      "ypm_error": null,
+      "ref_error": null,
+      "passed": true,
+      "ypm_seconds": 0.0015602079220116138
+    },
+    {
+      "token": {
+        "name": "aDAI-v1",
+        "address": "0xfC1E690f61EFd961294b3e1Ce3313fBD8aa4f85d",
+        "tolerance": 0.02,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1774385707,
+      "ypm_price": 1.0,
+      "ref_price": 0.9982072871055437,
+      "ypm_error": null,
+      "ref_error": null,
+      "passed": true,
+      "ypm_seconds": 0.0014971669297665358
+    },
+    {
+      "token": {
+        "name": "aDAI-v1",
+        "address": "0xfC1E690f61EFd961294b3e1Ce3313fBD8aa4f85d",
+        "tolerance": 0.02,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1782161712,
+      "ypm_price": 0.99955064,
+      "ref_price": 0.9963324849881936,
+      "ypm_error": null,
+      "ref_error": null,
+      "passed": true,
+      "ypm_seconds": 0.0014487090520560741
+    },
+    {
+      "token": {
+        "name": "aDAI-v1",
+        "address": "0xfC1E690f61EFd961294b3e1Ce3313fBD8aa4f85d",
+        "tolerance": 0.02,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1789937380,
+      "ypm_price": 0.99994674,
+      "ref_price": 0.9999372905097098,
+      "ypm_error": null,
+      "ref_error": null,
+      "passed": true,
+      "ypm_seconds": 0.001458749989978969
+    },
+    {
+      "token": {
+        "name": "pSLP-WBTC-ETH",
+        "address": "0xde74b6c547bd574c3527316a2eE30cd8F6041525",
+        "tolerance": 0.1,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1790961202,
+      "ypm_price": 83419789945.10852,
+      "ref_price": null,
+      "ypm_error": null,
+      "ref_error": "no DefiLlama data",
+      "passed": "ypm_only",
+      "ypm_seconds": 1.0241323329973966
+    },
+    {
+      "token": {
+        "name": "ptUSDC-v4",
+        "address": "0xdd4d117723C257CEe402285D3aCF218E9A8236E1",
+        "tolerance": 0.02,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1766610229,
+      "ypm_price": 1.0,
+      "ref_price": 0.9999017003588037,
+      "ypm_error": null,
+      "ref_error": null,
+      "passed": true,
+      "ypm_seconds": 0.0018002080032601953
+    },
+    {
+      "token": {
+        "name": "ptUSDC-v4",
+        "address": "0xdd4d117723C257CEe402285D3aCF218E9A8236E1",
+        "tolerance": 0.02,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1774386241,
+      "ypm_price": 1.0,
+      "ref_price": 0.9998283200395653,
+      "ypm_error": null,
+      "ref_error": null,
+      "passed": true,
+      "ypm_seconds": 0.0014869580045342445
+    },
+    {
+      "token": {
+        "name": "ptUSDC-v4",
+        "address": "0xdd4d117723C257CEe402285D3aCF218E9A8236E1",
+        "tolerance": 0.02,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1782162237,
+      "ypm_price": 1.0,
+      "ref_price": 0.9998078962911873,
+      "ypm_error": null,
+      "ref_error": null,
+      "passed": true,
+      "ypm_seconds": 0.0015384170692414045
+    },
+    {
+      "token": {
+        "name": "ptUSDC-v4",
+        "address": "0xdd4d117723C257CEe402285D3aCF218E9A8236E1",
+        "tolerance": 0.02,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1789938220,
+      "ypm_price": 1.0,
+      "ref_price": 0.9997134057820749,
+      "ypm_error": null,
+      "ref_error": null,
+      "passed": true,
+      "ypm_seconds": 0.001590666943229735
+    },
+    {
+      "token": {
+        "name": "xPREMIA",
+        "address": "0x16f9D564Df80376C61AC914205D3fDfF7057d610",
+        "tolerance": 0.1,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1790961208,
+      "ypm_price": 0.011063328149701741,
+      "ref_price": null,
+      "ypm_error": null,
+      "ref_error": "no DefiLlama data",
+      "passed": "ypm_only",
+      "ypm_seconds": 5.7196112079545856
+    },
+    {
+      "token": {
+        "name": "USDC",
+        "address": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+        "tolerance": 0.02,
+        "chain": "base",
+        "earliest_timestamp": 1692383789
+      },
+      "timestamp": 1766610229,
+      "ypm_price": 1.0,
+      "ref_price": 0.9999017003588037,
+      "ypm_error": null,
+      "ref_error": null,
+      "passed": true,
+      "ypm_seconds": 0.0028509170515462756
+    },
+    {
+      "token": {
+        "name": "USDC",
+        "address": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+        "tolerance": 0.02,
+        "chain": "base",
+        "earliest_timestamp": 1692383789
+      },
+      "timestamp": 1774386241,
+      "ypm_price": 1.0,
+      "ref_price": 0.9998283200395653,
+      "ypm_error": null,
+      "ref_error": null,
+      "passed": true,
+      "ypm_seconds": 0.0018714170437306166
+    },
+    {
+      "token": {
+        "name": "USDC",
+        "address": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+        "tolerance": 0.02,
+        "chain": "base",
+        "earliest_timestamp": 1692383789
+      },
+      "timestamp": 1782162237,
+      "ypm_price": 1.0,
+      "ref_price": 0.9998078962911873,
+      "ypm_error": null,
+      "ref_error": null,
+      "passed": true,
+      "ypm_seconds": 0.0019149999134242535
+    },
+    {
+      "token": {
+        "name": "USDC",
+        "address": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+        "tolerance": 0.02,
+        "chain": "base",
+        "earliest_timestamp": 1692383789
+      },
+      "timestamp": 1789938220,
+      "ypm_price": 1.0,
+      "ref_price": 0.9997134057820749,
+      "ypm_error": null,
+      "ref_error": null,
+      "passed": true,
+      "ypm_seconds": 0.0016578339273110032
+    },
+    {
+      "token": {
+        "name": "WETH",
+        "address": "0x4200000000000000000000000000000000000006",
+        "tolerance": 0.1,
+        "chain": "base",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1766610334,
+      "ypm_price": 2941.56,
+      "ref_price": 2944.1043597179005,
+      "ypm_error": null,
+      "ref_error": null,
+      "passed": true,
+      "ypm_seconds": 0.0015438750851899385
+    },
+    {
+      "token": {
+        "name": "WETH",
+        "address": "0x4200000000000000000000000000000000000006",
+        "tolerance": 0.1,
+        "chain": "base",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1774386235,
+      "ypm_price": 2148.85605275,
+      "ref_price": 2148.3795850378024,
+      "ypm_error": null,
+      "ref_error": null,
+      "passed": true,
+      "ypm_seconds": 0.001519208075478673
+    },
+    {
+      "token": {
+        "name": "WETH",
+        "address": "0x4200000000000000000000000000000000000006",
+        "tolerance": 0.1,
+        "chain": "base",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1782161991,
+      "ypm_price": 1730.59,
+      "ref_price": 1730.7762447482023,
+      "ypm_error": null,
+      "ref_error": null,
+      "passed": true,
+      "ypm_seconds": 0.001600000075995922
+    },
+    {
+      "token": {
+        "name": "WETH",
+        "address": "0x4200000000000000000000000000000000000006",
+        "tolerance": 0.1,
+        "chain": "base",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1789938220,
+      "ypm_price": 2614.31,
+      "ref_price": 2623.4375589215288,
+      "ypm_error": null,
+      "ref_error": null,
+      "passed": true,
+      "ypm_seconds": 0.0012504999758675694
+    },
+    {
+      "token": {
+        "name": "USDC",
+        "address": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+        "tolerance": 0.02,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1790961209,
+      "ypm_price": 1.0,
+      "ref_price": 0.999920872610607,
+      "ypm_error": null,
+      "ref_error": null,
+      "passed": true,
+      "ypm_seconds": 0.0435621669748798
+    },
+    {
+      "token": {
+        "name": "USDT",
+        "address": "0xdAC17F958D2ee523a2206206994597C13D831ec7",
+        "tolerance": 0.02,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1790961209,
+      "ypm_price": 0.99983258,
+      "ref_price": 0.9998296813896999,
+      "ypm_error": null,
+      "ref_error": null,
+      "passed": true,
+      "ypm_seconds": 0.0929015000583604
+    },
+    {
+      "token": {
+        "name": "DAI",
+        "address": "0x6B175474E89094C44Da98b954EedeAC495271d0F",
+        "tolerance": 0.02,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1790961209,
+      "ypm_price": 0.9998364,
+      "ref_price": 1.0000943334061856,
+      "ypm_error": null,
+      "ref_error": null,
+      "passed": true,
+      "ypm_seconds": 0.07619429100304842
+    },
+    {
+      "token": {
+        "name": "WETH",
+        "address": "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
+        "tolerance": 0.1,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1790961209,
+      "ypm_price": 2688.4646,
+      "ref_price": 2687.269147968464,
+      "ypm_error": null,
+      "ref_error": null,
+      "passed": true,
+      "ypm_seconds": 0.13058766699396074
+    },
+    {
+      "token": {
+        "name": "WBTC",
+        "address": "0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599",
+        "tolerance": 0.1,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1790961209,
+      "ypm_price": 85162.87394016,
+      "ref_price": 85054.62155121894,
+      "ypm_error": null,
+      "ref_error": null,
+      "passed": true,
+      "ypm_seconds": 0.14508633397053927
+    },
+    {
+      "token": {
+        "name": "UNI",
+        "address": "0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984",
+        "tolerance": 0.1,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1790961209,
+      "ypm_price": 9.01758723,
+      "ref_price": 9.01293590035921,
+      "ypm_error": null,
+      "ref_error": null,
+      "passed": true,
+      "ypm_seconds": 0.208625333965756
+    },
+    {
+      "token": {
+        "name": "LINK",
+        "address": "0x514910771AF9Ca656af840dff83E8264EcF986CA",
+        "tolerance": 0.1,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1790961210,
+      "ypm_price": 14.225803,
+      "ref_price": 14.166156405841418,
+      "ypm_error": null,
+      "ref_error": null,
+      "passed": true,
+      "ypm_seconds": 0.21249758393969387
+    },
+    {
+      "token": {
+        "name": "AAVE",
+        "address": "0x7Fc66500c84A76Ad7e9c93437bFc5Ac33E2DDaE9",
+        "tolerance": 0.1,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1790961210,
+      "ypm_price": 182.77178769,
+      "ref_price": 182.4793251749546,
+      "ypm_error": null,
+      "ref_error": null,
+      "passed": true,
+      "ypm_seconds": 0.20038287492934614
+    },
+    {
+      "token": {
+        "name": "CRV",
+        "address": "0xD533a949740bb3306d119CC777fa900bA034cd52",
+        "tolerance": 0.1,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1790961210,
+      "ypm_price": 0.37705808,
+      "ref_price": 0.3760076977214952,
+      "ypm_error": null,
+      "ref_error": null,
+      "passed": true,
+      "ypm_seconds": 0.21617175010032952
+    },
+    {
+      "token": {
+        "name": "SDT",
+        "address": "0x73968b9a57c6E53d41345FD57a6E6ae27d6CDB2F",
+        "tolerance": 0.1,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1790961216,
+      "ypm_price": 0.10252118562805872,
+      "ref_price": 0.10344710130253454,
+      "ypm_error": null,
+      "ref_error": null,
+      "passed": true,
+      "ypm_seconds": 5.899002499994822
+    },
+    {
+      "token": {
+        "name": "YB",
+        "address": "0x01791F726B4103694969820be083196cC7c045fF",
+        "tolerance": 0.1,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1790961217,
+      "ypm_price": 0.08805555621819569,
+      "ref_price": 0.08871253720497957,
+      "ypm_error": null,
+      "ref_error": null,
+      "passed": true,
+      "ypm_seconds": 0.6694997500162572
+    },
+    {
+      "token": {
+        "name": "yYB",
+        "address": "0x22222222aea0076fca927a3f44dc0b4fdf9479d6",
+        "tolerance": 0.1,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1790961217,
+      "ypm_price": 0.08105398104427455,
+      "ref_price": 0.08185082063186645,
+      "ypm_error": null,
+      "ref_error": null,
+      "passed": true,
+      "ypm_seconds": 0.6493361248867586
+    },
+    {
+      "token": {
+        "name": "stkAAVE",
+        "address": "0x4da27a545c0c5B758a6BA100e3a049001de870f5",
+        "tolerance": 0.1,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1790961217,
+      "ypm_price": 182.77178769,
+      "ref_price": 183.1658372987022,
+      "ypm_error": null,
+      "ref_error": null,
+      "passed": true,
+      "ypm_seconds": 0.0401977919973433
+    },
+    {
+      "token": {
+        "name": "plDAI",
+        "address": "0x49d716DFe60b37379010A75329ae09428f17118d",
+        "tolerance": 0.02,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1790961217,
+      "ypm_price": 0.9998364,
+      "ref_price": null,
+      "ypm_error": null,
+      "ref_error": "no DefiLlama data",
+      "passed": "ypm_only",
+      "ypm_seconds": 0.01881287503056228
+    },
+    {
+      "token": {
+        "name": "plUSDC",
+        "address": "0xBD87447F48ad729C5c4b8bcb503e1395F62e8B98",
+        "tolerance": 0.02,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1790961217,
+      "ypm_price": 1.0,
+      "ref_price": null,
+      "ypm_error": null,
+      "ref_error": "no DefiLlama data",
+      "passed": "ypm_only",
+      "ypm_seconds": 0.0037855830742046237
+    },
+    {
+      "token": {
+        "name": "sDAI",
+        "address": "0x83F20F44975D03b1b09e64809B757c47f942BEeA",
+        "tolerance": 0.02,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1790961217,
+      "ypm_price": 1.1810558451103308,
+      "ref_price": 1.181351690147708,
+      "ypm_error": null,
+      "ref_error": null,
+      "passed": true,
+      "ypm_seconds": 0.08589474996551871
+    },
+    {
+      "token": {
+        "name": "weETH",
+        "address": "0xCd5fE23C85820F7B72D0926FC9b05b43E359b7ee",
+        "tolerance": 0.1,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1790961218,
+      "ypm_price": 2969.2673912322957,
+      "ref_price": 2973.4890029923185,
+      "ypm_error": null,
+      "ref_error": null,
+      "passed": true,
+      "ypm_seconds": 0.7725439999485388
+    },
+    {
+      "token": {
+        "name": "aDAI-v1",
+        "address": "0xfC1E690f61EFd961294b3e1Ce3313fBD8aa4f85d",
+        "tolerance": 0.02,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1790961218,
+      "ypm_price": 0.9998364,
+      "ref_price": 0.998909754641042,
+      "ypm_error": null,
+      "ref_error": null,
+      "passed": true,
+      "ypm_seconds": 0.17404491594061255
+    },
+    {
+      "token": {
+        "name": "pSLP-WBTC-ETH",
+        "address": "0xde74b6c547bd574c3527316a2eE30cd8F6041525",
+        "tolerance": 0.1,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1790961219,
+      "ypm_price": 83419789945.10852,
+      "ref_price": null,
+      "ypm_error": null,
+      "ref_error": "no DefiLlama data",
+      "passed": "ypm_only",
+      "ypm_seconds": 0.3168188330018893
+    },
+    {
+      "token": {
+        "name": "ptUSDC-v4",
+        "address": "0xdd4d117723C257CEe402285D3aCF218E9A8236E1",
+        "tolerance": 0.02,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1790961219,
+      "ypm_price": 1.0,
+      "ref_price": 0.999920872610607,
+      "ypm_error": null,
+      "ref_error": null,
+      "passed": true,
+      "ypm_seconds": 0.06270904105622321
+    },
+    {
+      "token": {
+        "name": "xPREMIA",
+        "address": "0x16f9D564Df80376C61AC914205D3fDfF7057d610",
+        "tolerance": 0.1,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1790961224,
+      "ypm_price": 0.011063328149701741,
+      "ref_price": null,
+      "ypm_error": null,
+      "ref_error": "no DefiLlama data",
+      "passed": "ypm_only",
+      "ypm_seconds": 5.426776292035356
+    },
+    {
+      "token": {
+        "name": "USDC",
+        "address": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+        "tolerance": 0.02,
+        "chain": "base",
+        "earliest_timestamp": 1692383789
+      },
+      "timestamp": 1790961224,
+      "ypm_price": 1.0,
+      "ref_price": 0.999920872610607,
+      "ypm_error": null,
+      "ref_error": null,
+      "passed": true,
+      "ypm_seconds": 0.11684295802842826
+    },
+    {
+      "token": {
+        "name": "WETH",
+        "address": "0x4200000000000000000000000000000000000006",
+        "tolerance": 0.1,
+        "chain": "base",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1790961225,
+      "ypm_price": 2685.42372998,
+      "ref_price": 2687.269147968464,
+      "ypm_error": null,
+      "ref_error": null,
+      "passed": true,
+      "ypm_seconds": 0.45258791698142886
+    },
+    {
+      "token": {
+        "name": "xPREMIA-no-code",
+        "address": "0x16f9D564Df80376C61AC914205D3fDfB8a32f98b",
+        "tolerance": 0,
+        "chain": "ethereum",
+        "earliest_timestamp": 0
+      },
+      "timestamp": 1790961225,
+      "ypm_price": null,
+      "ref_price": null,
+      "ypm_error": "HTTP 404: {\"error\":\"No price found for 0x16f9D564Df80376C61AC914205D3fDfB8a32f98b at block 26106057 on ethereum\"}",
+      "ref_error": null,
+      "passed": true,
+      "ypm_seconds": 0.4660530419787392
+    }
+  ]
+}

@@ -6,6 +6,10 @@ on:
   pull_request:
     branches: [main]
     types: [closed]
+    paths-ignore:
+      - "**.md"
+      - "docs/**"
+      - "runbooks/**"
   workflow_dispatch:
 
 concurrency:
@@ -36,6 +40,14 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Set registry cache addresses
+        id: cache
+        run: |
+          {
+            echo "backend=${REGISTRY}/${IMAGE_NAME,,}:buildcache"
+            echo "frontend=${REGISTRY}/${IMAGE_NAME,,}-frontend:buildcache"
+          } >> "$GITHUB_OUTPUT"
+
       - name: Extract metadata for backend
         id: meta-backend
         uses: docker/metadata-action@v5
@@ -53,8 +65,8 @@ jobs:
           push: true
           tags: ${{ steps.meta-backend.outputs.tags }}
           labels: ${{ steps.meta-backend.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=registry,ref=${{ steps.cache.outputs.backend }}
+          cache-to: type=registry,ref=${{ steps.cache.outputs.backend }},mode=max
           platforms: linux/amd64
 
       - name: Extract metadata for frontend
@@ -74,20 +86,27 @@ jobs:
           push: true
           tags: ${{ steps.meta-frontend.outputs.tags }}
           labels: ${{ steps.meta-frontend.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=registry,ref=${{ steps.cache.outputs.frontend }}
+          cache-to: type=registry,ref=${{ steps.cache.outputs.frontend }},mode=max
           platforms: linux/amd64
 
   deploy:
     needs: build-and-push
     runs-on: ubuntu-latest
     steps:
-      - name: Trigger deploy webhook
+      - name: Queue production deployment
         env:
-          WEBHOOK_URL: https://webhook.stytt.com/hooks/ypricemagic-server
+          WEBHOOK_URL: ${{ vars.DEPLOY_WEBHOOK_URL }}
           WEBHOOK_SECRET: ${{ secrets.WEBHOOK_SECRET }}
+          REPOSITORY: ${{ github.repository }}
+          MERGED_COMMIT: ${{ github.event.pull_request.merge_commit_sha || github.sha }}
         run: |
-          curl --fail --show-error --silent \
-            -X POST \
-            -H "X-Webhook-Secret: ${WEBHOOK_SECRET}" \
-            "${WEBHOOK_URL}"
+          set -euo pipefail
+          : "${WEBHOOK_URL:?DEPLOY_WEBHOOK_URL must be set}"
+          : "${WEBHOOK_SECRET:?WEBHOOK_SECRET must be set}"
+          payload=$(jq -cn --arg repository "$REPOSITORY" --arg commit "$MERGED_COMMIT" \
+            '{repository: $repository, commit: $commit, targets: ["ypricemagic-server"]}')
+          curl --fail-with-body --silent --show-error --connect-timeout 10 --max-time 60 \
+            --header "X-Webhook-Secret: $WEBHOOK_SECRET" \
+            --header 'Content-Type: application/json' --data "$payload" "$WEBHOOK_URL"
+          echo 'Tank stored the deployment request. Its worker records the final result separately.'

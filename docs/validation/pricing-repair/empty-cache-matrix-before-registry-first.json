@@ -1,0 +1,22 @@
+{
+  "passed": false,
+  "complete": false,
+  "reason": "Stopped after reproducing Chainlink catalog backfill timeouts to validate a scoped repair",
+  "chain": "ethereum",
+  "provider": "production web3-proxy",
+  "source": "Curve grouped repair before registry-first Chainlink repair",
+  "api_failures": [
+    {
+      "token": "0xdAC17F958D2ee523a2206206994597C13D831ec7",
+      "historical_date": "2025-12-24",
+      "status": 504,
+      "server_deadline_seconds": 300
+    },
+    {
+      "token": "0xdAC17F958D2ee523a2206206994597C13D831ec7",
+      "historical_date": "2026-03-24",
+      "status": 504,
+      "server_deadline_seconds": 300
+    }
+  ]
+}

@@ -2,6 +2,7 @@
 
 import json
 import sys
+from collections.abc import Generator
 from pathlib import Path
 from typing import Any
 from unittest.mock import MagicMock
@@ -58,6 +59,21 @@ def ensure_tokenlist_fixture() -> None:
 
 
 @pytest.fixture(autouse=True)
+def isolated_price_cache(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> Generator[None, None, None]:
+    """Keep cached successes and failures scoped to their requesting test."""
+    from src import cache
+
+    cache.close_cache()
+    monkeypatch.setattr(cache, "CACHE_DIR", str(tmp_path / "prices"))
+    try:
+        yield
+    finally:
+        cache.close_cache()
+
+
+@pytest.fixture(autouse=True)
 def mock_y_module(monkeypatch: pytest.MonkeyPatch) -> None:
     """Mock the y module to avoid brownie network requirement during tests."""
 
@@ -104,6 +120,12 @@ def mock_y_module(monkeypatch: pytest.MonkeyPatch) -> None:
     mock_y.classes = mock_y_classes
     mock_y.prices = mock_y_prices
 
+    mock_y_constants: Any = MagicMock()
+    mock_y_constants.usdc = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"
+    mock_y_constants.weth = "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"
+    mock_y_constants.STABLECOINS = {mock_y_constants.usdc: "usdc"}
+    monkeypatch.setitem(sys.modules, "y.constants", mock_y_constants)
+
     # Install mocks
     monkeypatch.setitem(sys.modules, "y", mock_y)
     monkeypatch.setitem(sys.modules, "y.time", mock_y_time)
@@ -138,3 +160,23 @@ def mock_y_module(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setitem(sys.modules, "dank_mids", mock_dank_mids)
     monkeypatch.setitem(sys.modules, "dank_mids.helpers", mock_dank_mids_helpers)
     monkeypatch.setitem(sys.modules, "dank_mids.helpers._helpers", mock_dank_mids_helpers_helpers)
+
+    class BlockNumber:
+        def __await__(self) -> Generator[None, None, int]:
+            yield
+            return int(mock_brownie.chain.height)
+
+    mock_brownie_patch: Any = MagicMock()
+    mock_brownie_patch.dank_eth.block_number = BlockNumber()
+    monkeypatch.setitem(sys.modules, "dank_mids.brownie_patch", mock_brownie_patch)
+
+
+@pytest.fixture(autouse=True)
+def ready_test_backend(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Endpoint tests mock an initialized backend; lifecycle tests set it explicitly."""
+    import asyncio
+
+    from src import server
+
+    monkeypatch.setattr(server.app.state, "ready", True)
+    monkeypatch.setattr(server, "_shutdown_event", asyncio.Event())

@@ -1,0 +1,82 @@
+{
+  "chain": "ethereum",
+  "empty_cache": true,
+  "provider": "same production Ethereum web3-proxy host using its explicit Fastest endpoint (diagnostic)",
+  "passed": true,
+  "server_overlay_sha256": "37fc7e8f385544ebbbe09ee6ebbc22fb3b5fd5512b326b696a92eb555c8ca22e",
+  "overlay_commit": "c196667708e61e8c3a7a2789f4b717123c3eadca plus uncommitted RPC timeout, bounded batch, and sparse warmup repairs",
+  "overlay_sha256": {
+    "_db/utils/logs.py": "ed4502aa0fe6b9f069991e885c28375f1435b4d8fbd6d580822ca12e8ea0371a",
+    "prices/dex/balancer/v2.py": "c63a84d41d95c5aadc9421055c5a65a0370e24ceb1890404df0fdc3588c8d825",
+    "prices/_rpc.py": "7c1fd469702c4bfc5fc7ce7a7f0051cd95ae29404dc18a912b5e90096e3f0fb2",
+    "prices/_markets.py": "bd6181e6497a428b697706e083d71774ff824f83efbe1088f417dc130f6793bf",
+    "prices/dex/uniswap/v2.py": "d69c50c24f4613cffd350cd01788dda5d1b7c94f1b30360e6787a2f0b5638537",
+    "prices/dex/uniswap/v3.py": "b2a9657c4c7cdfce1f2e30e78a2a5d976448a796971a567742e1f5674cbe79e3",
+    "prices/stable_swap/curve.py": "b9817d6b249b9e2bd0a19509d2ebb2ea966aef2c8c23a62ad38d918770c630eb",
+    "utils/_factory_history.py": "07b4b327a8197f6bc1eddbe08325376d65d1bf124c8f97b5e8a421674fb69642",
+    "utils/_log_ranges.py": "8b4a7ffdc72597ca01e62395b1b718a06d08d06c828893ff0a99bffc0902791b"
+  },
+  "base_image_installed_fork": "073c7ac801ca36128eb27efc64031851ab6f2101",
+  "proof_scope": "empty-cache candidate with nine interpreted runtime overlays and server background priority control, not final production image",
+  "server_runtime_sha256": "d05d4d8d1dc82ea6442b9a49877bd498da130524218aa8c50a0d17d3483b926a",
+  "startup_seconds": 493.59975089342333,
+  "healthy_within_600": true,
+  "historical_usdc_amount": {
+    "status": 200,
+    "body": {
+      "token": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+      "price": 0.9989039883929369,
+      "block": 19000000,
+      "chain": "ethereum",
+      "block_timestamp": 1705173443,
+      "cached": false,
+      "trade_path": [
+        {
+          "token": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+          "price": 0.9989039883929369,
+          "source": "Liquidity-based sale estimate"
+        },
+        {
+          "token": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+          "price": 0.9989039883929369,
+          "source": "Uniswap V3 0x88e6a0c2ddd26feeb64f039a2c41296fcb3f5640 via quoteExactInput(bytes,uint256)"
+        },
+        {
+          "token": "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
+          "price": 2562.92441874,
+          "source": "Chainlink historical USD for 0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2"
+        }
+      ]
+    },
+    "seconds": 237.18358583399095,
+    "passed": true
+  },
+  "memory_before_shutdown": "764043264\nlow 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0\n8589934592\n0\n",
+  "shutdown_seconds": 0.5813198330579326,
+  "state": {
+    "Status": "exited",
+    "Running": false,
+    "Paused": false,
+    "Restarting": false,
+    "OOMKilled": false,
+    "Dead": false,
+    "Pid": 0,
+    "ExitCode": 0,
+    "Error": "",
+    "StartedAt": "2026-10-03T02:16:12.320448543Z",
+    "FinishedAt": "2026-10-03T02:28:23.619932601Z"
+  },
+  "cleanup_state": {
+    "Status": "exited",
+    "Running": false,
+    "Paused": false,
+    "Restarting": false,
+    "OOMKilled": false,
+    "Dead": false,
+    "Pid": 0,
+    "ExitCode": 0,
+    "Error": "",
+    "StartedAt": "2026-10-03T02:16:12.320448543Z",
+    "FinishedAt": "2026-10-03T02:28:23.619932601Z"
+  }
+}

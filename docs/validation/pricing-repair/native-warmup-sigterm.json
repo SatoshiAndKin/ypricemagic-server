@@ -1,0 +1,21 @@
+{
+  "passed": true,
+  "chain": "ethereum",
+  "provider": "production web3-proxy",
+  "empty_cache": true,
+  "signal_phase": "required Curve warmup",
+  "seconds": 0.415664125001058,
+  "state": {
+    "Status": "exited",
+    "Running": false,
+    "Paused": false,
+    "Restarting": false,
+    "OOMKilled": false,
+    "Dead": false,
+    "Pid": 0,
+    "ExitCode": 3,
+    "Error": "",
+    "StartedAt": "2026-10-02T17:14:19.866490559Z",
+    "FinishedAt": "2026-10-02T17:15:31.585956813Z"
+  }
+}

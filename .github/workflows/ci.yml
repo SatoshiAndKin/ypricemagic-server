@@ -19,10 +19,36 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  backend-image:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6
+      - name: Build production backend image on native amd64
+        run: docker build --tag ypm-server:ci .
+      - name: Import compiled dependencies in the runtime image
+        run: docker run --rm --entrypoint python ypm-server:ci -c 'import brownie, dank_mids, cachebox'
+
+  frontend:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - run: npm run check
+      - run: npm test -- --run
+      - run: npm run build
+
   lockfile:
-    # Only check on PRs; push-to-main skips this because git deps (ypricemagic@master)
-    # can resolve to a newer commit between lockfile generation and the check.
-    if: github.event_name == 'pull_request'
+    # Immutable Git dependencies make this reproducible on both PRs and pushes.
     runs-on: ubuntu-latest
     timeout-minutes: 5
 
@@ -32,6 +58,7 @@ jobs:
       - uses: astral-sh/setup-uv@v7
         with:
           python-version: "3.12"
+          enable-cache: true
 
       - name: Check lockfile is up to date
         run: uv lock --check
@@ -58,10 +85,10 @@ jobs:
         run: uv run ruff format --check .
 
       - name: Run mypy
-        run: uv run mypy src/
+        run: uv run mypy
 
       - name: Check unused dependencies
         run: uv run deptry .
 
       - name: Run tests with coverage
-        run: uv run pytest --cov=src --cov-report=term-missing --cov-fail-under=60
+        run: uv run pytest

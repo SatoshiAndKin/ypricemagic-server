@@ -1,0 +1,87 @@
+{
+  "2": {
+    "traefik_version": "3.7.13",
+    "docker_context": "colima-rpc-tune",
+    "isolated_network": "ypm-empty-service-routing-108",
+    "cases": [],
+    "passed": false,
+    "last_statuses": {
+      "18160": 404,
+      "18161": 500
+    },
+    "proxy_logs": {
+      "ypm-empty-service-routing-108-baseline": "",
+      "ypm-empty-service-routing-108-fixed": ""
+    },
+    "cleanup_complete": true
+  },
+  "3": {
+    "traefik_version": "3.7.13",
+    "docker_context": "colima-rpc-tune",
+    "isolated_network": "ypm-empty-service-routing-108",
+    "cases": [
+      {
+        "phase": "unhealthy_initial",
+        "baseline_status": 404,
+        "fixed_status": 500
+      },
+      {
+        "phase": "healthy",
+        "baseline_status": 200,
+        "fixed_status": 200
+      },
+      {
+        "phase": "unhealthy_after_readiness",
+        "baseline_status": 404,
+        "fixed_status": 500
+      },
+      {
+        "phase": "recovered",
+        "baseline_status": 200,
+        "fixed_status": 200
+      },
+      {
+        "phase": "unknown_host",
+        "fixed_status": 404
+      }
+    ],
+    "fixed_dynamic_config": "[{\"status\":\"enabled\",\"usedBy\":[\"api@internal\"],\"name\":\"api@internal\",\"provider\":\"internal\"},{\"status\":\"enabled\",\"usedBy\":[\"dashboard@internal\"],\"name\":\"dashboard@internal\",\"provider\":\"internal\"},{\"loadBalancer\":{\"servers\":[{\"url\":\"http://172.18.0.3:80\"}],\"strategy\":\"wrr\",\"passHostHeader\":true,\"responseForwarding\":{\"flushInterval\":\"100ms\"}},\"status\":\"enabled\",\"usedBy\":[\"fixture@docker\"],\"name\":\"fixture@docker\",\"provider\":\"docker\",\"type\":\"loadbalancer\",\"serverStatus\":{\"http://172.18.0.3:80\":\"UP\"}},{\"status\":\"enabled\",\"name\":\"noop@internal\",\"provider\":\"internal\"}]",
+    "passed": true,
+    "cleanup_complete": true
+  },
+  "4": {
+    "traefik_version": "3.7.13",
+    "docker_context": "colima-rpc-tune",
+    "isolated_network": "ypm-empty-service-routing-108",
+    "cases": [
+      {
+        "phase": "unhealthy_initial",
+        "baseline_status": 404,
+        "fixed_status": 503
+      },
+      {
+        "phase": "healthy",
+        "baseline_status": 200,
+        "fixed_status": 200
+      },
+      {
+        "phase": "unhealthy_after_readiness",
+        "baseline_status": 404,
+        "fixed_status": 503
+      },
+      {
+        "phase": "recovered",
+        "baseline_status": 200,
+        "fixed_status": 200
+      },
+      {
+        "phase": "unknown_host",
+        "fixed_status": 404
+      }
+    ],
+    "fixed_dynamic_config": "[{\"status\":\"enabled\",\"usedBy\":[\"api@internal\"],\"name\":\"api@internal\",\"provider\":\"internal\"},{\"status\":\"enabled\",\"usedBy\":[\"dashboard@internal\"],\"name\":\"dashboard@internal\",\"provider\":\"internal\"},{\"loadBalancer\":{\"servers\":[{\"url\":\"http://172.18.0.3:80\"}],\"strategy\":\"wrr\",\"passHostHeader\":true,\"responseForwarding\":{\"flushInterval\":\"100ms\"}},\"status\":\"enabled\",\"usedBy\":[\"fixture@docker\"],\"name\":\"fixture@docker\",\"provider\":\"docker\",\"type\":\"loadbalancer\",\"serverStatus\":{\"http://172.18.0.3:80\":\"UP\"}},{\"status\":\"enabled\",\"name\":\"noop@internal\",\"provider\":\"internal\"}]",
+    "passed": true,
+    "cleanup_complete": true
+  },
+  "proof_scope": "Retained shared-global-option experiment: partial explicit server.port returned 500; automatic EXPOSE with explicit passHostHeader service returned 503. The final app-specific repair does not change the shared global option."
+}

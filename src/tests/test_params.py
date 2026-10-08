@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 from src.params import (
     MAX_BATCH_TOKENS,
     MAX_BLOCK,
@@ -119,12 +121,12 @@ class TestParsePriceParamsAmount:
     def test_valid_amount(self) -> None:
         result = parse_price_params(DAI, "18000000", "1000")
         assert isinstance(result, ParseSuccess)
-        assert result.data.amount == 1000.0
+        assert result.data.amount == Decimal("1000.0")
 
     def test_valid_amount_decimal(self) -> None:
         result = parse_price_params(DAI, "18000000", "0.5")
         assert isinstance(result, ParseSuccess)
-        assert result.data.amount == 0.5
+        assert result.data.amount == Decimal("0.5")
 
     def test_no_amount(self) -> None:
         result = parse_price_params(DAI, "18000000")
@@ -296,7 +298,7 @@ class TestParsePriceParamsNewFields:
         assert isinstance(result, ParseSuccess)
         assert result.data.token == DAI
         assert result.data.block == 18000000
-        assert result.data.amount == 1000.0
+        assert result.data.amount == Decimal("1000.0")
         assert result.data.ignore_pools == (USDC, WETH)
 
     def test_backwards_compat_no_new_params(self) -> None:
@@ -305,7 +307,7 @@ class TestParsePriceParamsNewFields:
         assert isinstance(result, ParseSuccess)
         assert result.data.token == DAI
         assert result.data.block == 18000000
-        assert result.data.amount == 1000.0
+        assert result.data.amount == Decimal("1000.0")
         assert result.data.ignore_pools == ()
 
 
@@ -410,7 +412,7 @@ class TestParsePriceParamsTimestamp:
         result = parse_price_params(DAI, None, "1000", None, "1700000000")
         assert isinstance(result, ParseSuccess)
         assert result.data.timestamp == 1700000000
-        assert result.data.amount == 1000.0
+        assert result.data.amount == Decimal("1000.0")
 
     def test_no_timestamp_no_block(self) -> None:
         """Omitting both timestamp and block is valid (uses latest block)."""
@@ -515,13 +517,13 @@ class TestParseBatchParamsAmounts:
         """Amounts with matching count are parsed correctly."""
         result = parse_batch_params(f"{DAI},{USDC}", amounts="1000,500")
         assert isinstance(result, BatchParseSuccess)
-        assert result.data.amounts == (1000.0, 500.0)
+        assert result.data.amounts == (Decimal("1000.0"), Decimal("500.0"))
 
     def test_amounts_with_decimals(self) -> None:
         """Amounts with decimal values are parsed."""
         result = parse_batch_params(DAI, amounts="0.5")
         assert isinstance(result, BatchParseSuccess)
-        assert result.data.amounts == (0.5,)
+        assert result.data.amounts == (Decimal("0.5"),)
 
     def test_amounts_count_mismatch(self) -> None:
         """Amounts count mismatch returns error."""
@@ -564,14 +566,14 @@ class TestParseBatchParamsAmounts:
         """Whitespace around amounts is stripped."""
         result = parse_batch_params(f"{DAI},{USDC}", amounts=" 1000 , 500 ")
         assert isinstance(result, BatchParseSuccess)
-        assert result.data.amounts == (1000.0, 500.0)
+        assert result.data.amounts == (Decimal("1000.0"), Decimal("500.0"))
 
     def test_amounts_empty_segments_now_none(self) -> None:
         """Empty segments in amounts are now treated as None (not dropped)."""
         result = parse_batch_params(f"{DAI},{USDC},{WETH}", amounts="1000,,500")
         # Now: 3 amounts for 3 tokens, middle one is None
         assert isinstance(result, BatchParseSuccess)
-        assert result.data.amounts == (1000.0, None, 500.0)
+        assert result.data.amounts == (Decimal("1000.0"), None, Decimal("500.0"))
 
     def test_amounts_count_mismatch_with_none(self) -> None:
         """Empty segments count as None, so 2 tokens with 3 amounts fails."""
@@ -597,7 +599,7 @@ class TestParseBatchParamsMixedAmounts:
         """Amounts list can contain None values for tokens without amount."""
         result = parse_batch_params(f"{DAI},{USDC},{WETH}", amounts="1000,,500")
         assert isinstance(result, BatchParseSuccess)
-        assert result.data.amounts == (1000.0, None, 500.0)
+        assert result.data.amounts == (Decimal("1000.0"), None, Decimal("500.0"))
         assert len(result.data.amounts) == 3
 
     def test_all_none_amounts(self) -> None:
@@ -618,13 +620,13 @@ class TestParseBatchParamsMixedAmounts:
         """Leading empty segment becomes None."""
         result = parse_batch_params(f"{DAI},{USDC}", amounts=",500")
         assert isinstance(result, BatchParseSuccess)
-        assert result.data.amounts == (None, 500.0)
+        assert result.data.amounts == (None, Decimal("500.0"))
 
     def test_trailing_none_amount(self) -> None:
         """Trailing empty segment becomes None."""
         result = parse_batch_params(f"{DAI},{USDC}", amounts="1000,")
         assert isinstance(result, BatchParseSuccess)
-        assert result.data.amounts == (1000.0, None)
+        assert result.data.amounts == (Decimal("1000.0"), None)
 
     def test_mixed_amounts_preserves_position(self) -> None:
         """None values preserve positional correspondence with tokens."""
@@ -635,9 +637,9 @@ class TestParseBatchParamsMixedAmounts:
         assert isinstance(result, BatchParseSuccess)
         # DAI has amount 1000, USDC has None, WETH has amount 500
         assert result.data.amounts is not None
-        assert result.data.amounts[0] == 1000.0  # DAI
+        assert result.data.amounts[0] == Decimal("1000.0")  # DAI
         assert result.data.amounts[1] is None  # USDC
-        assert result.data.amounts[2] == 500.0  # WETH
+        assert result.data.amounts[2] == Decimal("500.0")  # WETH
 
 
 class TestParseBatchParamsTimestamp:
@@ -667,7 +669,7 @@ class TestParseBatchParamsTimestamp:
         result = parse_batch_params(DAI, timestamp="1700000000", amounts="1000")
         assert isinstance(result, BatchParseSuccess)
         assert result.data.timestamp == 1700000000
-        assert result.data.amounts == (1000.0,)
+        assert result.data.amounts == (Decimal("1000.0"),)
 
 
 class TestParseBatchParamsCombined:
@@ -683,7 +685,7 @@ class TestParseBatchParamsCombined:
         assert isinstance(result, BatchParseSuccess)
         assert result.data.tokens == (DAI, USDC)
         assert result.data.block == 18000000
-        assert result.data.amounts == (1000.0, 500.0)
+        assert result.data.amounts == (Decimal("1000.0"), Decimal("500.0"))
 
     def test_timestamp_amounts_combined(self) -> None:
         """Timestamp and amounts can be combined."""
@@ -694,5 +696,5 @@ class TestParseBatchParamsCombined:
         )
         assert isinstance(result, BatchParseSuccess)
         assert result.data.timestamp == 1700000000
-        assert result.data.amounts == (1000.0, 500.0)
+        assert result.data.amounts == (Decimal("1000.0"), Decimal("500.0"))
         assert result.data.block is None

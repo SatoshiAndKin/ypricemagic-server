@@ -1,0 +1,22 @@
+{
+  "chain": "ethereum",
+  "empty_cache": true,
+  "provider": "production web3-proxy",
+  "passed": true,
+  "startup_seconds": 534.9544509160332,
+  "healthy_within_600": true,
+  "shutdown_seconds": 1.2088970000622794,
+  "state": {
+    "Status": "exited",
+    "Running": false,
+    "Paused": false,
+    "Restarting": false,
+    "OOMKilled": false,
+    "Dead": false,
+    "Pid": 0,
+    "ExitCode": 0,
+    "Error": "",
+    "StartedAt": "2026-10-02T18:03:01.356757843Z",
+    "FinishedAt": "2026-10-02T18:11:57.183986127Z"
+  }
+}

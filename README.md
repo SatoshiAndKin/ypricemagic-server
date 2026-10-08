@@ -7,8 +7,6 @@ A multi-chain token price API backed by [ypricemagic](https://github.com/BobTheB
 ```
 client → traefik-proxy:8000 → frontend:8080
                             → ypm-ethereum:8001
-                            → ypm-arbitrum:8001
-                            → ypm-optimism:8001
                             → ypm-base:8001
 ```
 
@@ -47,7 +45,13 @@ docker compose up --build
 
 For local usage, open `http://localhost:<PORT>` from `traefik-proxy/.env`.
 
-For a deployed host-based setup, set `VIRTUAL_HOST` in `.env` (for example `VIRTUAL_HOST=ypricemagic.stytt.com`) and access:
+Startup loads the required Curve registry before reporting readiness. Base also requires indexed USDC pool metadata from its V2/V3 routers, which populates shared raw factory history for subsequent tokens. Ethereum router metadata and the remaining registries warm in the background; foreground requests pause this background work. A required initialization failure or shutdown signal aborts startup. Other tokens are discovered on demand through their indexed creation events. Keep the pricing cache volumes across restarts to reuse event history.
+
+Ethereum uses eight concurrent log reads and initial 10,000-block ranges through the existing web3-proxy. Sparse scans grow their ranges within bounded limits, while dense results and provider errors reduce them. Override `YPRICEMAGIC_GETLOGS_DOP_ETHEREUM` and `YPRICEMAGIC_GETLOGS_BATCH_SIZE_ETHEREUM` for a different provider. Curve coin metadata loads in bounded concurrent groups so its RPC reads can batch. The existing startup health grace remains 600 seconds, and each uncached lookup has one 300-second budget including queueing and retries.
+
+CCIP reads are disabled on both pricing providers, so contract reverts cannot automatically trigger HTTP requests to contract-supplied URLs. The API cache rejects pickle metadata even if its SQLite records are tampered with. CI retains the full vulnerability inventory; `.trivyignore.yaml` documents three application-specific findings, their mitigations or build-context limits, and a November 1, 2026 review deadline. These exceptions do not mean the dependency packages are universally patched.
+
+For a deployed host-based setup, set `VIRTUAL_HOST` in `.env` (for example `VIRTUAL_HOST=ski-nuc-3.shorthair-fir.ts.net`) and access:
 
 - `https://<VIRTUAL_HOST>/` — frontend UI
 - `https://<VIRTUAL_HOST>/ethereum/docs` — Swagger for ethereum backend
@@ -64,7 +68,7 @@ Fetch the USD price for a single token on a specific chain.
 
 | Parameter | In | Required | Description |
 |-----------|----|----------|-------------|
-| `chain` | path | yes | `ethereum`, `arbitrum`, `optimism`, or `base` |
+| `chain` | path | yes | `ethereum` or `base` |
 | `token` | query | yes | ERC-20 token address (`0x...`) |
 | `block` | query | no | Block number; mutually exclusive with `timestamp` |
 | `timestamp` | query | no | Unix epoch or ISO-8601 timestamp; resolves to a block |
@@ -130,7 +134,7 @@ Batch USD pricing for multiple tokens.
 
 | Parameter | In | Required | Description |
 |-----------|----|----------|-------------|
-| `chain` | path | yes | `ethereum`, `arbitrum`, `optimism`, or `base` |
+| `chain` | path | yes | `ethereum` or `base` |
 | `tokens` | query | yes | Comma-separated ERC-20 token addresses |
 | `block` | query | no | Block number; mutually exclusive with `timestamp` |
 | `timestamp` | query | no | Unix epoch or ISO-8601 timestamp; resolves to a block |
@@ -158,7 +162,7 @@ Returns the ypricemagic pricing bucket classification for a token (for example `
 
 | Parameter | In | Required | Description |
 |-----------|----|----------|-------------|
-| `chain` | path | yes | `ethereum`, `arbitrum`, `optimism`, or `base` |
+| `chain` | path | yes | `ethereum` or `base` |
 | `token` | query | yes | ERC-20 token address |
 
 **Response schema (`200`):**
@@ -192,11 +196,11 @@ Aggregate health check (proxied to ethereum backend).
 
 ### `GET /health/<chain>`
 
-Per-chain health check (externally reached as `GET /<chain>/health`, for example `/arbitrum/health`).
+Per-chain health check (externally reached as `GET /<chain>/health`, for example `/base/health`).
 
 | Parameter | In | Required | Description |
 |-----------|----|----------|-------------|
-| `chain` | path | yes | `ethereum`, `arbitrum`, `optimism`, or `base` |
+| `chain` | path | yes | `ethereum` or `base` |
 
 **Response schema (`200`):** same schema as `GET /health`.
 
@@ -223,17 +227,15 @@ The gear icon (⚙) opens a tokenlist manager where you can toggle lists on/off,
 
 ## Supported Chains
 
-| Chain     | Chain ID |
-|-----------|----------|
-| ethereum  | 1        |
-| arbitrum  | 42161    |
-| optimism  | 10       |
-| base      | 8453     |
+| Chain                       | Chain ID |
+|-----------------------------|----------|
+| ethereum                    | 1        |
+| base (paused in production) | 8453     |
 
 ## Tech Stack
 
 - **Python 3.12**, managed by [uv](https://github.com/astral-sh/uv)
-- **ypricemagic** (latest master) — price resolution
+- **ypricemagic** (fork revision pinned in `pyproject.toml` and `uv.lock`) — price resolution
 - **brownie** — EVM network/web3 management
 - **dank_mids** — batched async RPC calls
 - **FastAPI** + **uvicorn** — HTTP server
@@ -241,6 +243,17 @@ The gear icon (⚙) opens a tokenlist manager where you can toggle lists on/off,
 - **Traefik** — shared reverse proxy / host + chain routing
 - **Docker** (`linux/amd64`) + Docker Compose
 - **Uniswap tokenlist** — bundled token metadata for autocomplete
+
+The pricing fork and its native dependency forks use immutable commit pins. Refresh
+the ypricemagic revision in `pyproject.toml`, then run `uv lock --upgrade` and
+`uv sync --locked --extra dev`. Brownie retains its Web3 6 API; the UV overrides
+allow patched runtime dependencies despite Brownie's frozen requirements. Setuptools
+must remain below 81 because Web3 6 imports `pkg_resources`.
+
+The backend Docker build compiles the fork's C and Rust extensions in a separate
+build stage. The frontend uses Node 24, Vite 8, and TypeScript 6 (the newest major
+supported by `svelte-check`). For local frontend development, use Node 24.15 or newer
+within the Node 24 release line.
 
 ## Deployment
 
@@ -273,12 +286,42 @@ docker compose up --build
 
 Brownie cache volumes (`brownie-<chain>`) persist across deploys so contract metadata doesn't need to be re-fetched.
 
+App containers use `traefik.docker.allownonrunning=true` to retain their routes
+through startup, unhealthy periods and shutdown on Traefik 3.7.13. Health and
+pricing requests return HTTP 503 until a backend becomes healthy, rather than
+losing the route and returning HTTP 404. Backend and frontend images each expose
+one port, so service labels retain the explicit service name with
+`passhostheader=true` and let Docker select that port. An explicit `server.port`
+label produces HTTP 500 for an empty service in Traefik 3.7. These labels deploy
+through the existing app rollout; the shared proxy configuration stays unchanged.
+
 ### CD pipeline
 
-A GitHub Actions workflow (`.github/workflows/cd.yml`) runs on every push to `main`:
+The GitHub Actions workflow (`.github/workflows/cd.yml`) builds and publishes both
+images after a PR merges to `main`, or after a manual workflow dispatch. It then
+posts the merged commit to Tank's deployment webhook. Tank rolls out the services
+and records the final health result separately from the GitHub delivery result.
 
-1. Starts or reuses the shared Traefik stack from `traefik-proxy/`
-2. Builds and updates the ypricemagic app services
-3. Polls `/health` on `VIRTUAL_HOST` to verify the deployment succeeded
+Production runs Ethereum and the frontend. Base pricing is temporarily paused after
+its Alchemy RPC reached the monthly capacity limit; it is omitted from production
+Compose so deployments cannot restart it. Base implementation support remains for
+later reactivation, and its named cache volumes are retained.
 
-Required GitHub Actions variables: `SSH_HOST`, `SSH_USER`, `SSH_KEY`.
+Removing a service from Compose does not stop an existing container. Disable its
+restart policy and stop it separately; do not remove its named volumes. Restore
+Base to production Compose only when an acceptable RPC source is available.
+
+Required GitHub Actions settings: `DEPLOY_WEBHOOK_URL` variable and `WEBHOOK_SECRET`
+secret.
+
+## Private production access
+
+The production UI is https://ski-nuc-3.shorthair-fir.ts.net:9443/. Connect to
+Tailscale first. Ethereum APIs keep their existing `/ethereum` paths. Base APIs are
+unavailable while Base pricing is paused. The previous `ypricemagic.stytt.com` route is retired.
+
+Set `VIRTUAL_HOST=ski-nuc-3.shorthair-fir.ts.net` and
+`TRAEFIK_ENTRYPOINT=web2` in the production `.env`. Set
+`RPC_URL_ETHEREUM=https://ski-lambo-1.shorthair-fir.ts.net:18544`. The shared
+Traefik `web2` entrypoint receives traffic on loopback port 8001. See
+`traefik-proxy/README.md` for its private Tailscale Serve configuration.

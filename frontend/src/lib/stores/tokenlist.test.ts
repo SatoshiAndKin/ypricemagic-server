@@ -196,29 +196,16 @@ describe('DEFAULT_PAIRS', () => {
 
   it('defaults all chains to USD', () => {
     expect(DEFAULT_PAIRS.ethereum.to).toBe('USD');
-    expect(DEFAULT_PAIRS.arbitrum.to).toBe('USD');
-    expect(DEFAULT_PAIRS.optimism.to).toBe('USD');
     expect(DEFAULT_PAIRS.base.to).toBe('USD');
-  });
-
-  it('has correct Arbitrum USDC address', () => {
-    expect(DEFAULT_PAIRS.arbitrum.from).toBe('0xaf88d065e77c8cC2239327C5EDb3A432268e5831');
-  });
-
-  it('has correct Optimism USDC address', () => {
-    expect(DEFAULT_PAIRS.optimism.from).toBe('0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85');
   });
 
   it('has correct Base USDC address', () => {
     expect(DEFAULT_PAIRS.base.from).toBe('0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913');
   });
 
-  it('covers all four chains', () => {
+  it('covers only the two production chains', () => {
     const chains = Object.keys(DEFAULT_PAIRS);
-    expect(chains).toContain('ethereum');
-    expect(chains).toContain('arbitrum');
-    expect(chains).toContain('optimism');
-    expect(chains).toContain('base');
+    expect(chains).toEqual(['ethereum', 'base']);
   });
 });
 
@@ -227,16 +214,12 @@ describe('DEFAULT_PAIRS', () => {
 // ---------------------------------------------------------------------------
 
 describe('CHAIN_IDS', () => {
+  it('lists only production chains', () => {
+    expect(CHAIN_IDS).toEqual({ ethereum: 1, base: 8453 });
+  });
+
   it('maps ethereum to 1', () => {
     expect(CHAIN_IDS.ethereum).toBe(1);
-  });
-
-  it('maps arbitrum to 42161', () => {
-    expect(CHAIN_IDS.arbitrum).toBe(42161);
-  });
-
-  it('maps optimism to 10', () => {
-    expect(CHAIN_IDS.optimism).toBe(10);
   });
 
   it('maps base to 8453', () => {
@@ -313,10 +296,10 @@ describe('getCustomPairs / saveCustomPair / resetCustomPair', () => {
 
   it('saves multiple chains independently', () => {
     saveCustomPair('ethereum', '0xEthFrom', '0xEthTo');
-    saveCustomPair('arbitrum', '0xArbFrom', '0xArbTo');
+    saveCustomPair('base', '0xBaseFrom', '0xBaseTo');
     const pairs = getCustomPairs();
     expect(pairs['ethereum']).toEqual({ from: '0xEthFrom', to: '0xEthTo' });
-    expect(pairs['arbitrum']).toEqual({ from: '0xArbFrom', to: '0xArbTo' });
+    expect(pairs['base']).toEqual({ from: '0xBaseFrom', to: '0xBaseTo' });
   });
 
   it('overwrites an existing custom pair for the same chain', () => {
@@ -333,7 +316,7 @@ describe('getCustomPairs / saveCustomPair / resetCustomPair', () => {
   });
 
   it('does not save identity pairs', () => {
-    saveCustomPair('arbitrum', '0xABCDEF', '0xabcdef');
+    saveCustomPair('base', '0xABCDEF', '0xabcdef');
     expect(getCustomPairs()).toEqual({});
     expect(localStorage.getItem('defaultPairs')).toBeNull();
   });
@@ -346,7 +329,7 @@ describe('getCustomPairs / saveCustomPair / resetCustomPair', () => {
   });
 
   it('resetCustomPair on a non-existent chain does not throw', () => {
-    expect(() => resetCustomPair('optimism')).not.toThrow();
+    expect(() => resetCustomPair('base')).not.toThrow();
   });
 
   it('returns empty object if localStorage contains malformed JSON', () => {
@@ -374,7 +357,7 @@ describe('getEffectivePair', () => {
   });
 
   it('returns DEFAULT_PAIRS for each chain when no custom pairs set', () => {
-    const chains = ['ethereum', 'arbitrum', 'optimism', 'base'] as const;
+    const chains = ['ethereum', 'base'] as const;
     for (const chain of chains) {
       expect(getEffectivePair(chain)).toEqual(DEFAULT_PAIRS[chain]);
     }
@@ -387,8 +370,8 @@ describe('getEffectivePair', () => {
   });
 
   it('returns custom pair for one chain while others still return defaults', () => {
-    saveCustomPair('arbitrum', '0xArbFrom', '0xArbTo');
-    expect(getEffectivePair('arbitrum')).toEqual({ from: '0xArbFrom', to: '0xArbTo' });
+    saveCustomPair('base', '0xBaseFrom', '0xBaseTo');
+    expect(getEffectivePair('base')).toEqual({ from: '0xBaseFrom', to: '0xBaseTo' });
     expect(getEffectivePair('ethereum')).toEqual(DEFAULT_PAIRS.ethereum);
   });
 
@@ -396,30 +379,30 @@ describe('getEffectivePair', () => {
     localStorage.setItem(
       'defaultPairs',
       JSON.stringify({
-        arbitrum: {
-          from: '0xaf88d065e77c8cC2239327C5EDb3A432268e5831',
-          to: '0xAF88D065E77C8CC2239327C5EDB3A432268E5831',
+        base: {
+          from: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',
+          to: '0x833589FCD6EDB6E08F4C7C32D4F71B54BDA02913',
         },
       })
     );
 
-    expect(getEffectivePair('arbitrum')).toEqual(DEFAULT_PAIRS.arbitrum);
+    expect(getEffectivePair('base')).toEqual(DEFAULT_PAIRS.base);
   });
 
   it('keeps using normal custom pairs when from and to differ', () => {
     localStorage.setItem(
       'defaultPairs',
       JSON.stringify({
-        arbitrum: {
-          from: '0xaf88d065e77c8cC2239327C5EDb3A432268e5831',
-          to: '0x82aF49447D8a07e3bd95BD0d56f35241523fBab1',
+        base: {
+          from: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',
+          to: '0x4200000000000000000000000000000000000006',
         },
       })
     );
 
-    expect(getEffectivePair('arbitrum')).toEqual({
-      from: '0xaf88d065e77c8cC2239327C5EDb3A432268e5831',
-      to: '0x82aF49447D8a07e3bd95BD0d56f35241523fBab1',
+    expect(getEffectivePair('base')).toEqual({
+      from: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',
+      to: '0x4200000000000000000000000000000000000006',
     });
   });
 

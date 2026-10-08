@@ -45,6 +45,10 @@ class TestDocEndpoints:
         assert "openapi" in data
         assert "info" in data
         assert "paths" in data
+        assert data["servers"] == [
+            {"url": "/ethereum", "description": "ethereum"},
+            {"url": "/base", "description": "base"},
+        ]
 
     @pytest.mark.asyncio
     async def test_root_returns_404(self, mock_y_module: None) -> None:

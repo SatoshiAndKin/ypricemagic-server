@@ -1,0 +1,60 @@
+{
+  "passed": true,
+  "results": [
+    {
+      "chain": "ethereum",
+      "token_name": "USDC",
+      "token": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+      "status": 200,
+      "api_price": 1.0,
+      "rendered_price": "$1.0000",
+      "seconds": 0.140025082975626,
+      "final_url": "https://ski-nuc-3.shorthair-fir.ts.net:9443/",
+      "passed": true
+    },
+    {
+      "chain": "ethereum",
+      "token_name": "USDT",
+      "token": "0xdAC17F958D2ee523a2206206994597C13D831ec7",
+      "status": 200,
+      "api_price": 0.99983258,
+      "rendered_price": "$0.9998",
+      "seconds": 0.32770720904227346,
+      "final_url": "https://ski-nuc-3.shorthair-fir.ts.net:9443/",
+      "passed": true
+    },
+    {
+      "chain": "ethereum",
+      "token_name": "WETH",
+      "token": "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
+      "status": 200,
+      "api_price": 2654.07,
+      "rendered_price": "$2654.0700",
+      "seconds": 0.37735391699243337,
+      "final_url": "https://ski-nuc-3.shorthair-fir.ts.net:9443/",
+      "passed": true
+    },
+    {
+      "chain": "base",
+      "token_name": "USDC",
+      "token": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+      "status": 200,
+      "api_price": 1.0,
+      "rendered_price": "$1.0000",
+      "seconds": 0.27703345904592425,
+      "final_url": "https://ski-nuc-3.shorthair-fir.ts.net:9443/",
+      "passed": true
+    },
+    {
+      "chain": "base",
+      "token_name": "WETH",
+      "token": "0x4200000000000000000000000000000000000006",
+      "status": 200,
+      "api_price": 2663.87020583,
+      "rendered_price": "$2663.8702",
+      "seconds": 0.7622444999869913,
+      "final_url": "https://ski-nuc-3.shorthair-fir.ts.net:9443/",
+      "passed": true
+    }
+  ]
+}

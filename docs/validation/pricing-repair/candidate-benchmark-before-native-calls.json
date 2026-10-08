@@ -1,0 +1,15 @@
+[
+  {
+    "phase": "historical-first",
+    "chain": "ethereum",
+    "params": {
+      "token": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+      "block": 19000000,
+      "amount": "1000.000001"
+    },
+    "status": 504,
+    "passed": false,
+    "error": "{\"error\":\"Price lookup timed out after 300 seconds\"}",
+    "seconds": 300.02620675007347
+  }
+]

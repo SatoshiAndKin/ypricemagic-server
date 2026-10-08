@@ -25,7 +25,7 @@ API available at `http://localhost:8000`. Interactive UI at `/`.
 uv run pytest
 
 # Run tests with coverage
-uv run pytest --cov=src --cov-report=term-missing
+uv run pytest
 
 # Lint
 uv run ruff check .
@@ -34,7 +34,7 @@ uv run ruff check .
 uv run ruff format .
 
 # Type check
-uv run mypy src/
+uv run mypy
 
 # Check unused dependencies
 uv run deptry .
@@ -74,15 +74,15 @@ All endpoints are chain-scoped via path prefix (`/{chain}/...`), routed by Traef
 
 ## Supported Chains
 
-`ethereum` (1), `arbitrum` (42161), `optimism` (10), `base` (8453)
+`ethereum` (1) is active in production. `base` (8453) implementation support remains,
+but its production service is temporarily disabled to avoid paid RPC usage. Keep
+the Base cache volumes for later reactivation.
 
 ## Architecture
 
 ```
 client → traefik-proxy:8000 → frontend:8080
                              → ypm-ethereum:8001
-                             → ypm-arbitrum:8001
-                             → ypm-optimism:8001
                              → ypm-base:8001
 ```
 
@@ -110,8 +110,6 @@ Each chain container: brownie network connect → dank_mids patch → uvicorn Fa
 | Variable | Required | Description |
 |----------|----------|-------------|
 | `RPC_URL_ETHEREUM` | yes | Ethereum RPC endpoint |
-| `RPC_URL_ARBITRUM` | yes | Arbitrum RPC endpoint |
-| `RPC_URL_OPTIMISM` | yes | Optimism RPC endpoint |
 | `RPC_URL_BASE` | yes | Base RPC endpoint |
 | `ETHERSCAN_TOKEN` | yes | Etherscan API key (used for all explorer APIs) |
 | `PORT` | no | External port for Traefik proxy (default: 8000) |

@@ -8,7 +8,8 @@ export COMPOSE_FILE
 docker compose pull --ignore-pull-failures
 docker compose build --pull always
 
-# Rolling update each service
-for service in ypm-ethereum ypm-arbitrum ypm-optimism ypm-base frontend; do
+# Roll out only the services enabled in this Compose configuration.
+services=$(docker compose config --services)
+while IFS= read -r service; do
     docker rollout "$service"
-done
+done <<< "$services"

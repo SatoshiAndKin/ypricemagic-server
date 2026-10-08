@@ -1,0 +1,37 @@
+{
+  "passed": true,
+  "cases": [
+    {
+      "status": 502,
+      "body": {
+        "error": "controlled temporary provider failure"
+      },
+      "rejected": true,
+      "error": "HTTP 502: {\"error\": \"controlled temporary provider failure\"}"
+    },
+    {
+      "status": 200,
+      "body": {
+        "token": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+        "chain": "base",
+        "price": 1.0,
+        "block": 1,
+        "cached": false
+      },
+      "rejected": true,
+      "error": "{'token': '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48', 'chain': 'base', 'price': 1.0, 'block': 1, 'cached': False}"
+    },
+    {
+      "status": 200,
+      "body": {
+        "token": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+        "chain": "ethereum",
+        "price": 1.0,
+        "block": 1,
+        "cached": false
+      },
+      "rejected": true,
+      "error": "{'token': '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48', 'chain': 'ethereum', 'price': 1.0, 'block': 1, 'cached': False}"
+    }
+  ]
+}
