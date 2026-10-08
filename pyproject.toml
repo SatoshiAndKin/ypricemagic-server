@@ -3,8 +3,8 @@ name = "ypricemagic-server"
 version = "0.12.0"
 requires-python = ">=3.12,<3.13"
 dependencies = [
-    "dank-mids @ git+https://github.com/SatoshiAndKin/dank_mids.git@33d64a962a2ff2a60f4ddb0d1d17e6b0fbbd89c0",
-    "ypricemagic @ git+https://github.com/SatoshiAndKin/ypricemagic.git@e64d4282f4dfeca3b291f65790a6262ae3018965",
+    "dank-mids @ git+https://github.com/SatoshiAndKin/dank_mids.git@c3068cb2ec5f5cc529c26b20d48b20ac86fc2ded",
+    "ypricemagic @ git+https://github.com/SatoshiAndKin/ypricemagic.git@86a040097da15e45f452c946d24542ddc0a3c5e5",
     "fastapi",
     "uvicorn[standard]",
     "diskcache",
@@ -34,7 +34,7 @@ prerelease = "allow"
 # Allow old Brownie/ABI build pins and dank-mids' nested Git source in isolation.
 build-constraint-dependencies = [
     "cchecksum @ git+https://github.com/SatoshiAndKin/cchecksum.git@fff7e1fe87f4679ec96de1cebb1cdd8f5e94be44",
-    "evmspec @ git+https://github.com/SatoshiAndKin/evmspec.git@31c8540a14228ca49c77c19d565a6aaee3d0079f",
+    "evmspec @ git+https://github.com/SatoshiAndKin/evmspec.git@ffd7e2cc096bbfa79dd15d0f0ee0c65f0382c303",
 ]
 override-dependencies = [
     # Brownie's frozen dependency list includes vulnerable and incompatible pins.
