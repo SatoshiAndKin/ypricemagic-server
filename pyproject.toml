@@ -1,6 +1,6 @@
 [project]
 name = "ypricemagic-server"
-version = "0.12.0"
+version = "0.13.0"
 requires-python = ">=3.12,<3.13"
 dependencies = [
     "dank-mids @ git+https://github.com/SatoshiAndKin/dank_mids.git@c3068cb2ec5f5cc529c26b20d48b20ac86fc2ded",
