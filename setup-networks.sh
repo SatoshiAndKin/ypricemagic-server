@@ -1,12 +1,13 @@
 #!/bin/bash
 set -e
 
-if [ -z "$CHAIN_NAME" ] || [ -z "$RPC_URL" ] || [ -z "$CHAIN_ID" ]; then
-  echo "ERROR: CHAIN_NAME, RPC_URL, and CHAIN_ID must be set"
+if [ -z "$CHAIN_NAME" ] || [ -z "$CHAIN_ID" ]; then
+  echo "ERROR: CHAIN_NAME and CHAIN_ID must be set"
   exit 1
 fi
 
 NETWORK_ID="${CHAIN_NAME}-custom"
+RPC_HOST="http://rpc-${CHAIN_NAME}:8544"
 
 EXPLORER_MAP_ethereum="https://api.etherscan.io/api"
 EXPLORER_MAP_arbitrum="https://api.arbiscan.io/api"
@@ -32,15 +33,15 @@ CATEGORY="${!CATEGORY_VAR:-${CHAIN_NAME}}"
 
 echo "Registering brownie network: id=${NETWORK_ID} chainid=${CHAIN_ID}"
 
-ADD_ARGS=(networks add "$CATEGORY" "$NETWORK_ID" "host=$RPC_URL" "chainid=$CHAIN_ID")
+ADD_ARGS=(networks add "$CATEGORY" "$NETWORK_ID" "host=$RPC_HOST" "chainid=$CHAIN_ID")
 if [ -n "$EXPLORER" ]; then
   ADD_ARGS+=("explorer=$EXPLORER")
 fi
 
 OUTPUT=$(brownie "${ADD_ARGS[@]}" 2>&1) || {
   if echo "$OUTPUT" | grep -qi "already exists"; then
-    echo "Updating existing network ${NETWORK_ID} from the configured RPC settings..."
-    MODIFY_ARGS=(networks modify "$NETWORK_ID" "host=$RPC_URL" "chainid=$CHAIN_ID")
+    echo "Updating existing network ${NETWORK_ID} to the chain proxy..."
+    MODIFY_ARGS=(networks modify "$NETWORK_ID" "host=$RPC_HOST" "chainid=$CHAIN_ID")
     if [ -n "$EXPLORER" ]; then
       MODIFY_ARGS+=("explorer=$EXPLORER")
     fi

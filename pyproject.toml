@@ -17,6 +17,7 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = [
+    "aiohttp",  # Controlled HTTP/WebSocket RPC integration fixture.
     "pytest",
     "pytest-asyncio",
     "pytest-cov",

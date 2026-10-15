@@ -6,7 +6,7 @@ Multi-chain ERC-20 token price API backed by [ypricemagic](https://github.com/Bo
 
 ```bash
 cp env.example .env
-# Edit .env with your RPC URLs and ETHERSCAN_TOKEN
+# Edit .env with ETHERSCAN_TOKEN
 uv sync --extra dev
 ```
 
@@ -55,7 +55,7 @@ src/
   logger.py      # structlog configuration with secret redaction
   tests/         # pytest tests (test_server, test_params, test_cache, test_logger, test_static)
 frontend/        # Svelte 5 + Vite browser UI (separate Docker image)
-scripts/         # validate_prices.py, export_openapi.py, update_tokenlist.py, deploy.sh
+scripts/         # validate_prices.py, export_openapi.py, update_tokenlist.py, test_rpc_fallback.py
 traefik-proxy/   # Shared Traefik reverse proxy config
 .github/
   workflows/     # CI (tests+lint), Docker publish, release-please, PR review
@@ -82,8 +82,8 @@ the Base cache volumes for later reactivation.
 
 ```
 client → traefik-proxy:8000 → frontend:8080
-                             → ypm-ethereum:8001
-                             → ypm-base:8001
+                             → ypm-ethereum:8001 → rpc-ethereum:8544
+                             → ypm-base:8001 (paused)
 ```
 
 Each chain container: brownie network connect → dank_mids patch → uvicorn FastAPI server.
@@ -109,14 +109,14 @@ Each chain container: brownie network connect → dank_mids patch → uvicorn Fa
 
 | Variable | Required | Description |
 |----------|----------|-------------|
-| `RPC_URL_ETHEREUM` | yes | Ethereum RPC endpoint |
-| `RPC_URL_BASE` | yes | Base RPC endpoint |
 | `ETHERSCAN_TOKEN` | yes | Etherscan API key (used for all explorer APIs) |
 | `PORT` | no | External port for Traefik proxy (default: 8000) |
 | `CACHE_DIR` | no | Path for diskcache storage (default: /data/cache) |
 | `CHAIN_NAME` | container | Set per-container by docker-compose |
 | `CHAIN_ID` | container | Set per-container by docker-compose |
-| `RPC_URL` | container | Set per-container from RPC_URL_<CHAIN> |
+
+YPM uses `http://rpc-${CHAIN_NAME}:8544`. Store Ethereum backend policy in
+`rpc/ethereum.toml`.
 
 ## Lessons Learned
 

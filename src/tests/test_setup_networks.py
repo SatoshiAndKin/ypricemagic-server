@@ -15,7 +15,7 @@ class NetworkRegistrationTests(unittest.TestCase):
         for outcome in ("added", "updated", "add-failed", "update-failed"):
             with self.subTest(outcome=outcome), tempfile.TemporaryDirectory() as directory:
                 root = Path(directory)
-                rpc = "https://rpc.example/v2/private-key?first=1&second=2"
+                rpc = "http://rpc-base:8544"
                 brownie = root / "brownie"
                 brownie.write_text(
                     f"#!{sys.executable}\n"
@@ -24,7 +24,7 @@ class NetworkRegistrationTests(unittest.TestCase):
                     "    stream.write(json.dumps(sys.argv[1:]) + '\\n')\n"
                     "action = sys.argv[2]\n"
                     "mode = os.environ['OUTCOME']\n"
-                    "print(os.environ['RPC_URL'])\n"
+                    "print('private-key')\n"
                     "if action == 'add' and mode != 'added':\n"
                     "    print('already exists' if mode != 'add-failed' else 'failed')\n"
                     "    raise SystemExit(1)\n"
@@ -43,7 +43,6 @@ class NetworkRegistrationTests(unittest.TestCase):
                         PATH=f"{root}:{os.environ['PATH']}",
                         CHAIN_NAME="base",
                         CHAIN_ID="8453",
-                        RPC_URL=rpc,
                         CALLS=str(root / "calls"),
                         OUTCOME=outcome,
                     ),
@@ -52,7 +51,6 @@ class NetworkRegistrationTests(unittest.TestCase):
                     check=False,
                 )
                 output = result.stdout + result.stderr
-                self.assertNotIn(rpc, output)
                 self.assertNotIn("private-key", output)
                 succeeded = outcome in ("added", "updated")
                 self.assertEqual(result.returncode, 0 if succeeded else 1, output)

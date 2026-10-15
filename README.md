@@ -22,10 +22,6 @@ Create two env files:
 App `.env`:
 
 ```
-RPC_URL_ETHEREUM=https://...
-RPC_URL_ARBITRUM=https://...
-RPC_URL_OPTIMISM=https://...
-RPC_URL_BASE=https://...
 ETHERSCAN_TOKEN=your_etherscan_api_key
 VIRTUAL_HOST=localhost
 ```
@@ -302,7 +298,7 @@ images after a PR merges to `main`, or after a manual workflow dispatch. It then
 posts the merged commit to Tank's deployment webhook. Tank rolls out the services
 and records the final health result separately from the GitHub delivery result.
 
-Production runs Ethereum and the frontend. Base pricing is temporarily paused after
+Production runs Ethereum, its private RPC proxy, and the frontend. Base pricing is temporarily paused after
 its Alchemy RPC reached the monthly capacity limit; it is omitted from production
 Compose so deployments cannot restart it. Base implementation support remains for
 later reactivation, and its named cache volumes are retained.
@@ -321,7 +317,38 @@ Tailscale first. Ethereum APIs keep their existing `/ethereum` paths. Base APIs 
 unavailable while Base pricing is paused. The previous `ypricemagic.stytt.com` route is retired.
 
 Set `VIRTUAL_HOST=ski-nuc-3.shorthair-fir.ts.net` and
-`TRAEFIK_ENTRYPOINT=web2` in the production `.env`. Set
-`RPC_URL_ETHEREUM=https://ski-lambo-1.shorthair-fir.ts.net:18544`. The shared
+`TRAEFIK_ENTRYPOINT=web2` in the production `.env`. See
+the backend policy in `rpc/ethereum.toml`. YPM connects to its chain proxy at
+`http://rpc-ethereum:8544`. The shared
 Traefik `web2` entrypoint receives traffic on loopback port 8001. See
 `traefik-proxy/README.md` for its private Tailscale Serve configuration.
+
+## Ethereum RPC fallback
+
+The private `rpc-ethereum` Compose service prefers NUC and uses Lambo as a backup.
+One healthy backend is sufficient. The proxy returns to NUC when it recovers.
+It has no published ports and shares its private bridge only with YPM. The bridge
+permits outbound connections to the two Tailscale backends. Base stays disabled.
+
+Local development uses the proxy's successful current-main `:latest` image.
+Production uses the private Dockerfiles controller's `just ypm full` command on
+Tank. The controller selects and validates one current-main image digest. It
+creates an override outside the application checkout and uses both Compose files
+for every production command. Do not run production Compose with the base file
+alone. The controller records the image, configuration revision, and previous
+image under the application user's `~/.local/state/deploy-webhooks/ypm/`.
+`just ypm proxy` updates only the proxy with the deployed configuration.
+`just ypm rollback` restores the recorded previous proxy image. All operations
+share the existing YPM deployment lock.
+
+Run the controlled-backend integration check with an explicit test Docker context
+and the same immutable image digest selected for production:
+
+```bash
+uv run python scripts/test_rpc_fallback.py --context <test-context> --image ghcr.io/satoshiandkin/web3-proxy@sha256:<digest>
+```
+
+This check uses synthetic backends. It tests primary preference, cold startup
+without NUC, HTTP failure, missing head events, disconnection, recovery, complete
+outage, batch IDs, historical block parameters, and contract reverts. It does not
+prove live backend availability or historical prices.
