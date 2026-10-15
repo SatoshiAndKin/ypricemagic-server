@@ -23,6 +23,17 @@ env:
 jobs:
   build-and-push:
     if: github.event_name != 'pull_request' || github.event.pull_request.merged == true
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - component: backend
+            context: .
+            image-suffix: ""
+          - component: frontend
+            context: ./frontend
+            image-suffix: -frontend
+    name: Build and push ${{ matrix.component }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
@@ -40,54 +51,36 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Set registry cache addresses
-        id: cache
+      - name: Set registry addresses
+        id: registry
+        env:
+          IMAGE_SUFFIX: ${{ matrix.image-suffix }}
         run: |
+          image="${REGISTRY}/${IMAGE_NAME,,}${IMAGE_SUFFIX}"
           {
-            echo "backend=${REGISTRY}/${IMAGE_NAME,,}:buildcache"
-            echo "frontend=${REGISTRY}/${IMAGE_NAME,,}-frontend:buildcache"
+            echo "image=${image}"
+            echo "cache=${image}:buildcache"
           } >> "$GITHUB_OUTPUT"
 
-      - name: Extract metadata for backend
-        id: meta-backend
+      - name: Extract image metadata
+        id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          images: ${{ steps.registry.outputs.image }}
           tags: |
             type=sha
             type=ref,event=branch
             type=raw,value=latest,enable={{is_default_branch}}
 
-      - name: Build and push backend image
+      - name: Build and push image
         uses: docker/build-push-action@v6
         with:
-          context: .
+          context: ${{ matrix.context }}
           push: true
-          tags: ${{ steps.meta-backend.outputs.tags }}
-          labels: ${{ steps.meta-backend.outputs.labels }}
-          cache-from: type=registry,ref=${{ steps.cache.outputs.backend }}
-          cache-to: type=registry,ref=${{ steps.cache.outputs.backend }},mode=max
-          platforms: linux/amd64
-
-      - name: Extract metadata for frontend
-        id: meta-frontend
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-frontend
-          tags: |
-            type=sha
-            type=ref,event=branch
-            type=raw,value=latest,enable={{is_default_branch}}
-
-      - name: Build and push frontend image
-        uses: docker/build-push-action@v6
-        with:
-          context: ./frontend
-          push: true
-          tags: ${{ steps.meta-frontend.outputs.tags }}
-          labels: ${{ steps.meta-frontend.outputs.labels }}
-          cache-from: type=registry,ref=${{ steps.cache.outputs.frontend }}
-          cache-to: type=registry,ref=${{ steps.cache.outputs.frontend }},mode=max
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=registry,ref=${{ steps.registry.outputs.cache }}
+          cache-to: type=registry,ref=${{ steps.registry.outputs.cache }},mode=max
           platforms: linux/amd64
 
   deploy:
