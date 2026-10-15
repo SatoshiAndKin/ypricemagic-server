@@ -2266,6 +2266,7 @@ dependencies = [
 
 [package.optional-dependencies]
 dev = [
+    { name = "aiohttp" },
     { name = "deptry" },
     { name = "httpx" },
     { name = "mypy" },
@@ -2280,6 +2281,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
+    { name = "aiohttp", marker = "extra == 'dev'" },
     { name = "dank-mids", git = "https://github.com/SatoshiAndKin/dank_mids.git?rev=c3068cb2ec5f5cc529c26b20d48b20ac86fc2ded" },
     { name = "deptry", marker = "extra == 'dev'" },
     { name = "diskcache" },

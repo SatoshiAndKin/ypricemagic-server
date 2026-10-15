@@ -1,0 +1,19 @@
+[app]
+chain_id = 1
+min_synced_rpcs = 1
+min_sum_soft_limit = 1
+
+[balanced_rpcs.nuc]
+http_url = "https://ski-nuc-1.shorthair-fir.ts.net:18545"
+ws_url = "wss://ski-nuc-1.shorthair-fir.ts.net:18545"
+block_data_limit = "archive"
+log_data_limit = "archive"
+soft_limit = 1000
+
+[balanced_rpcs.lambo]
+http_url = "https://ski-lambo-1.shorthair-fir.ts.net:18544"
+ws_url = "wss://ski-lambo-1.shorthair-fir.ts.net:18544"
+block_data_limit = "archive"
+log_data_limit = "archive"
+soft_limit = 1000
+backup = true

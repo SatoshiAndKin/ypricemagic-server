@@ -1,4 +1,5 @@
 networks:
+  rpc-ethereum:
   traefik-proxy:
     external: true
     name: traefik-proxy
@@ -24,12 +25,45 @@ x-ypm-service: &ypm-service
   stop_grace_period: 320s
 
 services:
+  rpc-ethereum:
+    image: ghcr.io/satoshiandkin/web3-proxy:latest
+    platform: linux/amd64
+    init: true
+    mem_limit: 4g
+    memswap_limit: 4g
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,nodev,size=64m,mode=1777
+    command: [--workers, "2", --config, /run/config/proxy.toml, proxyd, --port, "8544"]
+    volumes:
+      - ./rpc/ethereum.toml:/run/config/proxy.toml:ro
+    networks:
+      - rpc-ethereum
+    healthcheck:
+      test: [CMD, curl, --fail, --silent, --max-time, "2", http://127.0.0.1:8544/health]
+      interval: 5s
+      timeout: 3s
+      retries: 3
+      start_period: 60s
+    labels:
+      traefik.enable: "false"
+      com.centurylinklabs.watchtower.enable: "false"
+    restart: unless-stopped
+    stop_grace_period: 30s
+
   ypm-ethereum:
     <<: *ypm-service
+    networks:
+      - traefik-proxy
+      - rpc-ethereum
+    depends_on:
+      rpc-ethereum:
+        condition: service_healthy
     environment:
       CHAIN_NAME: ethereum
       CHAIN_ID: 1
-      RPC_URL: ${RPC_URL_ETHEREUM}
       YPRICEMAGIC_GETLOGS_DOP: ${YPRICEMAGIC_GETLOGS_DOP_ETHEREUM:-8}
       YPRICEMAGIC_GETLOGS_BATCH_SIZE: ${YPRICEMAGIC_GETLOGS_BATCH_SIZE_ETHEREUM:-10000}
       ETHERSCAN_TOKEN: ${ETHERSCAN_TOKEN}
