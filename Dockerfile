@@ -35,7 +35,10 @@ WORKDIR /app
 RUN apt-get update \
     && apt-get install -y --no-install-recommends curl libgmp10 \
     && rm -rf /var/lib/apt/lists/*
-COPY --from=build /app /app
+# Keep compiled dependencies reusable when only application code changes.
+COPY --from=build /app/.venv /app/.venv
+COPY --from=build /app/src /app/src
+COPY --from=build /app/setup-networks.sh /app/setup-networks.sh
 
 RUN mkdir -p /data/cache /app/cache
 
