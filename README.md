@@ -175,6 +175,11 @@ Returns the ypricemagic pricing bucket classification for a token (for example `
 
 Aggregate health check (proxied to ethereum backend).
 
+HTTP 200 requires completed startup initialization, a successful block-height RPC
+read, confirmed node sync, and a backend that is not draining or shutting down.
+If any condition fails, the endpoint returns HTTP 503. Background cache loading
+can continue after readiness because pricing requests load needed data on demand.
+
 | Parameter | In | Required | Description |
 |-----------|----|----------|-------------|
 | _none_ | — | — | No parameters |
