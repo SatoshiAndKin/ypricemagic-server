@@ -38,6 +38,8 @@ build-constraint-dependencies = [
     "evmspec @ git+https://github.com/SatoshiAndKin/evmspec.git@ffd7e2cc096bbfa79dd15d0f0ee0c65f0382c303",
 ]
 override-dependencies = [
+    # Finish async waiters when executor shutdown cancels queued work.
+    "ez-a-sync @ git+https://github.com/SatoshiAndKin/ez-a-sync.git@a3ada714a5aba350e4a884d9651eca29336fa13f",
     # Brownie's frozen dependency list includes vulnerable and incompatible pins.
     # Preserve the server security overrides with the immutable Web3 v7 stack.
     "aiohttp>=3.14.3,<4",
