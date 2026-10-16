@@ -50,7 +50,11 @@ uvicorn.run(server.app, host="127.0.0.1", port=int(sys.argv[2]), timeout_gracefu
             [sys.executable, str(script), phase, str(port)],
             stdout=stream,
             stderr=subprocess.STDOUT,
-            env={**os.environ, "PYTHONPATH": str(Path.cwd()), "SENTRY_DSN": ""},
+            env={
+                **os.environ,
+                "PYTHONPATH": os.pathsep.join((str(Path.cwd()), os.environ.get("PYTHONPATH", ""))),
+                "SENTRY_DSN": "",
+            },
         )
         try:
             marker = "warmup_entered" if phase == "warmup" else "Application startup complete"
@@ -80,14 +84,20 @@ uvicorn.run(server.app, host="127.0.0.1", port=int(sys.argv[2]), timeout_gracefu
         assert "Application shutdown complete" in text
 
 
-@pytest.mark.parametrize("finish", [True, False], ids=["finish-accepted", "bound-shutdown"])
-def test_real_sigterm_preserves_active_and_queued_prices(tmp_path: Path, finish: bool) -> None:
+@pytest.mark.parametrize(
+    "finish,use_executor",
+    [(True, False), (False, False), (True, True)],
+    ids=["finish-accepted", "bound-shutdown", "real-executor"],
+)
+def test_real_sigterm_preserves_active_and_queued_prices(
+    tmp_path: Path, finish: bool, use_executor: bool
+) -> None:
     with socket.socket() as listener:
         listener.bind(("127.0.0.1", 0))
         port = listener.getsockname()[1]
     script = tmp_path / "serve_prices.py"
     script.write_text("""
-import asyncio, runpy, sys
+import asyncio, runpy, sys, time
 from pathlib import Path
 from unittest.mock import AsyncMock
 import pytest, uvicorn
@@ -97,9 +107,24 @@ from src import server
 for name in ("compound", "chainlink", "aave", "balancer", "gearbox", "uniswap"):
     mocks.setattr(server, "_prewarm_" + name, AsyncMock())
 release = Path(sys.argv[2])
+executor = None
+async def initialize(registry):
+    global executor
+    if sys.argv[3] == "True":
+        # Production imports a_sync through Brownie during lifespan startup,
+        # after the app and Uvicorn install their shutdown handlers.
+        from a_sync.executor import AsyncThreadPoolExecutor
+        executor = AsyncThreadPoolExecutor(max_workers=1)
+mocks.setattr(server, "_prewarm_with_shutdown", initialize)
+def blocking_lookup():
+    while not release.exists():
+        time.sleep(0.01)
+    return (1.25, None, 1234567890)
 async def lookup(*args, **kwargs):
     print("lookup_entered", flush=True)
     try:
+        if executor is not None:
+            return await executor.run(blocking_lookup)
         while not release.exists():
             await asyncio.sleep(0.01)
         return (1.25, None, 1234567890)
@@ -135,12 +160,12 @@ uvicorn.run(server.app, host="127.0.0.1", port=int(sys.argv[1]), timeout_gracefu
 
     with log.open("w") as stream, ThreadPoolExecutor(max_workers=3) as clients:
         process = subprocess.Popen(
-            [sys.executable, str(script), str(port), str(release)],
+            [sys.executable, str(script), str(port), str(release), str(use_executor)],
             stdout=stream,
             stderr=subprocess.STDOUT,
             env={
                 **os.environ,
-                "PYTHONPATH": str(Path.cwd()),
+                "PYTHONPATH": os.pathsep.join((str(Path.cwd()), os.environ.get("PYTHONPATH", ""))),
                 "SENTRY_DSN": "",
                 "CACHE_DIR": str(tmp_path / "prices"),
             },
@@ -166,6 +191,7 @@ uvicorn.run(server.app, host="127.0.0.1", port=int(sys.argv[1]), timeout_gracefu
                 assert all(response.status_code == 500 for response in responses)
                 assert "timeout graceful shutdown exceeded" in log.read_text()
         finally:
+            release.touch()
             if process.poll() is None:
                 process.kill()
                 process.wait()

@@ -10,7 +10,7 @@ overrides = [
     { name = "aiohttp", specifier = ">=3.14.3,<4" },
     { name = "cbor2", specifier = ">=5.9.0,<6" },
     { name = "cchecksum", git = "https://github.com/SatoshiAndKin/cchecksum.git?rev=fff7e1fe87f4679ec96de1cebb1cdd8f5e94be44" },
-    { name = "ez-a-sync", git = "https://github.com/SatoshiAndKin/ez-a-sync.git?rev=a3ada714a5aba350e4a884d9651eca29336fa13f" },
+    { name = "ez-a-sync", git = "https://github.com/SatoshiAndKin/ez-a-sync.git?rev=5e904b27249000b918a0f0662df9abdfda103fdd" },
     { name = "faster-eth-abi", specifier = "==5.2.30" },
     { name = "faster-eth-utils", specifier = "==5.3.28" },
     { name = "idna", specifier = ">=3.20,<4" },
@@ -858,8 +858,8 @@ wheels = [
 
 [[package]]
 name = "ez-a-sync"
-version = "0.34.3.dev21"
-source = { git = "https://github.com/SatoshiAndKin/ez-a-sync.git?rev=a3ada714a5aba350e4a884d9651eca29336fa13f#a3ada714a5aba350e4a884d9651eca29336fa13f" }
+version = "0.34.3.dev23"
+source = { git = "https://github.com/SatoshiAndKin/ez-a-sync.git?rev=5e904b27249000b918a0f0662df9abdfda103fdd#5e904b27249000b918a0f0662df9abdfda103fdd" }
 dependencies = [
     { name = "aiolimiter" },
     { name = "async-lru-threadsafe" },
