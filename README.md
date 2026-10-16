@@ -176,9 +176,15 @@ Returns the ypricemagic pricing bucket classification for a token (for example `
 Aggregate health check (proxied to ethereum backend).
 
 HTTP 200 requires completed startup initialization, a successful block-height RPC
-read, confirmed node sync, and a backend that is not draining or shutting down.
+read, confirmed node sync, and a backend that has not started shutdown.
 If any condition fails, the endpoint returns HTTP 503. Background cache loading
 can continue after readiness because pricing requests load needed data on demand.
+
+During a Docker rollout, `/tmp/drain` makes the Docker healthcheck fail so Traefik
+withdraws the old container. The app keeps serving requests during that routing
+change. On SIGTERM, Uvicorn stops accepting connections and lets accepted price
+requests, including queued lookups, finish within its existing 300-second shutdown
+limit. Lifespan teardown then closes lookup resources.
 
 | Parameter | In | Required | Description |
 |-----------|----|----------|-------------|

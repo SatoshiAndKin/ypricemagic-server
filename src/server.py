@@ -10,7 +10,6 @@ from contextlib import asynccontextmanager
 from decimal import Decimal
 from importlib.metadata import PackageNotFoundError
 from importlib.metadata import version as _pkg_version
-from pathlib import Path
 from typing import TYPE_CHECKING, Any, cast
 
 import sentry_sdk
@@ -55,13 +54,13 @@ _shutdown_event = asyncio.Event()
 
 
 def _signal_shutdown_handler() -> None:
-    """Mark the backend unavailable when SIGTERM/SIGINT is received."""
+    """Stop readiness and optional warmup; Uvicorn drains accepted requests."""
     logger.info("shutdown_signal_received")
     _shutdown_event.set()
     app.state.ready = False
-    supervisor = getattr(app.state, "lookups", None)
-    if supervisor is not None:
-        supervisor.cancel()
+    # Uvicorn stops accepting connections and waits for active ASGI requests.
+    # Keep their lookup supervisor open, including requests already queued.
+    # Lifespan teardown closes it after the drain or graceful-shutdown deadline.
     warmup = getattr(app.state, "warmup", None)
     if warmup is not None:
         warmup.cancel()
@@ -569,9 +568,10 @@ app.add_middleware(DeadlineMiddleware, timeout=lambda: PRICE_TIMEOUT)
 
 
 def _is_ready() -> bool:
-    return (
-        bool(app.state.ready) and not _shutdown_event.is_set() and not Path("/tmp/drain").exists()
-    )
+    # /tmp/drain belongs to the Docker healthcheck: it withdraws this container
+    # from routing. Keep serving healthy responses until that withdrawal reaches
+    # Traefik and Uvicorn actually starts shutdown.
+    return bool(app.state.ready) and not _shutdown_event.is_set()
 
 
 @app.get(
@@ -608,7 +608,7 @@ async def health() -> dict[str, Any]:
             logger.warning("health_check_node_error", error=str(e))
             synced = None
 
-    # RPC awaits can overlap shutdown or the deployment drain hook.
+    # RPC awaits can overlap shutdown or readiness changes.
     if not _is_ready():
         return JSONResponse(status_code=503, content={"status": "unavailable", "chain": CHAIN_NAME})  # type: ignore[return-value]
     content = {

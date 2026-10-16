@@ -37,18 +37,11 @@ async def test_failed_sync_check_never_reports_healthy(
 
 
 @pytest.mark.parametrize("phase", ["height", "sync"])
-@pytest.mark.parametrize("transition", ["drain", "shutdown", "unready"])
+@pytest.mark.parametrize("transition", ["shutdown", "unready"])
 async def test_health_cannot_pass_after_readiness_changes_during_rpc(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, phase: str, transition: str
+    monkeypatch: pytest.MonkeyPatch, phase: str, transition: str
 ) -> None:
     entered, release = asyncio.Event(), asyncio.Event()
-    drain = tmp_path / "drain"
-    original_exists = Path.exists
-
-    def exists(path: Path) -> bool:
-        return drain.is_file() if path == Path("/tmp/drain") else original_exists(path)
-
-    monkeypatch.setattr(Path, "exists", exists)
 
     async def height() -> int:
         if phase == "height":
@@ -69,9 +62,7 @@ async def test_health_cannot_pass_after_readiness_changes_during_rpc(
         task = asyncio.create_task(client.get("/health"))
         try:
             await asyncio.wait_for(entered.wait(), 1)
-            if transition == "drain":
-                drain.touch()
-            elif transition == "shutdown":
+            if transition == "shutdown":
                 server._shutdown_event.set()
             else:
                 server.app.state.ready = False
@@ -116,3 +107,42 @@ async def test_health_waits_for_required_startup(
         initialized.set()
         stop.set()
         await task
+
+
+@pytest.mark.parametrize("phase", ["before", "height", "sync"])
+async def test_routing_drain_keeps_serving_health_until_shutdown(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, phase: str
+) -> None:
+    # The rollout marker withdraws Docker routing eligibility. The old app must
+    # still serve requests while Docker and Traefik process that withdrawal.
+    drain = tmp_path / "drain"
+    original_exists = Path.exists
+
+    def exists(path: Path) -> bool:
+        return drain.is_file() if path == Path("/tmp/drain") else original_exists(path)
+
+    monkeypatch.setattr(Path, "exists", exists)
+    if phase == "before":
+        drain.touch()
+
+    async def height() -> int:
+        if phase == "height":
+            drain.touch()
+        return 19000000
+
+    async def synced() -> None:
+        if phase == "sync":
+            drain.touch()
+
+    monkeypatch.setattr(server, "_head_block", height)
+    monkeypatch.setattr("y.time.check_node_async", synced)
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=server.app), base_url="http://test"
+    ) as client:
+        response = await client.get("/health")
+        assert response.status_code == 200
+        assert response.json()["synced"] is True
+        server._signal_shutdown_handler()
+        stopped = await client.get("/health")
+        assert stopped.status_code == 503
+        assert stopped.json()["status"] == "unavailable"
