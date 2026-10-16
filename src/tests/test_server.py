@@ -1,6 +1,7 @@
 """Tests for server._fetch_price behavior."""
 
 import asyncio
+import json
 from collections.abc import AsyncIterator
 from decimal import Decimal
 from types import SimpleNamespace
@@ -624,7 +625,9 @@ class TestHealthEndpoint:
 
     @pytest.mark.asyncio
     async def test_synced_false_when_node_not_synced(self, mock_y_module: None) -> None:
-        """When check_node_async raises NodeNotSynced, health returns synced=False."""
+        """An unsynced RPC node must not pass deployment readiness."""
+        from fastapi.responses import JSONResponse
+
         from src.server import health
 
         # Create a NodeNotSynced exception matching ypricemagic's name
@@ -639,12 +642,15 @@ class TestHealthEndpoint:
             patch("brownie.chain", mock_chain),
         ):
             result = await health()
-            assert result["status"] == "ok"
-            assert result["synced"] is False
+            assert isinstance(result, JSONResponse)
+            assert result.status_code == 503
+            assert json.loads(bytes(result.body))["synced"] is False
 
     @pytest.mark.asyncio
     async def test_synced_none_on_other_exception(self, mock_y_module: None) -> None:
-        """When check_node_async raises unexpected exception, health returns synced=None."""
+        """Unknown RPC sync status must not pass deployment readiness."""
+        from fastapi.responses import JSONResponse
+
         from src.server import health
 
         mock_check_node_async = AsyncMock(side_effect=RuntimeError("Unexpected error"))
@@ -655,8 +661,9 @@ class TestHealthEndpoint:
             patch("brownie.chain", mock_chain),
         ):
             result = await health()
-            assert result["status"] == "ok"
-            assert result["synced"] is None
+            assert isinstance(result, JSONResponse)
+            assert result.status_code == 503
+            assert json.loads(bytes(result.body))["synced"] is None
 
     @pytest.mark.asyncio
     async def test_503_on_chain_height_failure(self, mock_y_module: None) -> None:
@@ -701,8 +708,10 @@ class TestHealthEndpoint:
 
     @pytest.mark.asyncio
     async def test_timeout_protection(self, mock_y_module: None) -> None:
-        """check_node_async timeout doesn't hang health endpoint."""
+        """A timed-out sync check is bounded and fails readiness."""
         import asyncio
+
+        from fastapi.responses import JSONResponse
 
         from src.server import health
 
@@ -718,8 +727,9 @@ class TestHealthEndpoint:
         ):
             # Should complete within reasonable time (timeout is 5s)
             result = await health()
-            # Timeout should result in synced=None
-            assert result["synced"] is None
+            assert isinstance(result, JSONResponse)
+            assert result.status_code == 503
+            assert json.loads(bytes(result.body))["synced"] is None
 
     @pytest.mark.asyncio
     async def test_synced_check_only_after_height_success(self, mock_y_module: None) -> None:

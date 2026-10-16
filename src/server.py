@@ -10,6 +10,7 @@ from contextlib import asynccontextmanager
 from decimal import Decimal
 from importlib.metadata import PackageNotFoundError
 from importlib.metadata import version as _pkg_version
+from pathlib import Path
 from typing import TYPE_CHECKING, Any, cast
 
 import sentry_sdk
@@ -567,14 +568,18 @@ async def request_id_middleware(request: Request, call_next: Any) -> Any:
 app.add_middleware(DeadlineMiddleware, timeout=lambda: PRICE_TIMEOUT)
 
 
+def _is_ready() -> bool:
+    return (
+        bool(app.state.ready) and not _shutdown_event.is_set() and not Path("/tmp/drain").exists()
+    )
+
+
 @app.get(
     "/health",
-    description="Check API and RPC node status. Returns chain name, latest block height, and node sync state.",
+    description="Return HTTP 200 only after required startup and successful RPC checks. Returns HTTP 503 while unavailable or when RPC sync cannot be confirmed.",
 )
 async def health() -> dict[str, Any]:
-    from pathlib import Path
-
-    if not app.state.ready or _shutdown_event.is_set() or Path("/tmp/drain").exists():
+    if not _is_ready():
         return JSONResponse(status_code=503, content={"status": "unavailable", "chain": CHAIN_NAME})  # type: ignore[return-value]
     try:
         height = await asyncio.wait_for(_head_block(), timeout=5.0)
@@ -603,7 +608,18 @@ async def health() -> dict[str, Any]:
             logger.warning("health_check_node_error", error=str(e))
             synced = None
 
-    return {"status": "ok", "chain": CHAIN_NAME, "block": height, "synced": synced}
+    # RPC awaits can overlap shutdown or the deployment drain hook.
+    if not _is_ready():
+        return JSONResponse(status_code=503, content={"status": "unavailable", "chain": CHAIN_NAME})  # type: ignore[return-value]
+    content = {
+        "status": "ok" if synced is True else "unhealthy",
+        "chain": CHAIN_NAME,
+        "block": height,
+        "synced": synced,
+    }
+    if synced is not True:
+        return JSONResponse(status_code=503, content=content)  # type: ignore[return-value]
+    return content
 
 
 def _serialize_trade_path(result: Any) -> list[dict[str, Any]] | None:

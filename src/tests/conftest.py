@@ -5,7 +5,7 @@ import sys
 from collections.abc import Generator
 from pathlib import Path
 from typing import Any
-from unittest.mock import MagicMock
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
@@ -83,7 +83,7 @@ def mock_y_module(monkeypatch: pytest.MonkeyPatch) -> None:
 
     # Create mock y.time submodule
     mock_y_time: Any = MagicMock()
-    mock_y_time.check_node_async = MagicMock()
+    mock_y_time.check_node_async = AsyncMock(return_value=None)
 
     # Create mock y.exceptions submodule
     mock_y_exceptions: Any = MagicMock()
