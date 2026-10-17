@@ -126,11 +126,11 @@ class Backend:
             await socket.close()
 
 
-def test_config(directory: Path, ports: list[int]) -> Path:
+def test_config(directory: Path, ports: dict[str, int]) -> Path:
     config = tomllib.loads((Path(__file__).resolve().parents[1] / "rpc/ethereum.toml").read_text())
     # Preserve production policy; replace only transport addresses.
     source = (Path(__file__).resolve().parents[1] / "rpc/ethereum.toml").read_text()
-    for key, port in zip(("nuc", "lambo"), ports, strict=True):
+    for key, port in ports.items():
         for scheme, field in (("http", "http_url"), ("ws", "ws_url")):
             source = source.replace(
                 config["balanced_rpcs"][key][field],
@@ -156,18 +156,19 @@ async def wait_unhealthy(client: ClientSession, url: str) -> None:
 async def exercise(context: str, image: str) -> None:
     docker = ["docker", "--context", context]
     name = "ypm-fallback-test-" + uuid.uuid4().hex[:10]
-    nodes = [Backend("0x11"), Backend("0x22")]
-    nodes[0].online = False
+    backends = {"lambo": Backend("0x11"), "nuc": Backend("0x22")}
+    primary = backends["lambo"]
+    primary.online = False
     runners = []
-    ports = []
-    for backend in nodes:
+    ports = {}
+    for backend_name, backend in backends.items():
         app = web.Application()
         app.router.add_route("*", "/", backend.handle)
         runner = web.AppRunner(app)
         await runner.setup()
         site = web.TCPSite(runner, "127.0.0.1", 0)
         await site.start()
-        ports.append(runner.addresses[0][1])
+        ports[backend_name] = runner.addresses[0][1]
         runners.append(runner)
     try:
         with tempfile.TemporaryDirectory(
@@ -233,44 +234,45 @@ async def exercise(context: str, image: str) -> None:
                     ) as response:
                         return await response.json()
 
-                async def marker(expected: str, seconds: int = 90) -> None:
+                async def marker(backend_name: str, seconds: int = 90) -> None:
+                    expected = backends[backend_name].marker
                     deadline = time.monotonic() + seconds
                     while time.monotonic() < deadline:
                         with contextlib.suppress(ClientError, TimeoutError):
                             reply = await rpc("eth_gasPrice")
                             if reply.get("result") == expected:
                                 assert reply["id"] == "request-id"
-                                print(f"PASS backend={expected}", flush=True)
+                                print(f"PASS backend={backend_name}", flush=True)
                                 return
                         await asyncio.sleep(1)
-                    raise AssertionError(f"Backend did not become {expected}")
+                    raise AssertionError(f"Backend did not become {backend_name}")
 
                 async def heads() -> None:
                     number = 101
                     while True:
-                        await asyncio.gather(*(node.head(number) for node in nodes))
+                        await asyncio.gather(*(node.head(number) for node in backends.values()))
                         number += 1
                         await asyncio.sleep(1)
 
                 pump = asyncio.create_task(heads())
                 try:
-                    await marker("0x22")  # Cold start while primary is offline.
+                    await marker("nuc")  # Cold start while Lambo is offline.
                     async with client.get(url + "/health") as response:
                         assert response.status == 200
-                    nodes[0].online = True
-                    await marker("0x11")
-                    nodes[0].http_ok = False
-                    await marker("0x22")  # HTTP failure with healthy WS heads.
-                    nodes[0].http_ok = True
-                    await marker("0x11")
-                    nodes[0].events = False
-                    await marker("0x22")  # Lost/stale heads while HTTP stays up.
-                    nodes[0].events = True
-                    await marker("0x11")
-                    await nodes[0].disconnect()
-                    await marker("0x22")
-                    nodes[0].online = True
-                    await marker("0x11")
+                    primary.online = True
+                    await marker("lambo")
+                    primary.http_ok = False
+                    await marker("nuc")  # HTTP failure with healthy WS heads.
+                    primary.http_ok = True
+                    await marker("lambo")
+                    primary.events = False
+                    await marker("nuc")  # Lost/stale heads while HTTP stays up.
+                    primary.events = True
+                    await marker("lambo")
+                    await primary.disconnect()
+                    await marker("nuc")
+                    primary.online = True
+                    await marker("lambo")
                     payload = [
                         {
                             "jsonrpc": "2.0",
@@ -299,10 +301,10 @@ async def exercise(context: str, image: str) -> None:
                     )
                     assert any(
                         c["method"] == "eth_getBalance" and c["params"][-1] == "0x10"
-                        for c in nodes[0].calls
+                        for c in primary.calls
                     )
                     print("PASS batch IDs, historical block, contract revert", flush=True)
-                    await asyncio.gather(*(node.disconnect() for node in nodes))
+                    await asyncio.gather(*(node.disconnect() for node in backends.values()))
                     await wait_unhealthy(client, url)
                     reply = await rpc("eth_gasPrice")
                     assert "error" in reply
