@@ -1,4 +1,4 @@
-FROM rust:1.98.1-slim-bookworm AS rust-toolchain
+FROM rust:1.99.0-slim-bookworm AS rust-toolchain
 
 FROM ghcr.io/astral-sh/uv:python3.12-bookworm-slim AS build
 
