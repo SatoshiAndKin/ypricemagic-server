@@ -336,8 +336,8 @@ Traefik `web2` entrypoint receives traffic on loopback port 8001. See
 
 ## Ethereum RPC fallback
 
-The private `rpc-ethereum` Compose service prefers NUC and uses Lambo as a backup.
-One healthy backend is sufficient. The proxy returns to NUC when it recovers.
+The private `rpc-ethereum` Compose service prefers Lambo and uses NUC as a backup.
+One healthy backend is sufficient. The proxy returns to Lambo when it recovers.
 It has no published ports and shares its private bridge only with YPM. The bridge
 permits outbound connections to the two Tailscale backends. Base stays disabled.
 
@@ -360,6 +360,6 @@ uv run python scripts/test_rpc_fallback.py --context <test-context> --image ghcr
 ```
 
 This check uses synthetic backends. It tests primary preference, cold startup
-without NUC, HTTP failure, missing head events, disconnection, recovery, complete
+without Lambo, HTTP failure, missing head events, disconnection, recovery, complete
 outage, batch IDs, historical block parameters, and contract reverts. It does not
 prove live backend availability or historical prices.
