@@ -1,0 +1,5 @@
+[sandbox_workspace_write]
+writable_roots = [
+    "/Users/bryan/.cache/uv",
+    "/Volumes/Sabrent4TB/agent-work/ypricemagic-server",
+]
