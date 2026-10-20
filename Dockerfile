@@ -1,7 +1,10 @@
+FROM ghcr.io/astral-sh/uv:0.13.4@sha256:9f130421e930bfbdc563c00740466603f8723158e90297d07957c2294640262b AS uv
+
 FROM rust:1.98.1-slim-bookworm AS rust-toolchain
 
 FROM ghcr.io/astral-sh/uv:python3.12-bookworm-slim AS build
 
+COPY --from=uv /uv /uvx /usr/local/bin/
 WORKDIR /app
 
 RUN apt-get update \
@@ -31,9 +34,13 @@ RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --locked
 
 FROM ghcr.io/astral-sh/uv:python3.12-bookworm-slim
+COPY --from=uv /uv /uvx /usr/local/bin/
 WORKDIR /app
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends curl libgmp10 \
+    && apt-get install -y --no-install-recommends curl libgmp10 ca-certificates \
+    && sed -i -e 's|^mozilla/emSign_ECC_Root_CA_-_G3.crt|!&|' \
+       -e 's|^mozilla/Comodo_AAA_Services_root.crt|!&|' /etc/ca-certificates.conf \
+    && update-ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 # Keep compiled dependencies reusable when only application code changes.
 COPY --from=build /app/.venv /app/.venv
