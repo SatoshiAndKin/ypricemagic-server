@@ -1,6 +1,6 @@
 FROM ghcr.io/astral-sh/uv:0.13.4@sha256:9f130421e930bfbdc563c00740466603f8723158e90297d07957c2294640262b AS uv
 
-FROM rust:1.98.1-slim-bookworm AS rust-toolchain
+FROM rust:1.99.1-slim-bookworm AS rust-toolchain
 
 FROM ghcr.io/astral-sh/uv:python3.12-bookworm-slim AS build
 
