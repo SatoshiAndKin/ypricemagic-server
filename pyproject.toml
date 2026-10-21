@@ -38,6 +38,8 @@ build-constraint-dependencies = [
     "evmspec @ git+https://github.com/SatoshiAndKin/evmspec.git@ffd7e2cc096bbfa79dd15d0f0ee0c65f0382c303",
 ]
 override-dependencies = [
+    # Distrust the compromised eMudhra CA chains despite Brownie's frozen pin.
+    "certifi>=2026.10.19",
     # Let the app drain requests before executor cleanup; retain cancelled-waiter repair.
     "ez-a-sync @ git+https://github.com/SatoshiAndKin/ez-a-sync.git@5e904b27249000b918a0f0662df9abdfda103fdd",
     # Brownie's frozen dependency list includes vulnerable and incompatible pins.
