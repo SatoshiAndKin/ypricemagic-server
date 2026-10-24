@@ -1,5 +1,26 @@
 # Changelog
 
+## [0.14.0](https://github.com/SatoshiAndKin/ypricemagic-server/compare/v0.13.0...v0.14.0) (2026-10-24)
+
+
+### Features
+
+* route Ethereum pricing through a private fallback RPC proxy ([#166](https://github.com/SatoshiAndKin/ypricemagic-server/issues/166)) ([5889a7d](https://github.com/SatoshiAndKin/ypricemagic-server/commit/5889a7dc23fc52c927d7ecae53bf8e4a03b109f8))
+
+
+### Bug Fixes
+
+* drain accepted requests during docker rollout ([#170](https://github.com/SatoshiAndKin/ypricemagic-server/issues/170)) ([77c6e83](https://github.com/SatoshiAndKin/ypricemagic-server/commit/77c6e83da9ebcca67b9ace6f276e757c16b18439))
+* prefer Lambo for YPM Ethereum RPC ([#171](https://github.com/SatoshiAndKin/ypricemagic-server/issues/171)) ([99c4de2](https://github.com/SatoshiAndKin/ypricemagic-server/commit/99c4de226a33d92b4efb86f2c9da37988423b5d3))
+* require confirmed readiness in backend health checks ([#169](https://github.com/SatoshiAndKin/ypricemagic-server/issues/169)) ([2d160a2](https://github.com/SatoshiAndKin/ypricemagic-server/commit/2d160a2e06de98a0ab4caff98b6e0d80fa81d8a0))
+* **security:** distrust compromised eMudhra certificate chains ([#173](https://github.com/SatoshiAndKin/ypricemagic-server/issues/173)) ([005a6e9](https://github.com/SatoshiAndKin/ypricemagic-server/commit/005a6e9c2aa9c1c08bd6009d7759b2d8cd4d4c59))
+* **security:** update vulnerable Python and frontend dependencies ([#174](https://github.com/SatoshiAndKin/ypricemagic-server/issues/174)) ([0508480](https://github.com/SatoshiAndKin/ypricemagic-server/commit/05084801a1438b8a7c6a65e712ea37ef4d6b6c55))
+
+
+### Performance Improvements
+
+* speed image delivery and fix queued shutdown cancellation ([#168](https://github.com/SatoshiAndKin/ypricemagic-server/issues/168)) ([7343d6e](https://github.com/SatoshiAndKin/ypricemagic-server/commit/7343d6ea889be60bcc199ae3308c8d9839fd1baf))
+
 ## [0.13.0](https://github.com/SatoshiAndKin/ypricemagic-server/compare/v0.12.0...v0.13.0) (2026-10-08)
 
 
