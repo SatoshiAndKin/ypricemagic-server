@@ -180,9 +180,10 @@ read, confirmed node sync, and a backend that has not started shutdown.
 If any condition fails, the endpoint returns HTTP 503. Background cache loading
 can continue after readiness because pricing requests load needed data on demand.
 
-During a Docker rollout, `/tmp/drain` makes the Docker healthcheck fail so Traefik
-withdraws the old container. The app keeps serving requests during that routing
-change. On SIGTERM, Uvicorn stops accepting connections and lets accepted price
+Kubernetes removes a terminating Pod from ready Service endpoints. The pre-stop
+hook allows routing to settle before the process receives SIGTERM. The API uses
+one writer and Recreate updates on its persistent volume. On SIGTERM, Uvicorn
+stops accepting connections and lets accepted price
 requests, including queued lookups, finish within its existing 300-second shutdown
 limit. Lifespan teardown then closes lookup resources.
 
@@ -285,7 +286,7 @@ docker compose -f traefik-proxy/docker-compose.yml --env-file traefik-proxy/.env
 docker compose up --build
 ```
 
-### Shared Traefik layout
+### Development Traefik layout
 
 - `traefik-proxy/docker-compose.yml` starts the repo-local shared proxy on the `PORT` defined in `traefik-proxy/.env`
 - root `docker-compose.yml` starts only the ypricemagic app services and joins the external `traefik-proxy` Docker network
@@ -299,24 +300,29 @@ pricing requests return HTTP 503 until a backend becomes healthy, rather than
 losing the route and returning HTTP 404. Backend and frontend images each expose
 one port, so service labels retain the explicit service name with
 `passhostheader=true` and let Docker select that port. An explicit `server.port`
-label produces HTTP 500 for an empty service in Traefik 3.7. These labels deploy
-through the existing app rollout; the shared proxy configuration stays unchanged.
+label produces HTTP 500 for an empty service in Traefik 3.7. These labels apply to the local Compose deployment. Production uses native
+Kubernetes routes and probes.
 
 ### CD pipeline
 
-The GitHub Actions workflow (`.github/workflows/cd.yml`) builds and publishes both
-images after a PR merges to `main`, or after a manual workflow dispatch. It then
-posts the merged commit to Tank's deployment webhook. Tank rolls out the services
-and records the final health result separately from the GitHub delivery result.
+The GitHub Actions workflow (`.github/workflows/cd.yml`) checks out the exact
+release commit and publishes both images with full-commit tags and OCI revision
+labels. It then sends the existing authenticated deployment request. The private
+infrastructure controller verifies the images and applies a Kubernetes Helm
+release. The durable worker result and live application checks prove deployment;
+the GitHub receipt proves only that the worker accepted the request.
 
-Production runs Ethereum, its private RPC proxy, and the frontend. Base pricing is temporarily paused after
-its Alchemy RPC reached the monthly capacity limit; it is omitted from production
-Compose so deployments cannot restart it. Base implementation support remains for
-later reactivation, and its named cache volumes are retained.
+Production runs one Ethereum API writer and two frontend replicas. The API uses
+the shared cluster query Service through the required `RPC_URL` setting. The
+initial migration stops the Docker writer, verifies a separate restore of all six
+writable volumes, and copies a verified protected backup before it starts the
+native API. Retain the old volumes and container configuration for recovery.
+Later releases use Recreate and keep the persistent data. A Helm rollback changes
+the application release and preserves its current data.
 
-Removing a service from Compose does not stop an existing container. Disable its
-restart policy and stop it separately; do not remove its named volumes. Restore
-Base to production Compose only when an acceptable RPC source is available.
+Base pricing stays paused to avoid paid RPC usage. Base implementation support
+and its retained cache volumes remain available for a future approved migration.
+Neither an application deployment nor a shared query release may enable Base.
 
 Required GitHub Actions settings: `DEPLOY_WEBHOOK_URL` variable and `WEBHOOK_SECRET`
 secret.
@@ -327,33 +333,21 @@ The production UI is https://ski-nuc-3.shorthair-fir.ts.net:9443/. Connect to
 Tailscale first. Ethereum APIs keep their existing `/ethereum` paths. Base APIs are
 unavailable while Base pricing is paused. The previous `ypricemagic.stytt.com` route is retired.
 
-Set `VIRTUAL_HOST=ski-nuc-3.shorthair-fir.ts.net` and
-`TRAEFIK_ENTRYPOINT=web2` in the production `.env`. See
-the backend policy in `rpc/ethereum.toml`. YPM connects to its chain proxy at
-`http://rpc-ethereum:8544`. The shared
-Traefik `web2` entrypoint receives traffic on loopback port 8001. See
-`traefik-proxy/README.md` for its private Tailscale Serve configuration.
+The private infrastructure repository owns Kubernetes routing, protected
+application settings, persistent storage, and the initial administrator cutover.
+Its native controller handles normal production releases. Do not run the retained
+production Compose configuration against the frozen volumes after native writes.
 
-## Ethereum RPC fallback
+## Development RPC fallback
 
-The private `rpc-ethereum` Compose service prefers Lambo and uses NUC as a backup.
-One healthy backend is sufficient. The proxy returns to Lambo when it recovers.
-It has no published ports and shares its private bridge only with YPM. The bridge
-permits outbound connections to the two Tailscale backends. Base stays disabled.
-
-Local development uses the proxy's successful current-main `:latest` image.
-Production uses the private Dockerfiles controller's `just ypm full` command on
-Tank. The controller selects and validates one current-main image digest. It
-creates an override outside the application checkout and uses both Compose files
-for every production command. Do not run production Compose with the base file
-alone. The controller records the image, configuration revision, and previous
-image under the application user's `~/.local/state/deploy-webhooks/ypm/`.
-`just ypm proxy` updates only the proxy with the deployed configuration.
-`just ypm rollback` restores the recorded previous proxy image. All operations
-share the existing YPM deployment lock.
+Local Compose uses `rpc/ethereum.toml` for its private proxy. It prefers Lambo and
+uses NUC as a backup. One healthy backend is sufficient, and it returns to Lambo
+when that backend recovers. The proxy has no published ports and shares its
+bridge only with the development API. Production uses the shared cluster query
+Service with all three primary execution backends instead of this side proxy.
 
 Run the controlled-backend integration check with an explicit test Docker context
-and the same immutable image digest selected for production:
+and an explicit immutable web3-proxy image digest:
 
 ```bash
 uv run python scripts/test_rpc_fallback.py --context <test-context> --image ghcr.io/satoshiandkin/web3-proxy@sha256:<digest>
