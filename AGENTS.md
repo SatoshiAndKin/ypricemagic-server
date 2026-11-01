@@ -78,7 +78,7 @@ All endpoints are chain-scoped via path prefix (`/{chain}/...`), routed by Traef
 but its production service is temporarily disabled to avoid paid RPC usage. Keep
 the Base cache volumes for later reactivation.
 
-## Architecture
+## Development architecture
 
 ```
 client → traefik-proxy:8000 → frontend:8080
@@ -87,6 +87,13 @@ client → traefik-proxy:8000 → frontend:8080
 ```
 
 Each chain container: brownie network connect → dank_mids patch → uvicorn FastAPI server.
+
+Production uses native Kubernetes services. The Ethereum API has one writer on
+its persistent volume and uses Recreate updates. Two frontend replicas use native
+private routing. The required RPC_URL points to the shared query Service. The
+private infrastructure controller owns storage backup/restore, initial cutover,
+and Helm releases. Keep the old Compose files and data for recovery; do not start
+an old writer against stale data after native writes.
 
 ## Git Workflow
 
@@ -112,11 +119,13 @@ Each chain container: brownie network connect → dank_mids patch → uvicorn Fa
 | `ETHERSCAN_TOKEN` | yes | Etherscan API key (used for all explorer APIs) |
 | `PORT` | no | External port for Traefik proxy (default: 8000) |
 | `CACHE_DIR` | no | Path for diskcache storage (default: /data/cache) |
-| `CHAIN_NAME` | container | Set per-container by docker-compose |
-| `CHAIN_ID` | container | Set per-container by docker-compose |
+| `CHAIN_NAME` | container | Set per-container by deployment configuration |
+| `CHAIN_ID` | container | Set per-container by deployment configuration |
+| `RPC_URL` | yes | Ethereum RPC endpoint used to register the Brownie network |
 
-YPM uses `http://rpc-${CHAIN_NAME}:8544`. Store Ethereum backend policy in
-`rpc/ethereum.toml`.
+Set `RPC_URL` explicitly. Local Compose uses `http://rpc-ethereum:8544` with
+backend policy in `rpc/ethereum.toml`. Production Kubernetes supplies the shared
+query Service URL.
 
 ## Lessons Learned
 
