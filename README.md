@@ -10,7 +10,7 @@ client → traefik-proxy:8000 → frontend:8080
                             → ypm-base:8001
 ```
 
-Each chain container runs FastAPI + brownie + dank_mids + ypricemagic. Prices are cached to disk (diskcache) at `/data/cache`, keyed by `token:block`.
+Each chain container runs FastAPI + brownie + dank_mids + ypricemagic. Set `RPC_URL` to the RPC endpoint for its chain. The entrypoint requires this value and uses it for Brownie network registration. Local Compose supplies its private proxy URL; production Kubernetes supplies the shared query Service URL. Prices are cached to disk (diskcache) at `/data/cache`, keyed by `token:block`.
 
 ## Setup
 

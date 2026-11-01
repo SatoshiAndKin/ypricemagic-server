@@ -113,10 +113,12 @@ Each chain container: brownie network connect → dank_mids patch → uvicorn Fa
 | `PORT` | no | External port for Traefik proxy (default: 8000) |
 | `CACHE_DIR` | no | Path for diskcache storage (default: /data/cache) |
 | `CHAIN_NAME` | container | Set per-container by docker-compose |
-| `CHAIN_ID` | container | Set per-container by docker-compose |
+| `CHAIN_ID` | container | Set per-container by deployment configuration |
+| `RPC_URL` | yes | Ethereum RPC endpoint used to register the Brownie network |
 
-YPM uses `http://rpc-${CHAIN_NAME}:8544`. Store Ethereum backend policy in
-`rpc/ethereum.toml`.
+Set `RPC_URL` explicitly. Local Compose uses `http://rpc-ethereum:8544` with
+backend policy in `rpc/ethereum.toml`. Production Kubernetes supplies the shared
+query Service URL.
 
 ## Lessons Learned
 
