@@ -21,10 +21,7 @@ API available at `http://localhost:8000`. Interactive UI at `/`.
 ## Development Commands
 
 ```bash
-# Run tests
-uv run pytest
-
-# Run tests with coverage
+# Run configured tests and coverage
 uv run pytest
 
 # Lint
@@ -98,18 +95,14 @@ an old writer against stale data after native writes.
 ## Git Workflow
 
 - **Never commit directly to main.** Always create a feature branch, push it, and open a PR.
-- Use the `/commit-push-pr` command to commit, push, and create PRs.
 - Branch naming: `<type>/<short-description>` (e.g. `fix/release-please-config`, `feat/new-endpoint`, `chore/update-deps`).
 - Use squash merges via `gh pr merge --squash`.
 
 ## Code Conventions
 
 - Python 3.12, managed by [uv](https://github.com/astral-sh/uv)
-- **Formatting**: `ruff format` (double quotes, 4-space indent, 100 char line length)
 - **Linting**: `ruff check` with pyflakes, bugbear, pep8-naming, complexity ≤10
 - **Types**: mypy strict — all public functions must have type annotations
-- **Naming**: snake_case for functions/variables, PascalCase for classes (enforced by ruff N rules)
-- **Tests**: pytest, files named `test_*.py`, classes `Test*`, functions `test_*`
 - **Error handling**: never silently swallow exceptions that affect correctness; cache failures are non-fatal (log warning, continue)
 
 ## Environment Variables
@@ -127,11 +120,11 @@ Set `RPC_URL` explicitly. Local Compose uses `http://rpc-ethereum:8544` with
 backend policy in `rpc/ethereum.toml`. Production Kubernetes supplies the shared
 query Service URL.
 
-## Lessons Learned
+## Source-build dependencies
 
 - **Pre-release transitive build deps**: `prerelease = "allow"`, `UV_PRERELEASE=allow`, and `--prerelease=allow` do NOT propagate into PEP 517 build isolation environments. If a git/source dependency has pre-release transitive build deps (e.g., ypricemagic's build-system.requires pulls eth-brownie which needs cchecksum==0.3.7.dev0), you must use `build-constraint-dependencies` in `[tool.uv]` to pin them. `extra-build-dependencies` alone is NOT sufficient.
 - **Git deps need git in Docker**: If any dependency uses a git source (e.g., `ypricemagic @ git+https://...`), the Dockerfile must install `git` via apt-get.
-- **PyPI wheels vs git source builds**: PyPI packages install from pre-built wheels (no build env needed). Switching to a git source requires building from source, which triggers `build-system.requires` resolution -- a completely different code path that can surface new dependency issues.
+- When changing a wheel dependency to a Git/source dependency, validate its isolated build requirements as well as its runtime dependencies.
 
 ## CI/CD
 
