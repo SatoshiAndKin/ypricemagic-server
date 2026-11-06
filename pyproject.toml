@@ -31,6 +31,7 @@ dev = [
 ]
 
 [tool.uv]
+exclude-newer = "7 days"
 prerelease = "allow"
 # Allow old Brownie/ABI build pins and dank-mids' nested Git source in isolation.
 build-constraint-dependencies = [
@@ -54,8 +55,8 @@ override-dependencies = [
     "pytest-xdist>=3.0",
     "pytest-forked>=1.6",
     "cchecksum @ git+https://github.com/SatoshiAndKin/cchecksum.git@fff7e1fe87f4679ec96de1cebb1cdd8f5e94be44",
-    "faster-eth-abi==5.2.30",
-    "faster-eth-utils==5.3.28",
+    "faster-eth-abi==5.2.32",
+    "faster-eth-utils==5.3.30",
     "protobuf>=6.33.5,<7",
     "ujson>=5.12.0",
     "urllib3>=2.8.0,<3",
