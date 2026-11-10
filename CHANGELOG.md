@@ -1,5 +1,35 @@
 # Changelog
 
+## [0.14.0](https://github.com/SatoshiAndKin/ypricemagic-server/compare/v0.13.0...v0.14.0) (2026-11-10)
+
+
+### Features
+
+* route Ethereum pricing through a private fallback RPC proxy ([#166](https://github.com/SatoshiAndKin/ypricemagic-server/issues/166)) ([5889a7d](https://github.com/SatoshiAndKin/ypricemagic-server/commit/5889a7dc23fc52c927d7ecae53bf8e4a03b109f8))
+
+
+### Bug Fixes
+
+* **deps:** bump astral-sh/uv from 0.13.4 to 0.13.7 ([#178](https://github.com/SatoshiAndKin/ypricemagic-server/issues/178)) ([d18e5b1](https://github.com/SatoshiAndKin/ypricemagic-server/commit/d18e5b1b79821d70faf1cd4714ba0cea53131ba6))
+* **deps:** bump rust from 1.98.1-slim-bookworm to 1.99.1-slim-bookworm ([#165](https://github.com/SatoshiAndKin/ypricemagic-server/issues/165)) ([b349782](https://github.com/SatoshiAndKin/ypricemagic-server/commit/b349782275aeddaf08636cc95d80c4f148c70a87))
+* **deps:** require Sentry SDK 2.73.0 with matching lockfile ([#164](https://github.com/SatoshiAndKin/ypricemagic-server/issues/164)) ([b833f46](https://github.com/SatoshiAndKin/ypricemagic-server/commit/b833f46fb42e180d864e87e66785f6f5c5b2604e))
+* drain accepted requests during docker rollout ([#170](https://github.com/SatoshiAndKin/ypricemagic-server/issues/170)) ([77c6e83](https://github.com/SatoshiAndKin/ypricemagic-server/commit/77c6e83da9ebcca67b9ace6f276e757c16b18439))
+* prefer Lambo for YPM Ethereum RPC ([#171](https://github.com/SatoshiAndKin/ypricemagic-server/issues/171)) ([99c4de2](https://github.com/SatoshiAndKin/ypricemagic-server/commit/99c4de226a33d92b4efb86f2c9da37988423b5d3))
+* require confirmed readiness in backend health checks ([#169](https://github.com/SatoshiAndKin/ypricemagic-server/issues/169)) ([2d160a2](https://github.com/SatoshiAndKin/ypricemagic-server/commit/2d160a2e06de98a0ab4caff98b6e0d80fa81d8a0))
+* **security:** distrust compromised eMudhra certificate chains ([#173](https://github.com/SatoshiAndKin/ypricemagic-server/issues/173)) ([005a6e9](https://github.com/SatoshiAndKin/ypricemagic-server/commit/005a6e9c2aa9c1c08bd6009d7759b2d8cd4d4c59))
+* **security:** update locked filelock to 4.2.4 ([#175](https://github.com/SatoshiAndKin/ypricemagic-server/issues/175)) ([17c270d](https://github.com/SatoshiAndKin/ypricemagic-server/commit/17c270dce50a3aa1e8b09f9a9bf7243909f2e771))
+* **security:** update vulnerable Python and frontend dependencies ([#174](https://github.com/SatoshiAndKin/ypricemagic-server/issues/174)) ([0508480](https://github.com/SatoshiAndKin/ypricemagic-server/commit/05084801a1438b8a7c6a65e712ea37ef4d6b6c55))
+
+
+### Performance Improvements
+
+* speed image delivery and fix queued shutdown cancellation ([#168](https://github.com/SatoshiAndKin/ypricemagic-server/issues/168)) ([7343d6e](https://github.com/SatoshiAndKin/ypricemagic-server/commit/7343d6ea889be60bcc199ae3308c8d9839fd1baf))
+
+
+### Documentation
+
+* focus repository instructions on required actions ([#179](https://github.com/SatoshiAndKin/ypricemagic-server/issues/179)) ([1c9f0b0](https://github.com/SatoshiAndKin/ypricemagic-server/commit/1c9f0b0aca130558e7fa87b6148518faf5974539))
+
 ## [0.13.0](https://github.com/SatoshiAndKin/ypricemagic-server/compare/v0.12.0...v0.13.0) (2026-10-08)
 
 
