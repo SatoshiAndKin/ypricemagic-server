@@ -3,8 +3,8 @@ name = "ypricemagic-server"
 version = "0.14.0"
 requires-python = ">=3.12,<3.13"
 dependencies = [
-    "dank-mids @ git+https://github.com/SatoshiAndKin/dank_mids.git@c3068cb2ec5f5cc529c26b20d48b20ac86fc2ded",
-    "ypricemagic @ git+https://github.com/SatoshiAndKin/ypricemagic.git@86a040097da15e45f452c946d24542ddc0a3c5e5",
+    "dank-mids @ git+https://github.com/SatoshiAndKin/dank_mids.git@867fee773aac436a1f1dc0ec1642418b8e61e219",
+    "ypricemagic @ git+https://github.com/SatoshiAndKin/ypricemagic.git@f515f008718f67813e209d5859fb2c6b6fced043",
     "fastapi",
     "uvicorn[standard]",
     "diskcache",
@@ -39,12 +39,12 @@ build-constraint-dependencies = [
     "evmspec @ git+https://github.com/SatoshiAndKin/evmspec.git@ffd7e2cc096bbfa79dd15d0f0ee0c65f0382c303",
 ]
 override-dependencies = [
-    # Distrust the compromised eMudhra CA chains despite Brownie's frozen pin.
+    # Retain patched certificate roots when the transitive graph changes.
     "certifi>=2026.10.19",
     # Let the app drain requests before executor cleanup; retain cancelled-waiter repair.
     "ez-a-sync @ git+https://github.com/SatoshiAndKin/ez-a-sync.git@5e904b27249000b918a0f0662df9abdfda103fdd",
-    # Brownie's frozen dependency list includes vulnerable and incompatible pins.
-    # Preserve the server security overrides with the immutable Web3 v7 stack.
+    # Brownie freezes dependencies for its broader CLI/native test matrix.
+    # Keep the server's security floors and validated ABI/tooling overrides.
     "aiohttp>=3.14.5,<4",
     "cbor2>=5.9.0,<6",
     "idna>=3.20,<4",
