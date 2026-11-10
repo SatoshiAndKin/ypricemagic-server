@@ -178,5 +178,6 @@ def ready_test_backend(monkeypatch: pytest.MonkeyPatch) -> None:
 
     from src import server
 
-    monkeypatch.setattr(server.app.state, "ready", True)
+    state = type(server.app.state)({"ready": True})
+    monkeypatch.setattr(server.app, "state", state)
     monkeypatch.setattr(server, "_shutdown_event", asyncio.Event())

@@ -10,12 +10,24 @@ from pathlib import Path
 
 
 class NetworkRegistrationTests(unittest.TestCase):
+    def test_missing_rpc_url_stops_before_network_registration(self) -> None:
+        script = Path(__file__).resolve().parents[2] / "setup-networks.sh"
+        result = subprocess.run(
+            ["bash", str(script)],
+            env=dict(os.environ, CHAIN_NAME="ethereum", CHAIN_ID="1", RPC_URL=""),
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("RPC_URL must be set", result.stdout)
+
     def test_registration_preserves_arguments_and_never_prints_credentials(self) -> None:
         script = Path(__file__).resolve().parents[2] / "setup-networks.sh"
         for outcome in ("added", "updated", "add-failed", "update-failed"):
             with self.subTest(outcome=outcome), tempfile.TemporaryDirectory() as directory:
                 root = Path(directory)
-                rpc = "http://rpc-base:8544"
+                rpc = "http://query.example.invalid:8544/private-key"
                 brownie = root / "brownie"
                 brownie.write_text(
                     f"#!{sys.executable}\n"
@@ -43,6 +55,7 @@ class NetworkRegistrationTests(unittest.TestCase):
                         PATH=f"{root}:{os.environ['PATH']}",
                         CHAIN_NAME="base",
                         CHAIN_ID="8453",
+                        RPC_URL=rpc,
                         CALLS=str(root / "calls"),
                         OUTCOME=outcome,
                     ),

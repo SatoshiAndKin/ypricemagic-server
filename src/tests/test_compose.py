@@ -49,7 +49,7 @@ def test_proxy_is_private_and_digest_override_preserves_application_contract(
     assert set(proxy["networks"]) == {"rpc-ethereum"}
     assert proxy["labels"]["traefik.enable"] == "false"
     app = services["ypm-ethereum"]
-    assert "RPC_URL" not in app["environment"]
+    assert app["environment"]["RPC_URL"] == "http://rpc-ethereum:8544"
     assert int(app["mem_limit"]) == int(app["memswap_limit"]) == 8 * 1024**3
     assert app["depends_on"]["rpc-ethereum"]["condition"] == "service_healthy"
     assert set(app["networks"]) == {"rpc-ethereum", "traefik-proxy"}
