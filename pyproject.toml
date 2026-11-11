@@ -12,7 +12,7 @@ dependencies = [
     "prometheus-client",
     "tenacity",
     "setuptools<82",
-    "sentry-sdk>=2.73.0,<3",
+    "sentry-sdk>=2.74.0,<3",
 ]
 
 [project.optional-dependencies]
