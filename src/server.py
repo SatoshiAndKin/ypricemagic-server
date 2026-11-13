@@ -4,12 +4,12 @@ import math
 import os
 import signal
 import time
+import tomllib
 import uuid
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from decimal import Decimal
-from importlib.metadata import PackageNotFoundError
-from importlib.metadata import version as _pkg_version
+from pathlib import Path
 from typing import TYPE_CHECKING, Any, cast
 
 import sentry_sdk
@@ -77,8 +77,9 @@ class _HealthAccessFilter(logging.Filter):
 CHAIN_NAME = os.environ.get("CHAIN_NAME", "ethereum")
 
 try:
-    _VERSION = _pkg_version("ypricemagic-server")
-except PackageNotFoundError:
+    with (Path(__file__).resolve().parents[1] / "pyproject.toml").open("rb") as project:
+        _VERSION = tomllib.load(project)["project"]["version"]
+except FileNotFoundError:
     _VERSION = "dev"
 
 PRICE_TIMEOUT = 300.0
