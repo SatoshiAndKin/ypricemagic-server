@@ -46,6 +46,7 @@ RUN apt-get update \
 COPY --from=build /app/.venv /app/.venv
 COPY --from=build /app/src /app/src
 COPY --from=build /app/setup-networks.sh /app/setup-networks.sh
+COPY --from=build /app/pyproject.toml /app/pyproject.toml
 
 RUN mkdir -p /data/cache /app/cache
 
@@ -56,6 +57,12 @@ VOLUME ["/root/.brownie", "/root/.solcx", "/root/.vvm", "/root/.ypricemagic", "/
 
 ENV PYTHONUNBUFFERED=1
 ENV PATH="/app/.venv/bin:$PATH"
+
+# Check the release schema in the final image without starting the RPC client.
+RUN --network=none python -c '\
+import tomllib; from pathlib import Path; from src.server import app; \
+expected = tomllib.loads(Path("pyproject.toml").read_text())["project"]["version"]; \
+actual = app.openapi()["info"]["version"]; assert actual == expected, (actual, expected)'
 
 EXPOSE 8001
 

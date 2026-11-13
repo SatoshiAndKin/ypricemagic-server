@@ -1,5 +1,8 @@
 """Tests for API documentation endpoints."""
 
+import tomllib
+from pathlib import Path
+
 import pytest
 from fastapi.testclient import TestClient
 
@@ -43,7 +46,9 @@ class TestDocEndpoints:
         assert response.headers["content-type"].startswith("application/json")
         data = response.json()
         assert "openapi" in data
-        assert "info" in data
+        project_path = Path(__file__).resolve().parents[2] / "pyproject.toml"
+        with project_path.open("rb") as project:
+            assert data["info"]["version"] == tomllib.load(project)["project"]["version"]
         assert "paths" in data
         assert data["servers"] == [
             {"url": "/ethereum", "description": "ethereum"},
