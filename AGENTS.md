@@ -85,12 +85,14 @@ client → traefik-proxy:8000 → frontend:8080
 
 Each chain container: brownie network connect → dank_mids patch → uvicorn FastAPI server.
 
-Production uses native Kubernetes services. The Ethereum API has one writer on
-its persistent volume and uses Recreate updates. Two frontend replicas use native
-private routing. The required RPC_URL points to the shared query Service. The
-private infrastructure controller owns storage backup/restore, initial cutover,
-and Helm releases. Keep the old Compose files and data for recovery; do not start
-an old writer against stale data after native writes.
+Production runs one Ethereum API replica and one frontend replica in steady state.
+Kubernetes keeps the old pod ready during a rolling update until the replacement
+passes readiness. Each API pod uses a private disk-backed `emptyDir` for its caches.
+A container restart in the same pod retains them. A replacement pod rebuilds them.
+The frontend uses private Tailscale ingress. The API's `RPC_URL` points to the shared
+query Service. The private infrastructure controller owns Helm releases and the
+retained Compose files, local volumes, and backups for recovery. Follow its recovery
+procedure before starting a legacy writer.
 
 ## Git Workflow
 
