@@ -34,6 +34,11 @@ jobs:
             --env "EXPECTED_RELEASE=$GITHUB_SHA" --entrypoint python ypm-server:ci \
             -c 'import os, sentry_sdk; from src.server import _init_sentry; _init_sentry(); assert sentry_sdk.get_client().options["release"] == os.environ["EXPECTED_RELEASE"]'
 
+      - name: Verify HTTPS Sentry upload deadlines
+        run: |
+          docker run --rm --network none --entrypoint python ypm-server:ci \
+            -m unittest src.tests.test_sentry_transport
+
   frontend:
     runs-on: ubuntu-latest
     timeout-minutes: 10

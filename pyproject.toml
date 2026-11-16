@@ -13,6 +13,7 @@ dependencies = [
     "tenacity",
     "setuptools<82",
     "sentry-sdk>=2.73.0,<3",
+    "urllib3>=2.8.0,<3",
 ]
 
 [project.optional-dependencies]
