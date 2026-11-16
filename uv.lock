@@ -2285,6 +2285,7 @@ dependencies = [
     { name = "setuptools" },
     { name = "structlog" },
     { name = "tenacity" },
+    { name = "urllib3" },
     { name = "uvicorn", extra = ["standard"] },
     { name = "ypricemagic" },
 ]
@@ -2324,6 +2325,7 @@ requires-dist = [
     { name = "setuptools", specifier = "<82" },
     { name = "structlog" },
     { name = "tenacity" },
+    { name = "urllib3", specifier = ">=2.8.0,<3" },
     { name = "uvicorn", extras = ["standard"] },
     { name = "vulture", marker = "extra == 'dev'" },
     { name = "ypricemagic", git = "https://github.com/SatoshiAndKin/ypricemagic.git?rev=86a040097da15e45f452c946d24542ddc0a3c5e5" },
