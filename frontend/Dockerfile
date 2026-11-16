@@ -5,7 +5,9 @@ COPY package*.json ./
 RUN npm ci
 COPY . .
 ARG VITE_SENTRY_DSN=""
+ARG SENTRY_RELEASE=""
 ENV VITE_SENTRY_DSN=${VITE_SENTRY_DSN}
+ENV VITE_SENTRY_RELEASE=${SENTRY_RELEASE}
 RUN npm run build
 
 # Serve stage

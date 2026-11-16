@@ -64,6 +64,9 @@ import tomllib; from pathlib import Path; from src.server import app; \
 expected = tomllib.loads(Path("pyproject.toml").read_text())["project"]["version"]; \
 actual = app.openapi()["info"]["version"]; assert actual == expected, (actual, expected)'
 
+ARG SENTRY_RELEASE=""
+ENV SENTRY_RELEASE=${SENTRY_RELEASE}
+
 EXPOSE 8001
 
 ENTRYPOINT ["./setup-networks.sh"]
