@@ -312,6 +312,13 @@ infrastructure controller verifies the images and applies a Kubernetes Helm
 release. The durable worker result and live application checks prove deployment;
 the GitHub receipt proves only that the worker accepted the request.
 
+Both images use the full release commit as their Sentry release ID. The API
+reads `SENTRY_RELEASE` from its image environment. The frontend embeds the ID
+at build time and sends events when the `VITE_SENTRY_DSN` GitHub Actions variable
+contains the frontend project's public DSN. The API uses its production
+`SENTRY_DSN`. Sentry can group new events by commit. Explicit Sentry deploy
+records require registration after the production rollout succeeds.
+
 Production runs one Ethereum API writer and two frontend replicas. The API uses
 the shared cluster query Service through the required `RPC_URL` setting. The
 initial migration stops the Docker writer, verifies a separate restore of all six

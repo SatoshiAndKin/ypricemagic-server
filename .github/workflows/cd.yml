@@ -81,6 +81,9 @@ jobs:
           context: ${{ matrix.context }}
           push: true
           tags: ${{ steps.meta.outputs.tags }}
+          build-args: |
+            SENTRY_RELEASE=${{ env.RELEASE_COMMIT }}
+            ${{ matrix.component == 'frontend' && format('VITE_SENTRY_DSN={0}', vars.VITE_SENTRY_DSN) || '' }}
           labels: |
             ${{ steps.meta.outputs.labels }}
             org.opencontainers.image.revision=${{ env.RELEASE_COMMIT }}

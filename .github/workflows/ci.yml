@@ -25,9 +25,14 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - name: Build production backend image on native amd64
-        run: docker build --tag ypm-server:ci .
+        run: docker build --build-arg "SENTRY_RELEASE=$GITHUB_SHA" --tag ypm-server:ci .
       - name: Import compiled dependencies in the runtime image
         run: docker run --rm --entrypoint python ypm-server:ci -c 'import brownie, dank_mids, cachebox'
+      - name: Verify the runtime Sentry release
+        run: |
+          docker run --rm --network none --env SENTRY_DSN=https://public@example.invalid/1 \
+            --env "EXPECTED_RELEASE=$GITHUB_SHA" --entrypoint python ypm-server:ci \
+            -c 'import os, sentry_sdk; from src.server import _init_sentry; _init_sentry(); assert sentry_sdk.get_client().options["release"] == os.environ["EXPECTED_RELEASE"]'
 
   frontend:
     runs-on: ubuntu-latest
@@ -45,7 +50,13 @@ jobs:
       - run: npm ci
       - run: npm run check
       - run: npm test -- --run
-      - run: npm run build
+      - name: Build and verify the Sentry release in the frontend bundle
+        env:
+          VITE_SENTRY_DSN: https://public@example.invalid/1
+          VITE_SENTRY_RELEASE: ${{ github.sha }}
+        run: |
+          npm run build
+          grep -Fq "$GITHUB_SHA" dist/assets/*.js
 
   lockfile:
     # Immutable Git dependencies make this reproducible on both PRs and pushes.
