@@ -35,6 +35,7 @@ from src.cache import (
     set_cached_error,
     set_cached_price,
 )
+from src.curve_history import seed_curve_history
 from src.logger import configure_logging, get_logger, sanitize_error_message
 from src.params import (
     ParseError,
@@ -302,9 +303,10 @@ async def _prewarm_with_shutdown(curve_registry: Any) -> None:
     """Finish required initialization before starting background pool backfills."""
 
     async def _prewarm_curve() -> None:
-        if curve_registry and hasattr(curve_registry, "_done"):
+        if curve_registry:
             logger.info("curve_registry_loading_started")
-            _ = curve_registry._done
+            if CHAIN_NAME == "ethereum":
+                await seed_curve_history()
             await curve_registry.__coin_to_pools__
             logger.info("curve_registry_loading_done")
 
