@@ -24,8 +24,16 @@ jobs:
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v6
+      - uses: docker/setup-buildx-action@v3
       - name: Build production backend image on native amd64
-        run: docker build --build-arg "SENTRY_RELEASE=$GITHUB_SHA" --tag ypm-server:ci .
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64
+          load: true
+          tags: ypm-server:ci
+          build-args: SENTRY_RELEASE=${{ github.sha }}
+          cache-from: type=registry,ref=ghcr.io/satoshiandkin/ypricemagic-server:buildcache
       - name: Import compiled dependencies in the runtime image
         run: docker run --rm --entrypoint python ypm-server:ci -c 'import brownie, dank_mids, cachebox'
       - name: Verify the runtime Sentry release
