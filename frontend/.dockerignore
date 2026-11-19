@@ -2,3 +2,9 @@ node_modules/
 dist/
 .DS_Store
 *.md
+
+# Never send repository metadata or local environment files to BuildKit.
+.git
+.git/**
+.env
+.env.*
