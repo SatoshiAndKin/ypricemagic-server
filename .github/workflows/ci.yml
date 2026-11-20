@@ -14,8 +14,14 @@ on:
     branches: [main]
     types: [opened, synchronize, reopened, ready_for_review]
 
+  # Handle closure even for fork PRs and PRs with merge conflicts.
+  # A closure only takes the concurrency slot; no job runs on a runner.
+  pull_request_target:
+    branches: [main]
+    types: [closed]
+
 concurrency:
-  group: ci-${{ github.ref }}
+  group: ci-${{ github.event.pull_request.number && format('refs/pull/{0}/merge', github.event.pull_request.number) || github.ref }}
   cancel-in-progress: true
 
 # PR cache writes stay in GitHub's PR merge-ref namespace. No PR registry
@@ -25,6 +31,7 @@ permissions:
 
 jobs:
   backend-image:
+    if: github.event_name != 'pull_request_target'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -64,6 +71,7 @@ jobs:
             -m unittest src.tests.test_sentry_transport
 
   frontend-image:
+    if: github.event_name != 'pull_request_target'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -94,6 +102,7 @@ jobs:
             -c 'test ! -e /usr/share/nginx/html/.git && nginx -t'
 
   frontend:
+    if: github.event_name != 'pull_request_target'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     defaults:
@@ -118,6 +127,7 @@ jobs:
           grep -Fq "$GITHUB_SHA" dist/assets/*.js
 
   lockfile:
+    if: github.event_name != 'pull_request_target'
     # Immutable Git dependencies make this reproducible on both PRs and pushes.
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -134,6 +144,7 @@ jobs:
         run: uv lock --check
 
   lint-and-test:
+    if: github.event_name != 'pull_request_target'
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
