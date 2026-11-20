@@ -34,7 +34,7 @@ jobs:
           output: trivy-unfiltered.json
 
       - name: Retain unfiltered vulnerability inventory
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: dependency-vulnerabilities
           path: trivy-unfiltered.json
