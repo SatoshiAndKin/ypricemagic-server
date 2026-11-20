@@ -12,16 +12,12 @@ on:
       - "*.json"  # release-please-config, etc.
   pull_request:
     branches: [main]
-    types: [opened, synchronize, reopened, ready_for_review]
-
-  # Handle closure even for fork PRs and PRs with merge conflicts.
-  # A closure only takes the concurrency slot; no job runs on a runner.
-  pull_request_target:
-    branches: [main]
-    types: [closed]
+    # A close takes the PR's concurrency slot without starting a runner.
+    types: [opened, synchronize, reopened, ready_for_review, closed]
 
 concurrency:
-  group: ci-${{ github.event.pull_request.number && format('refs/pull/{0}/merge', github.event.pull_request.number) || github.ref }}
+  # A merged close can point at main; never share its group without a PR number.
+  group: ci-${{ github.event.number && format('refs/pull/{0}/merge', github.event.number) || (github.event_name == 'pull_request' && !startsWith(github.ref, 'refs/pull/') && format('pr-no-number-{0}', github.run_id)) || github.ref }}
   cancel-in-progress: true
 
 # PR cache writes stay in GitHub's PR merge-ref namespace. No PR registry
@@ -31,7 +27,7 @@ permissions:
 
 jobs:
   backend-image:
-    if: github.event_name != 'pull_request_target'
+    if: github.event_name == 'push' || (github.event_name == 'pull_request' && contains(fromJSON('["opened","synchronize","reopened","ready_for_review"]'), github.event.action))
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -71,7 +67,7 @@ jobs:
             -m unittest src.tests.test_sentry_transport
 
   frontend-image:
-    if: github.event_name != 'pull_request_target'
+    if: github.event_name == 'push' || (github.event_name == 'pull_request' && contains(fromJSON('["opened","synchronize","reopened","ready_for_review"]'), github.event.action))
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -102,7 +98,7 @@ jobs:
             -c 'test ! -e /usr/share/nginx/html/.git && nginx -t'
 
   frontend:
-    if: github.event_name != 'pull_request_target'
+    if: github.event_name == 'push' || (github.event_name == 'pull_request' && contains(fromJSON('["opened","synchronize","reopened","ready_for_review"]'), github.event.action))
     runs-on: ubuntu-latest
     timeout-minutes: 10
     defaults:
@@ -127,7 +123,7 @@ jobs:
           grep -Fq "$GITHUB_SHA" dist/assets/*.js
 
   lockfile:
-    if: github.event_name != 'pull_request_target'
+    if: github.event_name == 'push' || (github.event_name == 'pull_request' && contains(fromJSON('["opened","synchronize","reopened","ready_for_review"]'), github.event.action))
     # Immutable Git dependencies make this reproducible on both PRs and pushes.
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -144,7 +140,7 @@ jobs:
         run: uv lock --check
 
   lint-and-test:
-    if: github.event_name != 'pull_request_target'
+    if: github.event_name == 'push' || (github.event_name == 'pull_request' && contains(fromJSON('["opened","synchronize","reopened","ready_for_review"]'), github.event.action))
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
