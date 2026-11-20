@@ -10,18 +10,13 @@ on:
       - "docs/**"
       - "runbooks/**"
 
-  # Handle closure even for fork PRs and PRs with merge conflicts.
-  # A closure only takes the concurrency slot; no job runs on a runner.
-  pull_request_target:
-    types: [closed]
-
 concurrency:
-  group: pr-review-${{ github.event.pull_request.number && format('refs/pull/{0}/merge', github.event.pull_request.number) || github.ref }}
+  # Keep this key in sync with pr-review-cancel.yml.
+  group: pr-review-${{ github.event.number && format('refs/pull/{0}/merge', github.event.number) || (startsWith(github.ref, 'refs/pull/') && github.ref) || format('pr-no-number-{0}', github.run_id) }}
   cancel-in-progress: true
 
 jobs:
   security-scan:
-    if: github.event_name != 'pull_request_target'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
