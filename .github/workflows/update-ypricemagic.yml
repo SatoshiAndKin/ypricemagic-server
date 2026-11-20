@@ -1,0 +1,156 @@
+name: Update ypricemagic dependency
+
+on:
+  schedule:
+    - cron: "23 17 * * *"
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: "Open a dependency PR (unchecked only resolves and verifies the lock)"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  pull-requests: read
+
+concurrency:
+  group: update-ypricemagic
+
+jobs:
+  resolve:
+    if: github.repository == 'SatoshiAndKin/ypricemagic-server' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    outputs:
+      current: ${{ steps.upstream.outputs.current }}
+      candidate: ${{ steps.upstream.outputs.candidate }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - name: Find a new immutable fork commit
+        id: upstream
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PUBLISH: ${{ github.event_name == 'schedule' || inputs.publish }}
+        run: |
+          set -euo pipefail
+          current="$(python3 .github/scripts/update-ypricemagic-pin.py read)"
+          if [ "$PUBLISH" = true ] &&
+            gh pr list --repo "$GITHUB_REPOSITORY" --base main --state open \
+              --limit 100 --json headRefName,isCrossRepository \
+              --jq '.[] | select(.isCrossRepository == false) | .headRefName' |
+              grep '^automation/ypricemagic-' >/dev/null; then
+            echo "An update PR is already open."
+            exit 0
+          fi
+
+          git -C "$RUNNER_TEMP" init --quiet ypricemagic
+          git -C "$RUNNER_TEMP/ypricemagic" fetch --quiet --no-tags --filter=blob:none \
+            https://github.com/SatoshiAndKin/ypricemagic.git refs/heads/master
+          candidate="$(git -C "$RUNNER_TEMP/ypricemagic" rev-parse FETCH_HEAD)"
+          if [ "$candidate" = "$current" ]; then
+            echo "Already at ypricemagic $current."
+            exit 0
+          fi
+
+          ancestor="$current"
+          # The deployed pin is the pre-squash head of ypricemagic #52.
+          # Permit that specific transition only if the candidate contains #52's landed commit.
+          if [ "$current" = 86a040097da15e45f452c946d24542ddc0a3c5e5 ]; then
+            ancestor=02383f0d3c1ff28888893e526a556b47d4e6fbf5
+          fi
+          git -C "$RUNNER_TEMP/ypricemagic" merge-base --is-ancestor "$ancestor" "$candidate" || {
+            echo "::error::Refusing to replace ypricemagic $current with divergent or older $candidate."
+            exit 1
+          }
+          if [ "$PUBLISH" = true ] &&
+            [ "$(gh api --method GET "repos/$GITHUB_REPOSITORY/pulls" \
+              -f state=closed -f head="SatoshiAndKin:automation/ypricemagic-$candidate" --jq length)" -gt 0 ]; then
+            echo "An update PR for $candidate was already closed."
+            exit 0
+          fi
+          echo "current=$current" >> "$GITHUB_OUTPUT"
+          echo "candidate=$candidate" >> "$GITHUB_OUTPUT"
+      - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
+        if: steps.upstream.outputs.candidate != ''
+        with:
+          python-version: "3.12"
+          version: "0.13.9"
+      - name: Resolve and verify the candidate lock
+        if: steps.upstream.outputs.candidate != ''
+        env:
+          CANDIDATE: ${{ steps.upstream.outputs.candidate }}
+        run: |
+          set -euo pipefail
+          rustup toolchain install 1.100.0 --profile minimal
+          export RUSTUP_TOOLCHAIN=1.100.0
+          python3 .github/scripts/update-ypricemagic-pin.py update "$CANDIDATE"
+          uv lock --upgrade-package ypricemagic
+          uv lock --check
+          python3 .github/scripts/update-ypricemagic-pin.py check-lock "$CANDIDATE"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        if: steps.upstream.outputs.candidate != '' && (github.event_name == 'schedule' || inputs.publish)
+        with:
+          name: ypricemagic-lock
+          path: uv.lock
+          if-no-files-found: error
+          retention-days: 1
+
+  publish:
+    needs: resolve
+    if: needs.resolve.outputs.candidate != '' && (github.event_name == 'schedule' || inputs.publish)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+        with:
+          name: ypricemagic-lock
+          path: ${{ runner.temp }}/ypricemagic-resolved
+      - name: Prepare only the two dependency files from the default-branch workflow
+        env:
+          CURRENT: ${{ needs.resolve.outputs.current }}
+          CANDIDATE: ${{ needs.resolve.outputs.candidate }}
+        run: |
+          set -euo pipefail
+          test "$(python3 .github/scripts/update-ypricemagic-pin.py read)" = "$CURRENT"
+          test "$(git ls-remote origin refs/heads/main | cut -f1)" = "$GITHUB_SHA"
+          python3 .github/scripts/update-ypricemagic-pin.py update "$CANDIDATE"
+          install -m 0644 "$RUNNER_TEMP/ypricemagic-resolved/uv.lock" uv.lock
+          python3 .github/scripts/update-ypricemagic-pin.py check-lock "$CANDIDATE"
+          git diff --check
+      - uses: actions/create-github-app-token@f418cff399f7aef4c2f0ad47e25ca7a6abbdd6fc # v3.4.0
+        id: app
+        with:
+          app-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+          repositories: ypricemagic-server
+          permission-contents: write
+          permission-pull-requests: write
+      - name: Push a dependency branch and open its PR
+        env:
+          GH_TOKEN: ${{ steps.app.outputs.token }}
+          CURRENT: ${{ needs.resolve.outputs.current }}
+          CANDIDATE: ${{ needs.resolve.outputs.candidate }}
+        run: |
+          set -euo pipefail
+          branch="automation/ypricemagic-$CANDIDATE"
+          gh auth setup-git --hostname github.com
+          git add -- pyproject.toml uv.lock
+          if [ -n "$(git ls-remote origin "refs/heads/$branch")" ]; then
+            # Retry only a branch with the exact same parent and locked files.
+            git fetch --quiet --depth=2 origin "refs/heads/$branch"
+            test "$(git rev-parse FETCH_HEAD^)" = "$GITHUB_SHA"
+            test "$(git rev-parse FETCH_HEAD^{tree})" = "$(git write-tree)"
+          else
+            git -c user.name='satoshiandkin-ci[bot]' -c user.email='satoshiandkin-ci[bot]@users.noreply.github.com' \
+              commit -m "chore: update ypricemagic to ${CANDIDATE:0:12}"
+            git push origin "HEAD:refs/heads/$branch"
+          fi
+          gh pr create --repo "$GITHUB_REPOSITORY" --base main --head "$branch" \
+            --title "chore: update ypricemagic to ${CANDIDATE:0:12}" \
+            --body "Updates the immutable ypricemagic Git pin and uv.lock. Upstream changes: https://github.com/SatoshiAndKin/ypricemagic/compare/$CURRENT...$CANDIDATE. The updater ran \`uv lock --check\`; ordinary CI builds and tests this PR. No auto-merge or deployment."
