@@ -3,8 +3,8 @@ name = "ypricemagic-server"
 version = "0.14.0"
 requires-python = ">=3.12,<3.13"
 dependencies = [
-    "dank-mids @ git+https://github.com/SatoshiAndKin/dank_mids.git@c3068cb2ec5f5cc529c26b20d48b20ac86fc2ded",
-    "ypricemagic @ git+https://github.com/SatoshiAndKin/ypricemagic.git@86a040097da15e45f452c946d24542ddc0a3c5e5",
+    "dank-mids @ git+https://github.com/SatoshiAndKin/dank_mids.git@867fee773aac436a1f1dc0ec1642418b8e61e219",
+    "ypricemagic @ git+https://github.com/SatoshiAndKin/ypricemagic.git@d7a126aeed8c1b1a568c881748926e4a69a7e98f",
     "fastapi",
     "uvicorn[standard]",
     "diskcache",
