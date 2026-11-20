@@ -1,0 +1,22 @@
+name: Cancel closed PR Review
+
+on:
+  # Separate from PR Review so its paths-ignore does not suppress cancellation.
+  pull_request:
+    types: [closed]
+
+permissions: {}
+
+concurrency:
+  # Same key as PR Review, including when a merged close has a base-branch ref.
+  group: pr-review-${{ github.event.number && format('refs/pull/{0}/merge', github.event.number) || (startsWith(github.ref, 'refs/pull/') && github.ref) || format('pr-no-number-{0}', github.run_id) }}
+  cancel-in-progress: true
+
+jobs:
+  cancel-review:
+    # GitHub requires a job definition. The workflow takes the concurrency slot;
+    # this job never starts a runner or receives a token.
+    if: ${{ false }}
+    runs-on: ubuntu-latest
+    steps:
+      - run: ':'
