@@ -189,7 +189,7 @@ def _parse_block(block: str | None) -> int | ParseError | None:
         return None
     try:
         parsed = int(block)
-    except (ValueError, TypeError):
+    except ValueError, TypeError:
         return ParseError(f"Invalid block number: {block}")
     if parsed <= 0 or parsed > MAX_BLOCK:
         return ParseError(f"Invalid block number: {block}")
@@ -202,7 +202,7 @@ def _parse_amount(amount: str | None) -> Decimal | ParseError | None:
         return None
     try:
         parsed = Decimal(amount)
-    except (InvalidOperation, ValueError, TypeError):
+    except InvalidOperation, ValueError, TypeError:
         return ParseError(f"Invalid amount: {amount}")
     if not parsed.is_finite() or parsed <= 0:
         return ParseError(f"Invalid amount: {amount}")
@@ -265,7 +265,7 @@ def parse_price_params(
 
 @dataclass
 class BatchParseSuccess:
-    data: "BatchParams"
+    data: BatchParams
 
 
 BatchParseResult = BatchParseSuccess | ParseError
@@ -297,7 +297,7 @@ def _parse_amounts(value: str | None) -> tuple[Decimal | None, ...] | ParseError
         else:
             try:
                 parsed = Decimal(stripped)
-            except (InvalidOperation, ValueError, TypeError):
+            except InvalidOperation, ValueError, TypeError:
                 return ParseError(f"Invalid amount at position {i + 1}: '{stripped}'")
             if not parsed.is_finite() or parsed <= 0:
                 return ParseError(

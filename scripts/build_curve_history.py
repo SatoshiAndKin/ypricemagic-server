@@ -35,7 +35,7 @@ def fetch_logs(endpoint: str, first: int, last: int) -> list[dict[str, Any]]:
             "eth_getLogs",
             [{"address": list(SOURCES), "fromBlock": hex(first), "toBlock": hex(last)}],
         )
-    except (OSError, ValueError):
+    except OSError, ValueError:
         if last - first < 10_000:
             raise
         middle = (first + last) // 2

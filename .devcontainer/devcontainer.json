@@ -5,7 +5,7 @@
     "ghcr.io/devcontainers/features/docker-in-docker:2": {},
     "ghcr.io/devcontainers/features/github-cli:1": {}
   },
-  "postCreateCommand": "pip install uv && uv sync --extra dev && uv run pre-commit install",
+  "postCreateCommand": "pip install uv && uv python install 3.14.10 && uv sync --locked --python 3.14.10 --extra dev && uv run pre-commit install",
   "customizations": {
     "vscode": {
       "extensions": [
