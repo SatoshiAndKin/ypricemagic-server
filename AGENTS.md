@@ -55,7 +55,7 @@ frontend/        # Svelte 5 + Vite browser UI (separate Docker image)
 scripts/         # validate_prices.py, export_openapi.py, update_tokenlist.py, test_rpc_fallback.py
 traefik-proxy/   # Shared Traefik reverse proxy config
 .github/
-  workflows/     # CI (tests+lint), Docker publish, release-please, PR review
+  workflows/     # CI (tests+lint), deployment, PR review
 ```
 
 ## API Endpoints
@@ -131,6 +131,5 @@ query Service URL.
 ## CI/CD
 
 - **CI** (`ci.yml`): runs on all PRs — ruff lint, ruff format check, mypy, pytest with coverage
-- **Docker publish** (`docker-publish.yml`): builds and pushes to ghcr.io on merge to main
-- **Release** (`release.yml`): release-please automation creates versioned releases
+- **Deployment** (`cd.yml`): builds and publishes images and queues production deployment on a merge to `main`. Deployments and Sentry use the build commit; no versioned GitHub release is required.
 - **PR review** (`pr-review.yml`): Trivy security scan + CodeQL analysis on every PR
