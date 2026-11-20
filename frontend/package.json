@@ -14,13 +14,13 @@
   },
   "dependencies": {
     "@sentry/svelte": "^11.2.0",
-    "svelte": "^5.57.1"
+    "svelte": "^5.57.3"
   },
   "devDependencies": {
     "@sveltejs/vite-plugin-svelte": "^7.3.1",
     "@tsconfig/svelte": "^5.0.8",
     "@types/node": "^24.19.0",
-    "@vitest/coverage-v8": "^5.0.3",
+    "@vitest/coverage-v8": "^5.1.0",
     "jsdom": "^30.1.1",
     "svelte-check": "^4.7.6",
     "typescript": "^6.0.3",
