@@ -987,7 +987,7 @@ async def _handle_price_request(params: Any, actual_block: int, force: bool = Fa
 
 
 async def _resolve_batch_block(
-    params: "BatchParams",
+    params: BatchParams,
 ) -> int | tuple[int, JSONResponse]:
     """Resolve the block for batch pricing.
 
@@ -1019,7 +1019,7 @@ async def _resolve_batch_block(
 
 
 def _prepare_batch_cache_check(
-    params: "BatchParams",
+    params: BatchParams,
     block: int,
 ) -> tuple[list[dict[str, Any]], list[str], list[int]]:
     """Prepare batch results by checking cache for each token.
@@ -1066,7 +1066,7 @@ def _fill_batch_results(
     prices: list[tuple[float, list[dict[str, Any]] | None] | None],
     block: int,
     block_timestamp: int | None,
-    params: "BatchParams",
+    params: BatchParams,
 ) -> None:
     """Fill in batch results with fetched prices and cache them."""
     for idx, token in enumerate(tokens_to_fetch):

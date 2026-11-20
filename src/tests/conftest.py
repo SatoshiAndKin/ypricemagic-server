@@ -59,9 +59,7 @@ def ensure_tokenlist_fixture() -> None:
 
 
 @pytest.fixture(autouse=True)
-def isolated_price_cache(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
-) -> Generator[None, None, None]:
+def isolated_price_cache(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Generator[None]:
     """Keep cached successes and failures scoped to their requesting test."""
     from src import cache
 
