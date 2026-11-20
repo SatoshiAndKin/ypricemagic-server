@@ -133,3 +133,8 @@ query Service URL.
 - **CI** (`ci.yml`): runs on all PRs — ruff lint, ruff format check, mypy, pytest with coverage
 - **Deployment** (`cd.yml`): builds and publishes images and queues production deployment on a merge to `main`. Deployments and Sentry use the build commit; no versioned GitHub release is required.
 - **PR review** (`pr-review.yml`): Trivy security scan + CodeQL analysis on every PR
+- **ypricemagic upstream updates** (`update-ypricemagic.yml`): daily, check the SKI fork
+  `master` commit, resolve the exact Git pin with uv, and open a CI-validated dependency PR
+  using the existing SKI GitHub App. It never merges or deploys. A failed resolve needs
+  dependency reconciliation before a PR can be opened. Run manually with publication unchecked
+  for a read-only dry run.
