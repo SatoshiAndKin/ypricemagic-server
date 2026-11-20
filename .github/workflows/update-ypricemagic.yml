@@ -37,23 +37,34 @@ jobs:
         run: |
           set -euo pipefail
           current="$(python3 .github/scripts/update-ypricemagic-pin.py read)"
-          if [ "$PUBLISH" = true ] &&
-            gh pr list --repo "$GITHUB_REPOSITORY" --base main --state open \
-              --limit 100 --json headRefName,isCrossRepository \
-              --jq '.[] | select(.isCrossRepository == false) | .headRefName' |
-              grep '^automation/ypricemagic-' >/dev/null; then
-            echo "An update PR is already open."
-            exit 0
-          fi
-
-          git -C "$RUNNER_TEMP" init --quiet ypricemagic
-          git -C "$RUNNER_TEMP/ypricemagic" fetch --quiet --no-tags --filter=blob:none \
-            https://github.com/SatoshiAndKin/ypricemagic.git refs/heads/master
-          candidate="$(git -C "$RUNNER_TEMP/ypricemagic" rev-parse FETCH_HEAD)"
+          upstream="https://github.com/SatoshiAndKin/ypricemagic.git"
+          candidate="$(git ls-remote --exit-code "$upstream" refs/heads/master | cut -f1)"
+          [[ "$candidate" =~ ^[0-9a-f]{40}$ ]]
           if [ "$candidate" = "$current" ]; then
             echo "Already at ypricemagic $current."
             exit 0
           fi
+          if [ "$PUBLISH" = true ]; then
+            open_branches="$(gh pr list --repo "$GITHUB_REPOSITORY" --base main --state open \
+              --limit 100 --json headRefName,isCrossRepository \
+              --jq '.[] | select(.isCrossRepository == false) | .headRefName')"
+            if grep -q '^automation/ypricemagic-' <<< "$open_branches"; then
+              echo "An update PR is already open."
+              exit 0
+            fi
+            closed="$(gh api --method GET "repos/$GITHUB_REPOSITORY/pulls" \
+              -f state=closed -f head="SatoshiAndKin:automation/ypricemagic-$candidate" --jq length)"
+            if [ "$closed" -gt 0 ]; then
+              echo "An update PR for $candidate was already closed."
+              exit 0
+            fi
+          fi
+
+          git -C "$RUNNER_TEMP" init --quiet ypricemagic
+          git -C "$RUNNER_TEMP/ypricemagic" fetch --quiet --no-tags --filter=blob:none \
+            "$upstream" refs/heads/master
+          # A concurrent fork advance can be picked up by the next run.
+          test "$(git -C "$RUNNER_TEMP/ypricemagic" rev-parse FETCH_HEAD)" = "$candidate"
 
           ancestor="$current"
           # The deployed pin is the pre-squash head of ypricemagic #52.
@@ -65,12 +76,6 @@ jobs:
             echo "::error::Refusing to replace ypricemagic $current with divergent or older $candidate."
             exit 1
           }
-          if [ "$PUBLISH" = true ] &&
-            [ "$(gh api --method GET "repos/$GITHUB_REPOSITORY/pulls" \
-              -f state=closed -f head="SatoshiAndKin:automation/ypricemagic-$candidate" --jq length)" -gt 0 ]; then
-            echo "An update PR for $candidate was already closed."
-            exit 0
-          fi
           echo "current=$current" >> "$GITHUB_OUTPUT"
           echo "candidate=$candidate" >> "$GITHUB_OUTPUT"
       - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
