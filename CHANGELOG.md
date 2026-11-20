@@ -1,5 +1,34 @@
 # Changelog
 
+## [0.14.1](https://github.com/SatoshiAndKin/ypricemagic-server/compare/v0.14.0...v0.14.1) (2026-11-20)
+
+
+### Bug Fixes
+
+* bound and verify Sentry uploads ([#186](https://github.com/SatoshiAndKin/ypricemagic-server/issues/186)) ([a4efced](https://github.com/SatoshiAndKin/ypricemagic-server/commit/a4efced20166ef9500b55f0e7b56e6506de113fc))
+* **deps-dev:** bump @vitest/coverage-v8 from 5.0.3 to 5.1.0 in /frontend ([989b839](https://github.com/SatoshiAndKin/ypricemagic-server/commit/989b8394ec3322858ef288cc27cd7c830069224b))
+* **deps-dev:** bump @vitest/coverage-v8 from 5.0.3 to 5.1.0 in /frontend ([5e3c15a](https://github.com/SatoshiAndKin/ypricemagic-server/commit/5e3c15a467517731759aa3371d25669a4741131b))
+* **deps-dev:** bump svelte-check from 4.7.6 to 4.7.8 in /frontend ([251da87](https://github.com/SatoshiAndKin/ypricemagic-server/commit/251da87f03888787a30ad5eef139e0a0aba0d4fb))
+* **deps-dev:** bump svelte-check from 4.7.6 to 4.7.8 in /frontend ([801bfa6](https://github.com/SatoshiAndKin/ypricemagic-server/commit/801bfa62eb972c4725c1842a9879256e8916dde1))
+* **deps:** bump actions/upload-artifact from 6 to 7 ([670aa4f](https://github.com/SatoshiAndKin/ypricemagic-server/commit/670aa4f7ff0afc06a4637d46c7b57d5c2d8c65a1))
+* **deps:** bump actions/upload-artifact from 6 to 7 ([f3015b1](https://github.com/SatoshiAndKin/ypricemagic-server/commit/f3015b1c05ba52fed7ca4e86891e64df02bbb180))
+* **deps:** bump docker/login-action from 3 to 4 ([5d0b953](https://github.com/SatoshiAndKin/ypricemagic-server/commit/5d0b95318e59b0982f09a18303af9c79b767784c))
+* **deps:** bump docker/login-action from 3 to 4 ([e0b45c9](https://github.com/SatoshiAndKin/ypricemagic-server/commit/e0b45c95572c78c3a1c8e1d5c19cf5a7bf6402d0))
+* **deps:** bump googleapis/release-please-action from 4 to 5 ([a98cdce](https://github.com/SatoshiAndKin/ypricemagic-server/commit/a98cdcea7654b949ccdc844ee4c1a6f2ad0e9faa))
+* **deps:** bump googleapis/release-please-action from 4 to 5 ([7fb2762](https://github.com/SatoshiAndKin/ypricemagic-server/commit/7fb27627c46a0e32dd626a22a9475405bc140d0d))
+* **deps:** bump https://github.com/astral-sh/ruff-pre-commit ([8726ef9](https://github.com/SatoshiAndKin/ypricemagic-server/commit/8726ef991fc0d7973da57c4af454de7e528ad826))
+* **deps:** bump https://github.com/astral-sh/ruff-pre-commit from v0.16.10 to 0.17.5 ([9e51a1b](https://github.com/SatoshiAndKin/ypricemagic-server/commit/9e51a1b0fc570d0057bb9ec093e5484b782c6610))
+* **deps:** bump rust from 1.99.1-slim-bookworm to 1.100.0-slim-bookworm ([85c8808](https://github.com/SatoshiAndKin/ypricemagic-server/commit/85c88087e9de4bf552914cab3762f94ca3e2f329))
+* **deps:** bump rust from 1.99.1-slim-bookworm to 1.100.0-slim-bookworm ([dc58dc2](https://github.com/SatoshiAndKin/ypricemagic-server/commit/dc58dc248296fd8997276b5beedfc2c5c667a543))
+* **deps:** bump svelte from 5.57.1 to 5.57.3 in /frontend ([f2baaca](https://github.com/SatoshiAndKin/ypricemagic-server/commit/f2baacad1fd6569369c8bd2db8df52fc2ff9a04c))
+* **deps:** bump svelte from 5.57.1 to 5.57.3 in /frontend ([1245abb](https://github.com/SatoshiAndKin/ypricemagic-server/commit/1245abb2158ca2ee66a99cdc7b61a64031d27ea7))
+* use the build commit for Sentry releases ([#184](https://github.com/SatoshiAndKin/ypricemagic-server/issues/184)) ([689f0b3](https://github.com/SatoshiAndKin/ypricemagic-server/commit/689f0b37084ed37441b03b335312538ed2a2773d))
+
+
+### Performance Improvements
+
+* seed finalized Curve registry history ([#190](https://github.com/SatoshiAndKin/ypricemagic-server/issues/190)) ([29420ba](https://github.com/SatoshiAndKin/ypricemagic-server/commit/29420ba7bb89e5c2f9e807ce8ebfd0c4d7f70bef))
+
 ## [0.14.0](https://github.com/SatoshiAndKin/ypricemagic-server/compare/v0.13.0...v0.14.0) (2026-11-10)
 
 
