@@ -18,12 +18,19 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
+# PR cache writes stay in GitHub's PR merge-ref namespace. No PR registry
+# credentials: release jobs must not import PR-produced cache records.
+permissions:
+  contents: read
+
 jobs:
   backend-image:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
       - uses: docker/setup-buildx-action@v3
       - name: Build production backend image on native amd64
         uses: docker/build-push-action@v6
@@ -33,7 +40,16 @@ jobs:
           load: true
           tags: ypm-server:ci
           build-args: SENTRY_RELEASE=${{ github.sha }}
-          cache-from: type=registry,ref=ghcr.io/satoshiandkin/ypricemagic-server:buildcache
+          push: false
+          labels: org.opencontainers.image.revision=${{ github.sha }}
+          cache-from: |
+            type=gha,scope=ypm-backend-amd64
+            type=registry,ref=ghcr.io/satoshiandkin/ypricemagic-server:buildcache
+          cache-to: type=gha,scope=ypm-backend-amd64,mode=max
+      - name: Verify runtime image metadata and exclude Git history
+        run: |
+          test "$(docker image inspect --format '{{ index .Config.Labels "org.opencontainers.image.revision" }}' ypm-server:ci)" = "$GITHUB_SHA"
+          docker run --rm --network none --entrypoint sh ypm-server:ci -c 'test ! -e /app/.git'
       - name: Import compiled dependencies in the runtime image
         run: docker run --rm --entrypoint python ypm-server:ci -c 'import brownie, dank_mids, cachebox'
       - name: Verify the runtime Sentry release
@@ -46,6 +62,36 @@ jobs:
         run: |
           docker run --rm --network none --entrypoint python ypm-server:ci \
             -m unittest src.tests.test_sentry_transport
+
+  frontend-image:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: docker/setup-buildx-action@v3
+      - name: Build the shipped frontend image (no publication)
+        uses: docker/build-push-action@v6
+        with:
+          context: ./frontend
+          platforms: linux/amd64
+          push: false
+          load: true
+          tags: ypm-frontend:ci
+          build-args: |
+            SENTRY_RELEASE=${{ github.sha }}
+            VITE_SENTRY_DSN=${{ vars.VITE_SENTRY_DSN }}
+          labels: org.opencontainers.image.revision=${{ github.sha }}
+          cache-from: |
+            type=gha,scope=ypm-frontend-amd64
+            type=registry,ref=ghcr.io/satoshiandkin/ypricemagic-server-frontend:buildcache
+          cache-to: type=gha,scope=ypm-frontend-amd64,mode=max
+      - name: Validate shipped nginx config and image metadata
+        run: |
+          test "$(docker image inspect --format '{{ index .Config.Labels "org.opencontainers.image.revision" }}' ypm-frontend:ci)" = "$GITHUB_SHA"
+          docker run --rm --network none --entrypoint sh ypm-frontend:ci \
+            -c 'test ! -e /usr/share/nginx/html/.git && nginx -t'
 
   frontend:
     runs-on: ubuntu-latest
