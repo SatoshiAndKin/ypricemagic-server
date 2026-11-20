@@ -23,7 +23,10 @@ env:
 
 jobs:
   build-and-push:
-    if: github.event_name != 'pull_request' || github.event.pull_request.merged == true
+    # Manual release builds must use trusted main, not an unmerged branch.
+    if: >-
+      (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main') ||
+      (github.event_name == 'pull_request' && github.event.pull_request.merged == true && github.event.pull_request.base.ref == 'main')
     strategy:
       fail-fast: false
       matrix:
@@ -45,6 +48,7 @@ jobs:
       - uses: actions/checkout@v6
         with:
           ref: ${{ env.RELEASE_COMMIT }}
+          persist-credentials: false
 
       - uses: docker/setup-buildx-action@v3
 
@@ -87,7 +91,11 @@ jobs:
           labels: |
             ${{ steps.meta.outputs.labels }}
             org.opencontainers.image.revision=${{ env.RELEASE_COMMIT }}
-          cache-from: type=registry,ref=${{ steps.registry.outputs.cache }}
+          # GHA only exposes default-branch caches here, never PR merge refs.
+          # Registry cache remains release-only; no PR job receives write access.
+          cache-from: |
+            type=gha,scope=ypm-${{ matrix.component }}-amd64
+            type=registry,ref=${{ steps.registry.outputs.cache }}
           cache-to: type=registry,ref=${{ steps.registry.outputs.cache }},mode=max
           platforms: linux/amd64
 
