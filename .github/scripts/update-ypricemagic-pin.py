@@ -2,6 +2,7 @@
 
 import argparse
 import re
+import sys
 import tomllib
 from pathlib import Path
 
@@ -47,7 +48,7 @@ def main() -> None:
     parser.add_argument("sha", nargs="?")
     args = parser.parse_args()
     if args.operation == "read":
-        print(pin())
+        sys.stdout.write(f"{pin()}\n")
         return
     if not args.sha or not re.fullmatch(r"[0-9a-f]{40}", args.sha):
         parser.error("expected a full lowercase Git SHA")
