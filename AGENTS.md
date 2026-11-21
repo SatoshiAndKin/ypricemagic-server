@@ -102,7 +102,7 @@ procedure before starting a legacy writer.
 
 ## Code Conventions
 
-- Python 3.14, managed by [uv](https://github.com/astral-sh/uv)
+- Python 3.12, managed by [uv](https://github.com/astral-sh/uv)
 - **Linting**: `ruff check` with pyflakes, bugbear, pep8-naming, complexity ≤10
 - **Types**: mypy strict — all public functions must have type annotations
 - **Error handling**: never silently swallow exceptions that affect correctness; cache failures are non-fatal (log warning, continue)
