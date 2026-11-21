@@ -1585,14 +1585,16 @@ class TestCheckBucketEndpoint:
 
         # Mock ERC20 class at its import location
         mock_erc20_instance = MagicMock()
-
-        # TestClient handles the request on a different event loop.
-        async def metadata(value: str | int) -> str | int:
-            return value
-
-        mock_erc20_instance.symbol = metadata("USDC")
-        mock_erc20_instance.name = metadata("USD Coin")
-        mock_erc20_instance.decimals = metadata(6)
+        # Use asyncio.Future for awaitable properties (asyncio.coroutine removed in 3.11)
+        symbol_fut: asyncio.Future[str] = asyncio.Future()
+        symbol_fut.set_result("USDC")
+        mock_erc20_instance.symbol = symbol_fut
+        name_fut: asyncio.Future[str] = asyncio.Future()
+        name_fut.set_result("USD Coin")
+        mock_erc20_instance.name = name_fut
+        decimals_fut: asyncio.Future[int] = asyncio.Future()
+        decimals_fut.set_result(6)
+        mock_erc20_instance.decimals = decimals_fut
         mock_erc20_cls = MagicMock(return_value=mock_erc20_instance)
 
         with (
