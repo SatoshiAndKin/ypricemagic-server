@@ -1,20 +1,10 @@
-# Application-scoped findings after the listed mitigations; review by 2026-11-01.
+# Application-scoped findings reviewed on 2026-11-23; review again by 2026-12-23.
 # CI retains an unfiltered JSON inventory alongside the filtered SARIF report.
 vulnerabilities:
-  - id: CVE-2026-40072
-    paths: [uv.lock]
-    purls: ["pkg:pypi/web3@6.11.0"]
-    expired_at: 2026-11-01
-    statement: >-
-      Both pricing providers disable automatic CCIP reads in lifespan.
-      TestContractURLPolicy.test_lifespan_disables_automatic_offchain_http
-      reproduces OffchainLookup on real sync/async Web3 call paths and verifies
-      that neither HTTP handler runs. Retain Web3 6 for the current pricing fork;
-      remove this exception when its Web3 7 migration is supported.
   - id: CVE-2025-69872
     paths: [uv.lock]
     purls: ["pkg:pypi/diskcache@5.6.3"]
-    expired_at: 2026-11-01
+    expired_at: 2026-12-23
     statement: >-
       The only runtime diskcache consumer uses _JSONOnlyDisk. It rejects
       non-raw keys and non-JSON value modes before diskcache can invoke pickle.
@@ -22,11 +12,22 @@ vulnerabilities:
       reads and verifies pickle.load is never called; normal JSON remains readable.
   - id: CVE-2026-59890
     paths: [uv.lock]
-    purls: ["pkg:pypi/setuptools@80.10.2"]
-    expired_at: 2026-11-01
+    purls: ["pkg:pypi/setuptools@81.0.0"]
+    expired_at: 2026-12-23
     statement: >-
-      This advisory concerns MANIFEST.in exclusions while building sdists on
-      macOS normalization-preserving filesystems. The supported build/deployment
-      builds wheels on Linux and this application has no MANIFEST.in or sdist
-      build flow. Web3 6 requires pkg_resources, removed in setuptools 81+.
-      This exception does not cover introducing macOS sdist publishing.
+      This advisory affects MANIFEST.in exclusions when building source
+      distributions on normalization-preserving macOS filesystems. Production
+      builds and installs wheels on Linux. The server has no MANIFEST.in or
+      source-distribution publishing workflow. Brownie still requires
+      pkg_resources, which is removed in setuptools 82. Reassess this exception
+      before adding macOS source-distribution publishing.
+  - id: GHSA-xmj3-9gf7-h52w
+    paths: [uv.lock]
+    purls: ["pkg:pypi/setuptools@81.0.0"]
+    expired_at: 2026-12-23
+    statement: >-
+      This advisory affects Windows legacy Wheel.install_as_egg when a wheel
+      contains a drive-qualified namespace_packages.txt path. The supported
+      server build and runtime use Linux and uv wheel installation. Neither
+      uses setuptools' legacy egg installer. Reassess this exception before
+      introducing Windows installation or a legacy egg installation path.

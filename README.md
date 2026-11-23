@@ -321,13 +321,17 @@ contains the frontend project's public DSN. The API uses its production
 `SENTRY_DSN`. Sentry can group new events by commit. Explicit Sentry deploy
 records require registration after the production rollout succeeds.
 
-Production runs one Ethereum API writer and two frontend replicas. The API uses
-the shared cluster query Service through the required `RPC_URL` setting. The
-initial migration stops the Docker writer, verifies a separate restore of all six
-writable volumes, and copies a verified protected backup before it starts the
-native API. Retain the old volumes and container configuration for recovery.
-Later releases use Recreate and keep the persistent data. A Helm rollback changes
-the application release and preserves its current data.
+Production runs one Ethereum API replica and one frontend replica in the same
+Pod. The API uses the shared cluster query Service through the required
+`RPC_URL` setting. Rolling updates retain the old Ready Pod until its replacement
+passes readiness. Each Pod has a private disk-backed `emptyDir` for its caches.
+A container restart in the same Pod retains the cache. A replacement Pod rebuilds it.
+
+The initial migration stopped the Docker writer, verified a separate restore of
+all six writable volumes, and copied a protected backup before starting the native
+API. The private infrastructure controller retains the legacy volumes and
+recovery configuration. Follow its recovery procedure before starting a legacy
+writer. A Helm rollback replaces the application Pod and rebuilds its private cache.
 
 Base pricing stays paused to avoid paid RPC usage. Base implementation support
 and its retained cache volumes remain available for a future approved migration.
