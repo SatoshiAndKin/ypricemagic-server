@@ -3179,6 +3179,26 @@ class TestContractURLPolicy:
 
 class TestPrewarmReadiness:
     @pytest.mark.asyncio
+    async def test_brownie_connection_requires_rpc_provider(
+        self, mock_y_module: None, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        import sys
+
+        from src import server
+
+        network = sys.modules["brownie"].network
+        monkeypatch.setattr(network, "is_connected", lambda: True)
+        network.web3 = SimpleNamespace(provider=None)
+        with (
+            patch("dank_mids.helpers._helpers.setup_dank_w3_from_sync") as setup_dank,
+            pytest.raises(RuntimeError, match="Brownie connected without an RPC provider"),
+        ):
+            async with server.lifespan(server.app):
+                pytest.fail("startup entered readiness without an RPC provider")
+        setup_dank.assert_not_called()
+        assert not server.app.state.ready
+
+    @pytest.mark.asyncio
     async def test_base_readiness_waits_for_shared_factory_history(
         self, mock_y_module: None, monkeypatch: pytest.MonkeyPatch
     ) -> None:
