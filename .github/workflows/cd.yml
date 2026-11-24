@@ -41,14 +41,23 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
+      actions: read
       contents: read
       packages: write
+      pull-requests: read
 
     steps:
       - uses: actions/checkout@v6
         with:
           ref: ${{ env.RELEASE_COMMIT }}
           persist-credentials: false
+
+      - name: Reuse tested Debian package snapshots
+        if: matrix.component == 'backend'
+        id: apt
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: bash .github/scripts/debian-apt-snapshot.sh for-release "backend-image"
 
       - uses: docker/setup-buildx-action@v3
 
@@ -79,14 +88,18 @@ jobs:
             type=ref,event=branch
             type=raw,value=latest,enable={{is_default_branch}}
 
-      - name: Build and push image
+      - name: Build and publish by digest for backend validation
+        id: build
         uses: docker/build-push-action@v6
         with:
           context: ${{ matrix.context }}
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
+          push: ${{ matrix.component != 'backend' }}
+          tags: ${{ matrix.component != 'backend' && steps.meta.outputs.tags || '' }}
+          outputs: ${{ matrix.component == 'backend' && format('type=image,name={0},name-canonical=true,push-by-digest=true,push=true', steps.registry.outputs.image) || '' }}
           build-args: |
             SENTRY_RELEASE=${{ env.RELEASE_COMMIT }}
+            ${{ matrix.component == 'backend' && format('DEBIAN_ARCHIVE_SNAPSHOT={0}', steps.apt.outputs.archive) || '' }}
+            ${{ matrix.component == 'backend' && format('DEBIAN_SECURITY_SNAPSHOT={0}', steps.apt.outputs.security) || '' }}
             ${{ matrix.component == 'frontend' && format('VITE_SENTRY_DSN={0}', vars.VITE_SENTRY_DSN) || '' }}
           labels: |
             ${{ steps.meta.outputs.labels }}
@@ -98,6 +111,19 @@ jobs:
             type=registry,ref=${{ steps.registry.outputs.cache }}
           cache-to: type=registry,ref=${{ steps.registry.outputs.cache }},mode=max
           platforms: linux/amd64
+
+      - name: Test and tag the exact backend image
+        if: matrix.component == 'backend'
+        env:
+          IMAGE: ${{ steps.registry.outputs.image }}
+          DIGEST: ${{ steps.build.outputs.digest }}
+          IMAGE_TAGS: ${{ steps.meta.outputs.tags }}
+        run: |
+          set -euo pipefail
+          candidate="$IMAGE@$DIGEST"
+          docker pull "$candidate"
+          bash .github/scripts/check-backend-image.sh "$candidate" "$RELEASE_COMMIT"
+          bash .github/scripts/tag-tested-image.sh "$IMAGE" "$DIGEST"
 
   deploy:
     needs: build-and-push

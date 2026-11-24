@@ -35,6 +35,9 @@ jobs:
         with:
           persist-credentials: false
       - uses: docker/setup-buildx-action@v3
+      - name: Resolve Debian package snapshots
+        id: apt
+        run: bash .github/scripts/debian-apt-snapshot.sh latest
       - name: Build production backend image on native amd64
         uses: docker/build-push-action@v6
         with:
@@ -42,29 +45,33 @@ jobs:
           platforms: linux/amd64
           load: true
           tags: ypm-server:ci
-          build-args: SENTRY_RELEASE=${{ github.sha }}
+          build-args: |
+            SENTRY_RELEASE=${{ github.sha }}
+            DEBIAN_ARCHIVE_SNAPSHOT=${{ steps.apt.outputs.archive }}
+            DEBIAN_SECURITY_SNAPSHOT=${{ steps.apt.outputs.security }}
           push: false
           labels: org.opencontainers.image.revision=${{ github.sha }}
           cache-from: |
             type=gha,scope=ypm-backend-amd64
             type=registry,ref=ghcr.io/satoshiandkin/ypricemagic-server:buildcache
           cache-to: type=gha,scope=ypm-backend-amd64,mode=max
-      - name: Verify runtime image metadata and exclude Git history
+      - name: Test the backend image
+        run: bash .github/scripts/check-backend-image.sh ypm-server:ci "$GITHUB_SHA"
+      - name: Record the tested Debian snapshot
+        if: github.event_name == 'pull_request'
+        env:
+          DEBIAN_ARCHIVE: ${{ steps.apt.outputs.archive }}
+          DEBIAN_SECURITY: ${{ steps.apt.outputs.security }}
         run: |
-          test "$(docker image inspect --format '{{ index .Config.Labels "org.opencontainers.image.revision" }}' ypm-server:ci)" = "$GITHUB_SHA"
-          docker run --rm --network none --entrypoint sh ypm-server:ci -c 'test ! -e /app/.git'
-      - name: Import compiled dependencies in the runtime image
-        run: docker run --rm --entrypoint python ypm-server:ci -c 'import brownie, dank_mids, cachebox'
-      - name: Verify the runtime Sentry release
-        run: |
-          docker run --rm --network none --env SENTRY_DSN=https://public@example.invalid/1 \
-            --env "EXPECTED_RELEASE=$GITHUB_SHA" --entrypoint python ypm-server:ci \
-            -c 'import os, sentry_sdk; from src.server import _init_sentry; _init_sentry(); assert sentry_sdk.get_client().options["release"] == os.environ["EXPECTED_RELEASE"]'
-
-      - name: Verify HTTPS Sentry upload deadlines
-        run: |
-          docker run --rm --network none --entrypoint python ypm-server:ci \
-            -m unittest src.tests.test_sentry_transport
+          bash .github/scripts/debian-apt-snapshot.sh record "$DEBIAN_ARCHIVE" "$DEBIAN_SECURITY" "$RUNNER_TEMP/snapshot.json"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        if: github.event_name == 'pull_request'
+        with:
+          name: debian-apt-snapshot
+          path: ${{ runner.temp }}/snapshot.json
+          if-no-files-found: error
+          retention-days: 30
+          overwrite: true
 
   frontend-image:
     if: github.event_name == 'push' || (github.event_name == 'pull_request' && contains(fromJSON('["opened","synchronize","reopened","ready_for_review"]'), github.event.action))
