@@ -4,7 +4,7 @@ version = "0.14.0"
 requires-python = ">=3.12,<3.13"
 dependencies = [
     "dank-mids @ git+https://github.com/SatoshiAndKin/dank_mids.git@867fee773aac436a1f1dc0ec1642418b8e61e219",
-    "ypricemagic @ git+https://github.com/SatoshiAndKin/ypricemagic.git@d7a126aeed8c1b1a568c881748926e4a69a7e98f",
+    "ypricemagic @ git+https://github.com/SatoshiAndKin/ypricemagic.git@e0f5c0cab232c79ef0c8c3902246ba50f329e791",
     "fastapi",
     "uvicorn[standard]",
     "diskcache",
