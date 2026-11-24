@@ -7,7 +7,8 @@ FROM ghcr.io/astral-sh/uv:python3.12-bookworm-slim@sha256:e5b65587bce7de595f2998
 COPY --from=uv /uv /uvx /usr/local/bin/
 WORKDIR /app
 
-RUN apt-get update \
+COPY scripts/debian.sources /etc/apt/sources.list.d/debian.sources
+RUN apt-get update --error-on=any \
     && apt-get install -y --no-install-recommends gcc git libc6-dev libgmp-dev curl \
     && rm -rf /var/lib/apt/lists/*
 
@@ -36,7 +37,8 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 FROM ghcr.io/astral-sh/uv:python3.12-bookworm-slim@sha256:e5b65587bce7de595f299855d7385fe7fca39b8a74baa261ba1b7147afa78e58
 COPY --from=uv /uv /uvx /usr/local/bin/
 WORKDIR /app
-RUN apt-get update \
+COPY scripts/debian.sources /etc/apt/sources.list.d/debian.sources
+RUN apt-get update --error-on=any \
     && apt-get install -y --no-install-recommends curl libgmp10 ca-certificates \
     && sed -i -e 's|^mozilla/emSign_ECC_Root_CA_-_G3.crt|!&|' \
        -e 's|^mozilla/Comodo_AAA_Services_root.crt|!&|' /etc/ca-certificates.conf \
