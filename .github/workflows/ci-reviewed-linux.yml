@@ -141,6 +141,9 @@ jobs:
       group: ski-ci-public-linux
       labels: ski-kvm-public-pr
     timeout-minutes: 10
+    env:
+      # The runner's system Python omits the headers for native wheels.
+      UV_MANAGED_PYTHON: "1"
 
     steps:
       - uses: actions/checkout@v6
