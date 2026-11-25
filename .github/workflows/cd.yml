@@ -57,7 +57,7 @@ jobs:
         id: apt
         env:
           GH_TOKEN: ${{ github.token }}
-        run: bash .github/scripts/debian-apt-snapshot.sh for-release "backend-image"
+        run: bash .github/scripts/debian-apt-snapshot.sh for-release "linux / backend-image"
 
       - uses: docker/setup-buildx-action@v3
 
