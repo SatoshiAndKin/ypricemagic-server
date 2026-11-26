@@ -16,160 +16,21 @@ concurrency:
   group: cd-${{ github.ref }}
   cancel-in-progress: false
 
-env:
-  REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}
-  RELEASE_COMMIT: ${{ github.event.pull_request.merge_commit_sha || github.sha }}
+
+permissions: {}
 
 jobs:
   build-and-push:
-    # Manual release builds must use trusted main, not an unmerged branch.
-    if: >-
-      (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main') ||
-      (github.event_name == 'pull_request' && github.event.pull_request.merged == true && github.event.pull_request.base.ref == 'main')
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - component: backend
-            context: .
-            image-suffix: ""
-          - component: frontend
-            context: ./frontend
-            image-suffix: -frontend
-    name: Build and push ${{ matrix.component }}
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
     permissions:
       actions: read
       contents: read
       packages: write
       pull-requests: read
-
-    steps:
-      - uses: actions/checkout@v7
-        with:
-          ref: ${{ env.RELEASE_COMMIT }}
-          persist-credentials: false
-
-      - name: Reuse tested Debian package snapshots
-        if: matrix.component == 'backend'
-        id: apt
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: bash .github/scripts/debian-apt-snapshot.sh for-release "backend-image"
-
-      - uses: docker/setup-buildx-action@v4
-
-      - uses: docker/login-action@v4
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Set registry addresses
-        id: registry
-        env:
-          IMAGE_SUFFIX: ${{ matrix.image-suffix }}
-        run: |
-          image="${REGISTRY}/${IMAGE_NAME,,}${IMAGE_SUFFIX}"
-          {
-            echo "image=${image}"
-            echo "cache=${image}:buildcache"
-          } >> "$GITHUB_OUTPUT"
-
-      - name: Extract image metadata
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ steps.registry.outputs.image }}
-          tags: |
-            type=raw,value=sha-${{ env.RELEASE_COMMIT }}
-            type=ref,event=branch
-            type=raw,value=latest,enable={{is_default_branch}}
-
-      - name: Build and publish by digest for backend validation
-        id: build
-        uses: docker/build-push-action@v6
-        with:
-          context: ${{ matrix.context }}
-          push: ${{ matrix.component != 'backend' }}
-          tags: ${{ matrix.component != 'backend' && steps.meta.outputs.tags || '' }}
-          outputs: ${{ matrix.component == 'backend' && format('type=image,name={0},name-canonical=true,push-by-digest=true,push=true', steps.registry.outputs.image) || '' }}
-          build-args: |
-            SENTRY_RELEASE=${{ env.RELEASE_COMMIT }}
-            ${{ matrix.component == 'backend' && format('DEBIAN_ARCHIVE_SNAPSHOT={0}', steps.apt.outputs.archive) || '' }}
-            ${{ matrix.component == 'backend' && format('DEBIAN_SECURITY_SNAPSHOT={0}', steps.apt.outputs.security) || '' }}
-            ${{ matrix.component == 'frontend' && format('VITE_SENTRY_DSN={0}', vars.VITE_SENTRY_DSN) || '' }}
-          labels: |
-            ${{ steps.meta.outputs.labels }}
-            org.opencontainers.image.revision=${{ env.RELEASE_COMMIT }}
-          # GHA only exposes default-branch caches here, never PR merge refs.
-          # Registry cache remains release-only; no PR job receives write access.
-          cache-from: |
-            type=gha,scope=ypm-${{ matrix.component }}-amd64
-            type=registry,ref=${{ steps.registry.outputs.cache }}
-          cache-to: type=registry,ref=${{ steps.registry.outputs.cache }},mode=max
-          platforms: linux/amd64
-
-      - name: Test and tag the exact backend image
-        if: matrix.component == 'backend'
-        env:
-          IMAGE: ${{ steps.registry.outputs.image }}
-          DIGEST: ${{ steps.build.outputs.digest }}
-          IMAGE_TAGS: ${{ steps.meta.outputs.tags }}
-        run: |
-          set -euo pipefail
-          candidate="$IMAGE@$DIGEST"
-          docker pull "$candidate"
-          bash .github/scripts/check-backend-image.sh "$candidate" "$RELEASE_COMMIT"
-          bash .github/scripts/tag-tested-image.sh "$IMAGE" "$DIGEST"
+    uses: SatoshiAndKin/ypricemagic-server/.github/workflows/cd-build-reviewed-linux.yml@d285609b6f56d61cf574284531440d7aa5959333
 
   deploy:
     needs: build-and-push
-    runs-on: ubuntu-latest
-    steps:
-      - name: Queue production deployment
-        env:
-          DEPLOY_URL: ${{ vars.DEPLOY_WEBHOOK_URL }}
-          DEPLOY_FALLBACK_URL: ${{ vars.DEPLOY_WEBHOOK_FALLBACK_URL }}
-          WEBHOOK_SECRET: ${{ secrets.WEBHOOK_SECRET }}
-          REPOSITORY: ${{ github.repository }}
-          MERGED_COMMIT: ${{ github.event.pull_request.merge_commit_sha || github.sha }}
-        run: |
-          set -euo pipefail
-          : "${DEPLOY_URL:?DEPLOY_WEBHOOK_URL must be set}"
-          : "${WEBHOOK_SECRET:?WEBHOOK_SECRET must be set}"
-          payload=$(jq -cn --arg repository "$REPOSITORY" --arg commit "$MERGED_COMMIT" \
-            '{repository: $repository, commit: $commit, targets: ["ypricemagic-server"]}')
-          response=$(mktemp)
-          trap 'rm -f "$response"' EXIT
-          request_key="actions-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
-          receipt=
-          for endpoint in "$DEPLOY_URL" "$DEPLOY_FALLBACK_URL"; do
-            [[ -n "$endpoint" ]] || continue
-            transport=0
-            status=$(curl --silent --show-error --connect-timeout 8 --max-time 25 \
-              --header "X-Webhook-Secret: $WEBHOOK_SECRET" \
-              --header "Idempotency-Key: $request_key" \
-              --header 'Content-Type: application/json' --data "$payload" \
-              --output "$response" --write-out '%{http_code}' "$endpoint") || transport=$?
-            case "$transport:$status" in
-              0:200)
-                receipt=$(jq -ce 'select(.status == "queued" and (.id | test("^[0-9a-f]{32}$")))' "$response")
-                break
-                ;;
-              6:000|7:000|28:*|52:000|55:*|56:*|0:500|0:502|0:503|0:504)
-                printf 'Temporary deployment webhook failure (curl %s, HTTP %s).\n' "$transport" "$status" >&2
-                ;;
-              *)
-                printf 'Deployment webhook rejected the request (curl %s, HTTP %s).\n' "$transport" "$status" >&2
-                exit 1
-                ;;
-            esac
-          done
-          if [[ -z "$receipt" ]]; then
-            echo 'No deployment endpoint confirmed a durable receipt.' >&2
-            exit 1
-          fi
-          printf 'Deployment queued: %s\n' "$receipt"
+    permissions: {}
+    uses: SatoshiAndKin/ypricemagic-server/.github/workflows/cd-deploy-reviewed-linux.yml@d285609b6f56d61cf574284531440d7aa5959333
+    secrets:
+      WEBHOOK_SECRET: ${{ secrets.WEBHOOK_SECRET }}
