@@ -130,7 +130,7 @@ jobs:
       - uses: astral-sh/setup-uv@v7
         with:
           python-version: "3.12"
-          enable-cache: true
+          enable-cache: false
 
       - name: Check lockfile is up to date
         run: uv lock --check
@@ -150,25 +150,35 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - uses: astral-sh/setup-uv@v7
+      - name: Restore the Python dependency cache
+        id: uv
+        uses: astral-sh/setup-uv@v7
         with:
           enable-cache: true
           python-version: "3.12"
+          cache-dependency-glob: |
+            uv.lock
+            pyproject.toml
+          cache-suffix: lint-and-test
 
       - name: Install dependencies
-        run: uv sync --extra dev
+        env:
+          UV_CACHE_HIT: ${{ steps.uv.outputs.cache-hit }}
+        run: |
+          printf 'uv dependency cache hit: %s\n' "$UV_CACHE_HIT"
+          uv sync --locked --extra dev
 
       - name: Run ruff lint
-        run: uv run ruff check .
+        run: uv run --no-sync ruff check .
 
       - name: Run ruff format check
-        run: uv run ruff format --check .
+        run: uv run --no-sync ruff format --check .
 
       - name: Run mypy
-        run: uv run mypy
+        run: uv run --no-sync mypy
 
       - name: Check unused dependencies
-        run: uv run deptry .
+        run: uv run --no-sync deptry .
 
       - name: Run tests with coverage
-        run: uv run pytest
+        run: uv run --no-sync pytest
