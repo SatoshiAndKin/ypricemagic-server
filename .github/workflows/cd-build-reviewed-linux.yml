@@ -1,0 +1,132 @@
+name: Reviewed Linux release images
+
+on:
+  workflow_call:
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+  RELEASE_COMMIT: ${{ github.event.pull_request.merge_commit_sha || github.sha }}
+
+
+jobs:
+  build-and-push:
+    if: >-
+      github.repository == 'SatoshiAndKin/ypricemagic-server' &&
+      ((github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main') ||
+      (github.event_name == 'pull_request' && github.event.pull_request.merged == true && github.event.pull_request.base.ref == 'main'))
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - component: backend
+            context: .
+            image-suffix: ""
+          - component: frontend
+            context: ./frontend
+            image-suffix: -frontend
+    name: Build and push ${{ matrix.component }}
+    runs-on:
+      group: ski-ci-public-linux
+      labels: ski-kvm-public-build
+    timeout-minutes: 20
+    permissions:
+      actions: read
+      contents: read
+      packages: write
+      pull-requests: read
+
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ env.RELEASE_COMMIT }}
+          persist-credentials: false
+
+      - name: Install the pinned GitHub CLI
+        if: matrix.component == 'backend'
+        env:
+          GH_CLI_SHA256: 79e7ab5db738c48777b696e374f8b428f0647debfb424f44d2f426370407fe2f  # pragma: allowlist secret
+        run: |
+          set -euo pipefail
+          bin="$RUNNER_TEMP/github-cli"
+          mkdir "$bin"
+          archive="$bin/gh.tar.gz"
+          curl --fail --silent --show-error --location --retry 2 \
+            'https://github.com/cli/cli/releases/download/v2.105.0/gh_2.105.0_linux_amd64.tar.gz' \
+            --output "$archive"
+          printf '%s  %s\n' "$GH_CLI_SHA256" "$archive" | sha256sum --check
+          tar -xzf "$archive" --strip-components=2 -C "$bin" gh_2.105.0_linux_amd64/bin/gh
+          echo "$bin" >> "$GITHUB_PATH"
+
+      - name: Reuse tested Debian package snapshots
+        if: matrix.component == 'backend'
+        id: apt
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: bash .github/scripts/debian-apt-snapshot.sh for-release "linux / backend-image"
+
+      - uses: docker/setup-buildx-action@v4
+
+      - uses: docker/login-action@v4
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set registry addresses
+        id: registry
+        env:
+          IMAGE_SUFFIX: ${{ matrix.image-suffix }}
+        run: |
+          image="${REGISTRY}/${IMAGE_NAME,,}${IMAGE_SUFFIX}"
+          {
+            echo "image=${image}"
+            echo "cache=${image}:buildcache"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Extract image metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ steps.registry.outputs.image }}
+          tags: |
+            type=raw,value=sha-${{ env.RELEASE_COMMIT }}
+            type=ref,event=branch
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build and publish by digest for backend validation
+        id: build
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ matrix.context }}
+          push: ${{ matrix.component != 'backend' }}
+          tags: ${{ matrix.component != 'backend' && steps.meta.outputs.tags || '' }}
+          outputs: ${{ matrix.component == 'backend' && format('type=image,name={0},name-canonical=true,push-by-digest=true,push=true', steps.registry.outputs.image) || '' }}
+          build-args: |
+            SENTRY_RELEASE=${{ env.RELEASE_COMMIT }}
+            ${{ matrix.component == 'backend' && format('DEBIAN_ARCHIVE_SNAPSHOT={0}', steps.apt.outputs.archive) || '' }}
+            ${{ matrix.component == 'backend' && format('DEBIAN_SECURITY_SNAPSHOT={0}', steps.apt.outputs.security) || '' }}
+            ${{ matrix.component == 'frontend' && format('VITE_SENTRY_DSN={0}', vars.VITE_SENTRY_DSN) || '' }}
+          labels: |
+            ${{ steps.meta.outputs.labels }}
+            org.opencontainers.image.revision=${{ env.RELEASE_COMMIT }}
+          # GHA only exposes default-branch caches here, never PR merge refs.
+          # Registry cache remains release-only; no PR job receives write access.
+          cache-from: |
+            type=gha,scope=ypm-${{ matrix.component }}-amd64
+            type=registry,ref=${{ steps.registry.outputs.cache }}
+          cache-to: type=registry,ref=${{ steps.registry.outputs.cache }},mode=max
+          platforms: linux/amd64
+
+      - name: Test and tag the exact backend image
+        if: matrix.component == 'backend'
+        env:
+          IMAGE: ${{ steps.registry.outputs.image }}
+          DIGEST: ${{ steps.build.outputs.digest }}
+          IMAGE_TAGS: ${{ steps.meta.outputs.tags }}
+        run: |
+          set -euo pipefail
+          candidate="$IMAGE@$DIGEST"
+          docker pull "$candidate"
+          bash .github/scripts/check-backend-image.sh "$candidate" "$RELEASE_COMMIT"
+          bash .github/scripts/tag-tested-image.sh "$IMAGE" "$DIGEST"
