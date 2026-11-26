@@ -27,4 +27,4 @@ permissions:
 
 jobs:
   linux:
-    uses: SatoshiAndKin/ypricemagic-server/.github/workflows/ci-reviewed-linux.yml@5b84f3546901042ed268dca663272fa0a43473b7
+    uses: SatoshiAndKin/ypricemagic-server/.github/workflows/ci-reviewed-linux.yml@277c522024de60c08d00726ec8240bb609ee98b6
