@@ -26,7 +26,7 @@ jobs:
       contents: read
       packages: write
       pull-requests: read
-    uses: SatoshiAndKin/ypricemagic-server/.github/workflows/cd-build-reviewed-linux.yml@42140a57d071d368b820a0cea18e65d16fb2a6aa
+    uses: SatoshiAndKin/ypricemagic-server/.github/workflows/cd-build-reviewed-linux.yml@d285609b6f56d61cf574284531440d7aa5959333
 
   deploy:
     needs: build-and-push
