@@ -17,6 +17,6 @@ jobs:
     # GitHub requires a job definition. The workflow takes the concurrency slot;
     # this job never starts a runner or receives a token.
     if: ${{ github.event.number && github.event.action != 'closed' }}
-    runs-on: ubuntu-latest
+    runs-on: ski-kvm-public-pr
     steps:
       - run: ':'
