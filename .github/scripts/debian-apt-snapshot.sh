@@ -14,7 +14,8 @@ latest() {
 }
 
 canonical_url() {
-    curl --fail --silent --show-error --location --max-redirs 2 \
+    # Security archive aliases can require three canonical redirects.
+    curl --fail --silent --show-error --location --max-redirs 5 \
         --proto '=https' --proto-redir '=https' --connect-timeout 5 --max-time 20 --retry 2 \
         --output /dev/null --write-out '%{url_effective}' "https://snapshot.debian.org/archive/$1/$2/"
 }
