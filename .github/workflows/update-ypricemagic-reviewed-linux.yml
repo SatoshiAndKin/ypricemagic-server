@@ -110,8 +110,9 @@ jobs:
           set -euo pipefail
           export RUSTUP_TOOLCHAIN=1.100.0
           python3 .github/scripts/update-ypricemagic-pin.py update "$CANDIDATE"
-          uv lock --upgrade-package ypricemagic
-          uv lock --check
+          # The runner system Python does not include headers for source builds.
+          uv lock --managed-python --upgrade-package ypricemagic
+          uv lock --managed-python --check
           python3 .github/scripts/update-ypricemagic-pin.py check-lock "$CANDIDATE"
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         if: steps.upstream.outputs.candidate != '' && (github.event_name == 'schedule' || inputs.publish)
